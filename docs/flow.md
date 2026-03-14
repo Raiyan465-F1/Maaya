@@ -36,7 +36,11 @@ There will be a join us on hero section and login at the top
 #Forum
 There will be a search bar for forum, basic filters like newest, oldest, most upvoted, also can be filtered tag wise
 whatever tags that will exists in the future.
-It will be somewhat of a reddit style.
+It will be somewhat of a reddit style. The page will show cards of different posts, their up and downvoats and related tags, title,
+and a little of content
 
 
 
+# Doctors help:
+There will be a dedicated page for it where users can posts their questions and only doctors can answer their and users can also close the post ig
+There will also be a place in there where people can see all the verified doctors. 
