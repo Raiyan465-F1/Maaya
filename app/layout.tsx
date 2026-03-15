@@ -2,6 +2,7 @@ import { Geist, JetBrains_Mono } from "next/font/google"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
+import { SessionProvider } from "@/components/session-provider"
 import { cn } from "@/lib/utils";
 
 const fontSans = Geist({
@@ -23,7 +24,9 @@ export default function RootLayout({
       className={cn("antialiased", fontSans.variable, jetbrainsMono.variable)}
     >
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <SessionProvider>
+          <ThemeProvider>{children}</ThemeProvider>
+        </SessionProvider>
       </body>
     </html>
   )
