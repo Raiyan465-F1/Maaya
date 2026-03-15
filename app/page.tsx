@@ -10,9 +10,8 @@ function LandingNavbar() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-card/80 backdrop-blur-md border-b border-primary/15 shadow-sm">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-        {/* Brand */}
-        <a href="/" className="flex items-center gap-2">
-          <span className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+        <a href="/" className="flex items-center gap-2.5">
+          <span className="font-heading text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent tracking-tight">
             MAAYA
           </span>
           <span className="hidden sm:inline text-xs text-muted-foreground font-medium tracking-wide">
@@ -20,7 +19,6 @@ function LandingNavbar() {
           </span>
         </a>
 
-        {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-foreground">
           <a href="#about" className="hover:text-primary transition-colors">About</a>
           <a href="#features" className="hover:text-primary transition-colors">Features</a>
@@ -28,7 +26,6 @@ function LandingNavbar() {
           <a href="#for-professionals" className="hover:text-primary transition-colors">For Doctors</a>
         </nav>
 
-        {/* Auth buttons */}
         <div className="hidden md:flex items-center gap-3">
           <a
             href="/login"
@@ -44,7 +41,6 @@ function LandingNavbar() {
           </a>
         </div>
 
-        {/* Mobile hamburger */}
         <button
           className="md:hidden text-foreground"
           onClick={() => setMobileOpen(!mobileOpen)}
@@ -54,7 +50,6 @@ function LandingNavbar() {
         </button>
       </div>
 
-      {/* Mobile menu */}
       {mobileOpen && (
         <div className="md:hidden bg-card border-t border-primary/15 px-6 py-4 flex flex-col gap-4 text-sm font-medium text-foreground">
           <a href="#about" onClick={() => setMobileOpen(false)} className="hover:text-primary">About</a>
@@ -75,77 +70,142 @@ function LandingNavbar() {
   );
 }
 
+/* ─── Hero preview cards ──────────────────────────────────── */
+const calDots = [
+  "bg-muted/70", "bg-muted/70", "bg-secondary/60", "bg-secondary/70", "bg-secondary/70", "bg-muted/70", "bg-muted/70",
+  "bg-muted/70", "bg-muted/70", "bg-muted/70", "bg-muted/70", "bg-primary ring-2 ring-primary/30", "bg-primary/25", "bg-primary/15",
+  "bg-muted/50", "bg-muted/70", "bg-muted/70", "bg-muted/70", "bg-muted/70", "bg-muted/70", "bg-muted/50",
+  "bg-muted/30", "bg-muted/30", "bg-secondary/30", "bg-secondary/50", "bg-secondary/65", "bg-secondary/70", "bg-secondary/55",
+];
+
+function HeroPreviewCards() {
+  return (
+    <div className="hidden lg:flex flex-col gap-4 w-64 xl:w-72 flex-shrink-0">
+      {/* Cycle calendar preview */}
+      <div className="bg-card rounded-2xl border border-primary/12 shadow-sm p-5">
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-xs font-medium text-foreground">Cycle Tracking</span>
+          <span className="font-mono text-[10px] text-primary bg-primary/10 px-2 py-0.5 rounded-full tabular-nums">
+            Day 12
+          </span>
+        </div>
+        <div className="grid grid-cols-7 gap-1.5">
+          {calDots.map((cls, i) => (
+            <div key={i} className={`w-5 h-5 rounded-full ${cls}`} />
+          ))}
+        </div>
+        <div className="mt-3 flex items-center gap-4">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-secondary/70" />
+            <span className="text-[10px] text-muted-foreground">Period</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-primary" />
+            <span className="text-[10px] text-muted-foreground">Today</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Forum post preview */}
+      <div className="bg-card rounded-2xl border border-secondary/12 shadow-sm p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+            #cycles
+          </span>
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary/10 text-secondary border border-secondary/20">
+            Anonymous
+          </span>
+        </div>
+        <p className="text-xs text-foreground leading-relaxed mb-3">
+          &ldquo;Has anyone tracked their cycle with PCOS? Would love to hear your experiences with symptom logging...&rdquo;
+        </p>
+        <div className="flex items-center gap-4 font-mono text-[10px] text-muted-foreground">
+          <span>↑ 38</span>
+          <span>12 replies</span>
+        </div>
+      </div>
+
+      {/* Doctor Q&A preview */}
+      <div className="bg-card rounded-2xl border border-accent/12 shadow-sm p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground text-[10px] font-semibold">
+            Dr
+          </div>
+          <div>
+            <p className="text-[10px] font-medium text-foreground">Dr. Nadia Islam</p>
+            <p className="text-[10px] text-muted-foreground">Verified ✓</p>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          &ldquo;Irregular cycles are common with PCOS. Tracking over 3+ months gives the best data...&rdquo;
+        </p>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Hero ────────────────────────────────────────────────── */
 function LandingHero() {
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-background pt-16">
-      {/* Decorative blobs */}
-      <div aria-hidden className="pointer-events-none absolute -top-32 -left-32 w-[480px] h-[480px] rounded-full bg-primary/20 blur-3xl" />
-      <div aria-hidden className="pointer-events-none absolute -bottom-32 -right-32 w-[420px] h-[420px] rounded-full bg-secondary/20 blur-3xl" />
-      <div aria-hidden className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-accent/10 blur-3xl" />
+    <section className="relative min-h-screen overflow-hidden bg-background pt-16">
+      {/* Repositioned blobs — less symmetrical */}
+      <div aria-hidden className="pointer-events-none absolute top-0 right-0 w-[550px] h-[550px] rounded-full bg-primary/15 blur-3xl" />
+      <div aria-hidden className="pointer-events-none absolute bottom-0 left-0 w-[380px] h-[380px] rounded-full bg-secondary/15 blur-3xl" />
 
-      <div className="relative z-10 max-w-4xl mx-auto px-6 text-center">
-        {/* Pill badge */}
-        <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide bg-primary/10 text-primary border border-primary/20 mb-6">
-          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-          Smart Women&apos;s Health Platform
-        </span>
-
-        {/* Headline */}
-        <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-foreground leading-tight mb-6">
-          Your health,{" "}
-          <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            your story
+      <div className="max-w-6xl mx-auto px-6 min-h-[calc(100vh-4rem)] flex flex-col justify-center lg:flex-row lg:items-center lg:gap-16 py-20">
+        {/* Left / main content — left-aligned */}
+        <div className="flex-1 max-w-2xl">
+          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium tracking-wide bg-primary/10 text-primary border border-primary/20 mb-8">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+            Smart Women&apos;s Health Platform
           </span>
-          ,<br />
-          your space.
-        </h1>
 
-        {/* Subheading */}
-        <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-          MAAYA is a safe, supportive platform for reproductive health education,
-          cycle tracking, community discussion, and expert guidance — all in one place.
-        </p>
+          <h1 className="font-heading text-5xl sm:text-6xl lg:text-[5.5rem] font-bold text-foreground leading-[1.05] tracking-tight mb-6">
+            Your health,{" "}
+            <span className="italic bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              your story
+            </span>
+            ,<br />
+            your space.
+          </h1>
 
-        {/* CTAs */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <a
-            href="/register"
-            className="w-full sm:w-auto px-8 py-4 text-base font-semibold text-primary-foreground bg-gradient-to-r from-primary to-accent rounded-xl shadow-lg hover:opacity-90 transition-all duration-200"
-          >
-            Join Us — It&apos;s Free
-          </a>
-          <a
-            href="#about"
-            className="w-full sm:w-auto px-8 py-4 text-base font-semibold text-primary bg-card border border-primary/30 rounded-xl hover:bg-primary/5 transition-all duration-200"
-          >
-            Learn More
-          </a>
-        </div>
+          <p className="text-lg text-muted-foreground max-w-xl mb-10 leading-relaxed">
+            MAAYA is a safe, supportive platform for reproductive health education,
+            cycle tracking, community discussion, and expert guidance — all in one place.
+          </p>
 
-        {/* Trust stats */}
-        <div className="mt-16 grid grid-cols-3 gap-6 max-w-lg mx-auto">
-          {[
-            { value: "100%", label: "Anonymous friendly" },
-            { value: "Free", label: "Always free to join" },
-            { value: "Safe", label: "Private & secure" },
-          ].map((stat) => (
-            <div key={stat.label} className="flex flex-col items-center gap-1">
-              <span className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                {stat.value}
-              </span>
-              <span className="text-xs text-muted-foreground text-center">{stat.label}</span>
-            </div>
-          ))}
-        </div>
+          <div className="flex flex-col sm:flex-row items-start gap-4">
+            <a
+              href="/register"
+              className="w-full sm:w-auto px-8 py-3.5 text-base font-semibold text-primary-foreground bg-gradient-to-r from-primary to-accent rounded-xl shadow-md hover:opacity-90 transition-all duration-200"
+            >
+              Join Us — It&apos;s Free
+            </a>
+            <a
+              href="#about"
+              className="w-full sm:w-auto px-8 py-3.5 text-base font-semibold text-primary bg-card border border-primary/30 rounded-xl hover:bg-primary/5 transition-all duration-200"
+            >
+              Learn More
+            </a>
+          </div>
 
-        {/* Scroll hint */}
-        <div className="mt-12 flex flex-col items-center gap-2 text-muted-foreground text-xs">
-          <span>Scroll to explore</span>
-          <div className="w-5 h-8 rounded-full border-2 border-primary/40 flex items-start justify-center pt-1">
-            <div className="w-1 h-2 rounded-full bg-primary animate-bounce" />
+          {/* Stats row — DM Mono numbers */}
+          <div className="mt-12 flex items-center gap-10 pt-8 border-t border-border/50">
+            {[
+              { value: "100%", label: "Anonymous friendly" },
+              { value: "Free", label: "Always free to join" },
+              { value: "Safe", label: "Private & secure" },
+            ].map((stat) => (
+              <div key={stat.label}>
+                <p className="font-mono text-2xl font-medium text-foreground tabular-nums">{stat.value}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
+              </div>
+            ))}
           </div>
         </div>
+
+        {/* Right — feature preview cards */}
+        <HeroPreviewCards />
       </div>
     </section>
   );
@@ -156,16 +216,15 @@ function AboutSection() {
   return (
     <section id="about" className="py-24 bg-card">
       <div className="max-w-6xl mx-auto px-6">
-        <p className="text-xs font-semibold tracking-widest text-primary uppercase mb-4 text-center">
+        <p className="font-mono text-xs tracking-widest text-primary uppercase mb-4 text-center">
           Our Story
         </p>
 
         <div className="grid lg:grid-cols-2 gap-16 items-center">
-          {/* Text */}
           <div>
-            <h2 className="text-4xl font-bold text-foreground mb-6 leading-tight">
+            <h2 className="font-heading text-4xl font-bold text-foreground mb-6 leading-[1.1] tracking-tight">
               Breaking the silence{" "}
-              <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              <span className="italic bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                 around women&apos;s health
               </span>
             </h2>
@@ -190,7 +249,7 @@ function AboutSection() {
                 <div key={point} className="flex items-start gap-3">
                   <span className="mt-1 flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center">
                     <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                      <path d="M1 4l2.5 2.5L9 1" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M1 4l2.5 2.5L9 1" stroke="var(--color-primary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </span>
                   <span className="text-sm text-foreground">{point}</span>
@@ -199,12 +258,13 @@ function AboutSection() {
             </div>
           </div>
 
-          {/* Visual card */}
+          {/* Pull quote card */}
           <div className="relative">
-            <div className="bg-gradient-to-br from-primary/10 to-secondary/10 rounded-3xl p-8 border border-primary/10">
-              <blockquote className="text-foreground text-lg font-medium italic leading-relaxed mb-6">
-                &ldquo;If accessible and supportive guidance had been available, the situation would
-                have been far less distressing.&rdquo;
+            <div className="bg-gradient-to-br from-primary/8 to-secondary/8 rounded-3xl p-8 border border-primary/10">
+              <span className="font-heading text-7xl text-primary/20 leading-none select-none">&ldquo;</span>
+              <blockquote className="font-heading text-xl italic font-normal text-foreground leading-relaxed -mt-4 mb-6">
+                If accessible and supportive guidance had been available, the situation would
+                have been far less distressing.
               </blockquote>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-primary-foreground font-bold text-sm">
@@ -217,13 +277,13 @@ function AboutSection() {
               </div>
             </div>
 
-            {/* Floating stat cards */}
+            {/* Floating stat cards — DM Mono numbers */}
             <div className="absolute -bottom-6 -left-6 bg-card rounded-2xl shadow-lg border border-primary/10 px-5 py-3">
-              <p className="text-xl font-bold text-primary">22+</p>
+              <p className="font-mono text-xl font-medium text-primary">22+</p>
               <p className="text-xs text-muted-foreground">Core features</p>
             </div>
             <div className="absolute -top-6 -right-6 bg-card rounded-2xl shadow-lg border border-secondary/10 px-5 py-3">
-              <p className="text-xl font-bold text-secondary">Open</p>
+              <p className="font-mono text-xl font-medium text-secondary">Open</p>
               <p className="text-xs text-muted-foreground">Community forum</p>
             </div>
           </div>
@@ -244,10 +304,9 @@ const features = [
       </svg>
     ),
     iconClass: "bg-primary/10 text-primary",
-    dotClass: "bg-primary",
     title: "Cycle Tracking",
     description: "Log and visualize your menstrual cycle, track symptoms, predict your next cycle, and understand your fertile window — all in a private calendar view.",
-    highlights: ["Cycle calendar", "Symptom logging", "Next cycle prediction", "Pregnancy likelihood estimator"],
+    highlights: ["Cycle calendar", "Symptom logging", "Next cycle prediction", "Pregnancy likelihood"],
   },
   {
     icon: (
@@ -258,7 +317,6 @@ const features = [
       </svg>
     ),
     iconClass: "bg-secondary/10 text-secondary",
-    dotClass: "bg-secondary",
     title: "Educational Hub",
     description: "Browse curated articles on reproductive health, STI awareness, and sexual education. Take quizzes to reinforce your learning.",
     highlights: ["Curated articles", "Topic categories", "Search & recommendations", "Knowledge quizzes"],
@@ -271,7 +329,6 @@ const features = [
       </svg>
     ),
     iconClass: "bg-accent/15 text-accent",
-    dotClass: "bg-accent",
     title: "Community Forum",
     description: "Ask questions, share experiences, and support each other in a moderated, Reddit-style forum. Post anonymously whenever you need privacy.",
     highlights: ["Anonymous posting", "Upvoting system", "Threaded discussions", "Moderated & safe"],
@@ -284,7 +341,6 @@ const features = [
       </svg>
     ),
     iconClass: "bg-primary/10 text-primary",
-    dotClass: "bg-secondary",
     title: "Doctor's Help",
     description: "Browse verified medical professionals and submit your questions directly. Get expert, trustworthy answers from qualified doctors.",
     highlights: ["Verified doctor directory", "Direct Q&A", "Expert-reviewed content", "Professional profiles"],
@@ -295,41 +351,57 @@ function FeaturesSection() {
   return (
     <section id="features" className="py-24 bg-background">
       <div className="max-w-6xl mx-auto px-6">
-        <div className="text-center mb-16">
-          <p className="text-xs font-semibold tracking-widest text-primary uppercase mb-3">
+        <div className="mb-14">
+          <p className="font-mono text-xs tracking-widest text-primary uppercase mb-3">
             What MAAYA Offers
           </p>
-          <h2 className="text-4xl font-bold text-foreground mb-4">
+          <h2 className="font-heading text-4xl font-bold text-foreground leading-[1.1] tracking-tight">
             Everything you need,{" "}
-            <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+            <span className="italic bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
               in one place
             </span>
           </h2>
-          <p className="text-muted-foreground max-w-xl mx-auto text-base">
-            From tracking your cycle to learning about reproductive health — MAAYA brings
-            together the tools and community you deserve.
-          </p>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {features.map((f) => (
+        {/* Editorial list layout */}
+        <div className="divide-y divide-border/50">
+          {features.map((f, i) => (
             <div
               key={f.title}
-              className="group bg-card rounded-2xl p-6 border border-border hover:border-primary/30 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col"
+              className="py-10 flex gap-6 md:gap-10 items-start group"
             >
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${f.iconClass}`}>
-                {f.icon}
+              {/* Number */}
+              <span className="font-mono text-lg tabular-nums text-muted-foreground/40 pt-1.5 w-8 flex-shrink-0 group-hover:text-primary/50 transition-colors">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+
+              {/* Content: title+icon on left, description on right at md+ */}
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-[14rem_1fr] gap-4 md:gap-12 items-start">
+                <div>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${f.iconClass}`}>
+                    {f.icon}
+                  </div>
+                  <h3 className="font-heading text-xl font-semibold text-foreground leading-snug">
+                    {f.title}
+                  </h3>
+                </div>
+
+                <div>
+                  <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+                    {f.description}
+                  </p>
+                  <ul className="flex flex-wrap gap-2">
+                    {f.highlights.map((h) => (
+                      <li
+                        key={h}
+                        className="text-xs px-2.5 py-1 rounded-full border border-border/70 text-muted-foreground"
+                      >
+                        {h}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">{f.title}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed mb-4 flex-1">{f.description}</p>
-              <ul className="flex flex-col gap-1.5">
-                {f.highlights.map((h) => (
-                  <li key={h} className="flex items-center gap-2 text-xs text-foreground">
-                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${f.dotClass}`} />
-                    {h}
-                  </li>
-                ))}
-              </ul>
             </div>
           ))}
         </div>
@@ -340,47 +412,45 @@ function FeaturesSection() {
 
 /* ─── How It Works ────────────────────────────────────────── */
 const steps = [
-  { step: "01", title: "Create your account", description: "Sign up in minutes — optionally anonymously. Your data stays private and you're always in control of what you share.", gradientClass: "from-primary to-primary/80" },
-  { step: "02", title: "Set up your profile", description: "Tell MAAYA a little about yourself. The more context you provide, the more personalized your dashboard and cycle insights will be.", gradientClass: "from-accent to-accent/80" },
-  { step: "03", title: "Track & learn", description: "Log your cycle, read educational articles, take quizzes, and explore topics tailored to your health journey.", gradientClass: "from-secondary to-secondary/80" },
-  { step: "04", title: "Connect with community", description: "Ask questions in the forum, read peer experiences, and get answers from verified doctors — all in a safe, moderated space.", gradientClass: "from-secondary to-primary" },
+  { step: "01", title: "Create your account", description: "Sign up in minutes — optionally anonymously. Your data stays private and you're always in control of what you share." },
+  { step: "02", title: "Set up your profile", description: "Tell MAAYA a little about yourself. The more context you provide, the more personalized your dashboard and cycle insights will be." },
+  { step: "03", title: "Track & learn", description: "Log your cycle, read educational articles, take quizzes, and explore topics tailored to your health journey." },
+  { step: "04", title: "Connect with community", description: "Ask questions in the forum, read peer experiences, and get answers from verified doctors — all in a safe, moderated space." },
 ];
 
 function HowItHelpsSection() {
   return (
     <section id="how-it-works" className="py-24 bg-card">
       <div className="max-w-6xl mx-auto px-6">
-        <div className="text-center mb-16">
-          <p className="text-xs font-semibold tracking-widest text-primary uppercase mb-3">
+        <div className="mb-16">
+          <p className="font-mono text-xs tracking-widest text-primary uppercase mb-3">
             How It Works
           </p>
-          <h2 className="text-4xl font-bold text-foreground mb-4">
+          <h2 className="font-heading text-4xl font-bold text-foreground leading-[1.1] tracking-tight">
             Getting started is{" "}
-            <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+            <span className="italic bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
               simple
             </span>
           </h2>
-          <p className="text-muted-foreground max-w-xl mx-auto text-base">
+          <p className="text-muted-foreground max-w-xl text-base mt-4">
             MAAYA is designed to be welcoming from day one — no medical background required.
           </p>
         </div>
 
-        <div className="relative">
-          <div className="hidden lg:block absolute top-8 left-[calc(12.5%+1rem)] right-[calc(12.5%+1rem)] h-px bg-gradient-to-r from-primary via-secondary to-secondary/60" />
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {steps.map((s) => (
-              <div key={s.step} className="flex flex-col items-center text-center">
-                <div className={`relative z-10 w-16 h-16 rounded-full flex items-center justify-center text-primary-foreground font-bold text-lg shadow-md mb-5 bg-gradient-to-br ${s.gradientClass}`}>
-                  {s.step}
-                </div>
-                <h3 className="text-base font-semibold text-foreground mb-2">{s.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{s.description}</p>
-              </div>
-            ))}
-          </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          {steps.map((s) => (
+            <div key={s.step} className="flex flex-col">
+              {/* DM Mono step number — large, light, distinctive */}
+              <span className="font-mono text-5xl font-light text-primary/20 leading-none mb-5 tabular-nums">
+                {s.step}
+              </span>
+              <h3 className="font-heading text-lg font-semibold text-foreground mb-2">{s.title}</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">{s.description}</p>
+            </div>
+          ))}
         </div>
 
-        <div className="mt-16 text-center">
+        <div className="mt-16">
           <a
             href="/register"
             className="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold text-primary-foreground bg-gradient-to-r from-primary to-accent rounded-xl shadow-lg hover:opacity-90 transition-all duration-200"
@@ -414,7 +484,7 @@ function ForProfessionals() {
                   </svg>
                 </div>
                 <div>
-                  <p className="font-semibold text-foreground">Verified Professional</p>
+                  <p className="font-medium text-foreground">Verified Professional</p>
                   <p className="text-sm text-muted-foreground">Doctor / Health Contributor</p>
                 </div>
                 <span className="ml-auto text-xs px-3 py-1 rounded-full bg-primary/10 text-primary font-medium border border-primary/20">
@@ -440,12 +510,12 @@ function ForProfessionals() {
 
           {/* Text */}
           <div className="order-1 lg:order-2">
-            <p className="text-xs font-semibold tracking-widest text-secondary uppercase mb-4">
+            <p className="font-mono text-xs tracking-widest text-secondary uppercase mb-4">
               For Healthcare Professionals
             </p>
-            <h2 className="text-4xl font-bold text-foreground mb-6 leading-tight">
+            <h2 className="font-heading text-4xl font-bold text-foreground mb-6 leading-[1.1] tracking-tight">
               Join MAAYA as a{" "}
-              <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              <span className="italic bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                 verified expert
               </span>
             </h2>
@@ -492,9 +562,8 @@ function LandingFooter() {
     <footer className="bg-card border-t border-primary/15">
       <div className="max-w-6xl mx-auto px-6 py-14">
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
-          {/* Brand */}
           <div className="lg:col-span-2">
-            <span className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+            <span className="font-heading text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent tracking-tight">
               MAAYA
             </span>
             <p className="text-sm text-muted-foreground mt-3 leading-relaxed max-w-xs">
@@ -504,7 +573,6 @@ function LandingFooter() {
             <p className="text-xs text-muted-foreground mt-4">Built with care by the MAAYA team.</p>
           </div>
 
-          {/* Platform */}
           <div>
             <p className="text-sm font-semibold text-foreground mb-4">Platform</p>
             <ul className="flex flex-col gap-2.5 text-sm text-muted-foreground">
@@ -522,7 +590,6 @@ function LandingFooter() {
             </ul>
           </div>
 
-          {/* Company */}
           <div>
             <p className="text-sm font-semibold text-foreground mb-4">Company</p>
             <ul className="flex flex-col gap-2.5 text-sm text-muted-foreground">

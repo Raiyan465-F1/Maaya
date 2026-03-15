@@ -39,3 +39,9 @@ next-env.d.ts
 
 docs/maaya
 docs/Db_draft.md
+
+.agents
+.env.example
+skills-lock.json
+.cursor
+docs/design.md
