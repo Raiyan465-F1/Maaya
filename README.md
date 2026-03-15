@@ -4,7 +4,7 @@
 
 Many people struggle to find reliable information about reproductive health, or feel uncomfortable asking questions openly. MAAYA aims to change that by creating a space where people can **learn, track their health, and connect with others in a safe environment**.
 
-Our goal is to combine **education, personal health tools, and community support** into a single platform that encourages awareness and informed decision-making.
+Our goal is to combine **education, personal health tools, and community support** into a single platform that encourages awareness and informed decision-making when it comes to adulthood.
 
 ---
 
