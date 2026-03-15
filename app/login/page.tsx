@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -69,8 +69,8 @@ function BrandPanel() {
   );
 }
 
-/* ─── Login page ──────────────────────────────────────────── */
-export default function LoginPage() {
+/* ─── Login form (uses useSearchParams, must be in Suspense) ── */
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/";
@@ -209,5 +209,37 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+/* ─── Fallback while search params are available ───────────── */
+function LoginPageFallback() {
+  return (
+    <div className="min-h-screen bg-background lg:grid lg:grid-cols-2">
+      <BrandPanel />
+      <div className="relative flex flex-col min-h-screen overflow-hidden">
+        <div className="lg:hidden flex items-center justify-between px-6 h-16 border-b border-primary/15 bg-card/80 backdrop-blur-md">
+          <Link href="/" className="font-heading text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent tracking-tight">
+            MAAYA
+          </Link>
+          <Link href="/register" className="text-sm font-medium text-primary hover:underline">
+            Register
+          </Link>
+        </div>
+        <div className="relative flex flex-1 items-center justify-center px-8 py-16">
+          <div className="w-full max-w-sm text-center text-muted-foreground">
+            Loading…
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginPageFallback />}>
+      <LoginPageContent />
+    </Suspense>
   );
 }
