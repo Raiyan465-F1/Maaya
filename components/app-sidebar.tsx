@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 
 const MAIN_NAV = [
@@ -15,6 +16,8 @@ const MAIN_NAV = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const initial = session?.user?.email?.[0]?.toUpperCase() ?? "?";
 
   return (
     <aside
@@ -74,8 +77,8 @@ export function AppSidebar() {
               : "text-foreground hover:bg-primary/10 hover:text-primary border border-transparent"
           )}
         >
-          <span className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-primary font-semibold text-sm">
-            P
+          <span className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-primary-foreground font-heading font-semibold text-sm">
+            {initial}
           </span>
           Profile
         </Link>

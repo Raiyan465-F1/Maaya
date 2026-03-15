@@ -1,21 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-/* ─── Mock data — will be replaced with API fetch later ─────── */
-const MOCK_USER = {
-  email: "user@example.com",
-  role: "user" as const,
-  accountStatus: "active" as const,
-  isAnonymous: false,
-  likedTags: ["menstrual-health", "wellness"],
-  ageGroup: "",
-  gender: "",
-  location: "",
-  createdAt: new Date().toISOString(),
-};
+/* ─── Types matching the API response ────────────────────────── */
+interface UserProfile {
+  id: string;
+  email: string;
+  role: "user" | "doctor" | "admin";
+  accountStatus: "pending" | "active" | "banned" | "suspended" | null;
+  isAnonymous: boolean | null;
+  likedTags: string[] | null;
+  ageGroup: string | null;
+  gender: string | null;
+  location: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
 
 /* ─── Avatar from initials ───────────────────────────────────── */
 function ProfileAvatar({ email, size = "lg" }: { email: string; size?: "sm" | "lg" }) {
@@ -59,7 +62,7 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-/* ─── Info row used in the details grid ──────────────────────── */
+/* ─── Info row ───────────────────────────────────────────────── */
 function InfoRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div>
@@ -74,51 +77,183 @@ function InfoRow({ label, value, mono }: { label: string; value: string; mono?: 
   );
 }
 
+/* ─── Loading skeleton ───────────────────────────────────────── */
+function ProfileSkeleton() {
+  return (
+    <>
+      <div className="relative mb-10">
+        <div className="h-40 sm:h-48 rounded-3xl bg-muted animate-pulse" />
+        <div className="absolute -bottom-10 left-6 sm:left-8">
+          <div className="w-24 h-24 rounded-full bg-muted animate-pulse ring-4 ring-card" />
+        </div>
+      </div>
+      <div className="mb-10 pl-1 space-y-3">
+        <div className="h-7 w-48 bg-muted rounded-lg animate-pulse" />
+        <div className="h-4 w-56 bg-muted rounded animate-pulse" />
+        <div className="h-3 w-36 bg-muted rounded animate-pulse" />
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-6">
+        <div className="space-y-6">
+          <div className="bg-card rounded-2xl border border-border p-6 h-40 animate-pulse" />
+          <div className="bg-card rounded-2xl border border-border p-6 h-28 animate-pulse" />
+          <div className="bg-card rounded-2xl border border-border p-6 h-24 animate-pulse" />
+        </div>
+        <div className="bg-card rounded-2xl border border-border p-6 h-80 animate-pulse" />
+      </div>
+    </>
+  );
+}
+
 /* ─── Profile page ───────────────────────────────────────────── */
 export default function ProfilePage() {
-  const [isAnonymous, setIsAnonymous] = useState(MOCK_USER.isAnonymous);
-  const [ageGroup, setAgeGroup] = useState(MOCK_USER.ageGroup);
-  const [gender, setGender] = useState(MOCK_USER.gender);
-  const [location, setLocation] = useState(MOCK_USER.location);
+  const { status: sessionStatus } = useSession();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const memberSince = new Date(MOCK_USER.createdAt).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
+  // Editable fields
+  const [isAnonymous, setIsAnonymous] = useState(false);
+  const [ageGroup, setAgeGroup] = useState("");
+  const [gender, setGender] = useState("");
+  const [location, setLocation] = useState("");
+
+  // Save state
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [togglingAnon, setTogglingAnon] = useState(false);
+
+  /* ── Fetch profile ───────────────────────────────────────── */
+  const fetchProfile = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch("/api/profile");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Failed to load profile (${res.status})`);
+      }
+      const data: UserProfile = await res.json();
+      setProfile(data);
+      setIsAnonymous(data.isAnonymous ?? false);
+      setAgeGroup(data.ageGroup ?? "");
+      setGender(data.gender ?? "");
+      setLocation(data.location ?? "");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (sessionStatus === "authenticated") {
+      fetchProfile();
+    } else if (sessionStatus === "unauthenticated") {
+      setLoading(false);
+      setError("You must be logged in to view your profile.");
+    }
+  }, [sessionStatus, fetchProfile]);
+
+  /* ── PATCH helper ────────────────────────────────────────── */
+  async function patchProfile(body: Record<string, unknown>) {
+    const res = await fetch("/api/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Update failed");
+    return data as UserProfile;
+  }
+
+  /* ── Save personal details ───────────────────────────────── */
+  async function handleSave() {
+    setSaving(true);
+    setSaveMsg(null);
+    try {
+      const updated = await patchProfile({
+        ageGroup: ageGroup || null,
+        gender: gender || null,
+        location: location || null,
+      });
+      setProfile(updated);
+      setSaveMsg({ type: "success", text: "Profile updated successfully." });
+      setTimeout(() => setSaveMsg(null), 3000);
+    } catch (err) {
+      setSaveMsg({ type: "error", text: err instanceof Error ? err.message : "Save failed" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  /* ── Toggle anonymous ────────────────────────────────────── */
+  async function handleToggleAnonymous() {
+    const newValue = !isAnonymous;
+    setIsAnonymous(newValue);
+    setTogglingAnon(true);
+    try {
+      const updated = await patchProfile({ isAnonymous: newValue });
+      setProfile(updated);
+    } catch {
+      setIsAnonymous(!newValue);
+    } finally {
+      setTogglingAnon(false);
+    }
+  }
+
+  /* ── Derived values ──────────────────────────────────────── */
+  const memberSince = profile
+    ? new Date(profile.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })
+    : "";
+
+  const hasUnsavedChanges =
+    profile &&
+    (ageGroup !== (profile.ageGroup ?? "") ||
+      gender !== (profile.gender ?? "") ||
+      location !== (profile.location ?? ""));
+
+  /* ── Render ──────────────────────────────────────────────── */
+  if (loading) return <ProfileSkeleton />;
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <p className="font-heading text-xl font-semibold text-foreground mb-2">
+          Couldn&apos;t load profile
+        </p>
+        <p className="text-sm text-muted-foreground mb-6">{error}</p>
+        <Button onClick={fetchProfile} className="rounded-xl px-6">
+          Try again
+        </Button>
+      </div>
+    );
+  }
+
+  if (!profile) return null;
 
   return (
     <>
       {/* ── Hero banner with avatar ─────────────────────────── */}
       <div className="relative mb-10">
-        {/* Gradient banner */}
         <div className="h-40 sm:h-48 rounded-3xl bg-gradient-to-br from-primary/15 via-accent/10 to-secondary/15 border border-primary/10 overflow-hidden relative">
-          {/* Subtle decorative shapes */}
           <div aria-hidden className="pointer-events-none absolute -top-16 -right-16 w-60 h-60 rounded-full bg-primary/10 blur-3xl" />
           <div aria-hidden className="pointer-events-none absolute -bottom-16 -left-16 w-48 h-48 rounded-full bg-secondary/10 blur-3xl" />
-
-          {/* Section label inside banner */}
           <div className="absolute top-5 left-6">
-            <p className="font-mono text-xs tracking-widest text-primary uppercase">
-              Profile
-            </p>
+            <p className="font-mono text-xs tracking-widest text-primary uppercase">Profile</p>
           </div>
         </div>
-
-        {/* Avatar — overlaps banner bottom */}
         <div className="absolute -bottom-10 left-6 sm:left-8">
-          <ProfileAvatar email={MOCK_USER.email} size="lg" />
+          <ProfileAvatar email={profile.email} size="lg" />
         </div>
-
-        {/* Role pill — top-right of banner */}
         <div className="absolute top-5 right-6 flex items-center gap-2">
-          <StatusBadge status={MOCK_USER.accountStatus} />
+          <StatusBadge status={profile.accountStatus ?? "pending"} />
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20 capitalize">
-            {MOCK_USER.role}
+            {profile.role}
           </span>
         </div>
       </div>
 
-      {/* ── Name / email row below avatar ────────────────────── */}
+      {/* ── Identity row ─────────────────────────────────────── */}
       <div className="mb-10 pl-1">
         <h1 className="font-heading text-2xl font-bold text-foreground tracking-tight leading-snug">
           Your{" "}
@@ -126,31 +261,32 @@ export default function ProfilePage() {
             account
           </span>
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">{MOCK_USER.email}</p>
+        <p className="text-sm text-muted-foreground mt-1">{profile.email}</p>
         <p className="font-mono text-xs text-muted-foreground/60 mt-1 tabular-nums">
           Member since {memberSince}
         </p>
       </div>
 
-      {/* ── Content grid: 2-col on lg ────────────────────────── */}
+      {/* ── Content grid ─────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-6">
-
-        {/* ── Left column: account info + privacy ──────────── */}
+        {/* Left column */}
         <div className="space-y-6">
-          {/* Account details card */}
+          {/* Account details */}
           <section className="bg-card rounded-2xl border border-border p-6">
             <h2 className="font-heading text-base font-semibold text-foreground tracking-tight mb-5">
               Account details
             </h2>
-            <div className="grid grid-cols-2 gap-5">
-              <InfoRow label="Email" value={MOCK_USER.email} />
-              <InfoRow label="Role" value={MOCK_USER.role.charAt(0).toUpperCase() + MOCK_USER.role.slice(1)} />
-              <InfoRow label="Status" value={MOCK_USER.accountStatus.charAt(0).toUpperCase() + MOCK_USER.accountStatus.slice(1)} />
-              <InfoRow label="Member since" value={memberSince} mono />
+            <div className="space-y-5">
+              <InfoRow label="Email" value={profile.email} />
+              <div className="grid grid-cols-3 gap-5">
+                <InfoRow label="Role" value={profile.role.charAt(0).toUpperCase() + profile.role.slice(1)} />
+                <InfoRow label="Status" value={(profile.accountStatus ?? "pending").charAt(0).toUpperCase() + (profile.accountStatus ?? "pending").slice(1)} />
+                <InfoRow label="Member since" value={memberSince} mono />
+              </div>
             </div>
           </section>
 
-          {/* Privacy card */}
+          {/* Privacy */}
           <section className="bg-card rounded-2xl border border-border p-6">
             <h2 className="font-heading text-base font-semibold text-foreground tracking-tight mb-5">
               Privacy
@@ -160,9 +296,10 @@ export default function ProfilePage() {
                 type="button"
                 role="switch"
                 aria-checked={isAnonymous}
-                onClick={() => setIsAnonymous(!isAnonymous)}
+                disabled={togglingAnon}
+                onClick={handleToggleAnonymous}
                 className={cn(
-                  "relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                  "relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50",
                   isAnonymous ? "bg-primary border-primary/30" : "bg-input border-border"
                 )}
               >
@@ -181,7 +318,6 @@ export default function ProfilePage() {
                 </p>
               </div>
             </div>
-
             {isAnonymous && (
               <div className="mt-4 px-4 py-3 rounded-xl bg-primary/5 border border-primary/10">
                 <p className="text-xs text-primary font-medium">
@@ -191,7 +327,7 @@ export default function ProfilePage() {
             )}
           </section>
 
-          {/* Liked tags card */}
+          {/* Interests */}
           <section className="bg-card rounded-2xl border border-border p-6">
             <h2 className="font-heading text-base font-semibold text-foreground tracking-tight mb-2">
               Interests
@@ -199,9 +335,9 @@ export default function ProfilePage() {
             <p className="text-xs text-muted-foreground mb-4">
               Tags you follow for personalized content recommendations.
             </p>
-            {MOCK_USER.likedTags && MOCK_USER.likedTags.length > 0 ? (
+            {profile.likedTags && profile.likedTags.length > 0 ? (
               <div className="flex flex-wrap gap-2">
-                {MOCK_USER.likedTags.map((tag) => (
+                {profile.likedTags.map((tag) => (
                   <span
                     key={tag}
                     className="text-xs px-3 py-1.5 rounded-full bg-primary/8 text-primary border border-primary/15 font-medium"
@@ -211,12 +347,14 @@ export default function ProfilePage() {
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground italic">No tags followed yet.</p>
+              <p className="text-xs text-muted-foreground italic">
+                No tags followed yet. These will appear as you interact with the forum and articles.
+              </p>
             )}
           </section>
         </div>
 
-        {/* ── Right column: editable profile fields ────────── */}
+        {/* Right column — editable */}
         <section className="bg-card rounded-2xl border border-primary/15 shadow-sm p-6 h-fit">
           <h2 className="font-heading text-base font-semibold text-foreground tracking-tight mb-1">
             Personal details
@@ -283,14 +421,27 @@ export default function ProfilePage() {
             <div className="pt-2">
               <Button
                 type="button"
-                disabled
+                disabled={saving || !hasUnsavedChanges}
+                onClick={handleSave}
                 className="w-full sm:w-auto h-11 px-8 text-sm font-semibold bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-xl hover:opacity-90 transition-opacity shadow-sm disabled:opacity-60"
               >
-                Save changes
+                {saving ? "Saving…" : "Save changes"}
               </Button>
-              <p className="text-xs text-muted-foreground mt-3">
-                API integration coming soon — your changes won&apos;t persist yet.
-              </p>
+
+              {saveMsg && (
+                <p className={cn(
+                  "text-xs mt-3 font-medium",
+                  saveMsg.type === "success" ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
+                )}>
+                  {saveMsg.text}
+                </p>
+              )}
+
+              {hasUnsavedChanges && !saveMsg && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-3">
+                  You have unsaved changes.
+                </p>
+              )}
             </div>
           </div>
         </section>
@@ -305,20 +456,10 @@ export default function ProfilePage() {
           These actions are irreversible. Proceed with caution.
         </p>
         <div className="flex flex-col sm:flex-row gap-3">
-          <Button
-            type="button"
-            disabled
-            variant="destructive"
-            className="h-10 px-5 text-sm rounded-xl"
-          >
+          <Button type="button" disabled variant="destructive" className="h-10 px-5 text-sm rounded-xl">
             Delete account
           </Button>
-          <Button
-            type="button"
-            disabled
-            variant="outline"
-            className="h-10 px-5 text-sm rounded-xl text-destructive border-destructive/30 hover:bg-destructive/5"
-          >
+          <Button type="button" disabled variant="outline" className="h-10 px-5 text-sm rounded-xl text-destructive border-destructive/30 hover:bg-destructive/5">
             Export my data
           </Button>
         </div>
