@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { eq } from "drizzle-orm";
 import { db } from "@/src/db";
-import { users } from "@/src/schema";
+import { users, doctorProfiles } from "@/src/schema";
 import { authOptions } from "@/lib/auth";
 import { withCorsHeaders } from "@/lib/cors";
 
@@ -64,7 +64,21 @@ export async function GET(request: NextRequest) {
       return jsonResponse({ error: "User not found" }, 404, origin);
     }
 
-    return jsonResponse(user, 200, origin);
+    const payload: Record<string, unknown> = { ...user };
+
+    if (user.role === "doctor") {
+      const [doctorProfile] = await db
+        .select({
+          specialty: doctorProfiles.specialty,
+          availabilityInfo: doctorProfiles.availabilityInfo,
+        })
+        .from(doctorProfiles)
+        .where(eq(doctorProfiles.userId, user.id))
+        .limit(1);
+      payload.doctorProfile = doctorProfile ?? { specialty: null, availabilityInfo: null };
+    }
+
+    return jsonResponse(payload, 200, origin);
   } catch (err) {
     console.error("Profile GET error:", err);
     return jsonResponse(
@@ -77,8 +91,9 @@ export async function GET(request: NextRequest) {
 
 /**
  * PATCH /api/profile
- * Updates the current user's profile (privacy preferences and optional profile fields).
- * Body: { isAnonymous?: boolean, likedTags?: string[], ageGroup?: string, gender?: string, location?: string }
+ * Updates the current user's profile.
+ * Body: { isAnonymous?: boolean, likedTags?: string[], ageGroup?: string, gender?: string, location?: string, specialty?: string, availabilityInfo?: string }
+ * specialty and availabilityInfo only apply when role is doctor.
  */
 export async function PATCH(request: NextRequest) {
   const origin = request.headers.get("origin");
@@ -124,7 +139,18 @@ export async function PATCH(request: NextRequest) {
       updates.location = v || null;
     }
 
-    if (Object.keys(updates).length <= 1) {
+    const hasUserUpdates = Object.keys(updates).length > 1;
+
+    const doctorUpdates: { specialty?: string | null; availabilityInfo?: string | null } = {};
+    if (typeof body.specialty === "string") {
+      doctorUpdates.specialty = body.specialty.trim().slice(0, 100) || null;
+    }
+    if (typeof body.availabilityInfo === "string") {
+      doctorUpdates.availabilityInfo = body.availabilityInfo.trim() || null;
+    }
+    const hasDoctorUpdates = Object.keys(doctorUpdates).length > 0;
+
+    if (!hasUserUpdates && !hasDoctorUpdates) {
       return jsonResponse(
         { error: "No valid fields to update" },
         400,
@@ -132,10 +158,36 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    await db
-      .update(users)
-      .set(updates)
-      .where(eq(users.id, session.user.id));
+    if (hasUserUpdates) {
+      await db
+        .update(users)
+        .set(updates)
+        .where(eq(users.id, session.user.id));
+    }
+
+    if (hasDoctorUpdates && session.user.role === "doctor") {
+      const [existing] = await db
+        .select({ userId: doctorProfiles.userId })
+        .from(doctorProfiles)
+        .where(eq(doctorProfiles.userId, session.user.id))
+        .limit(1);
+
+      if (existing) {
+        await db
+          .update(doctorProfiles)
+          .set({
+            ...doctorUpdates,
+            updatedAt: new Date(),
+          })
+          .where(eq(doctorProfiles.userId, session.user.id));
+      } else {
+        await db.insert(doctorProfiles).values({
+          userId: session.user.id,
+          specialty: doctorUpdates.specialty ?? null,
+          availabilityInfo: doctorUpdates.availabilityInfo ?? null,
+        });
+      }
+    }
 
     const [updated] = await db
       .select(PROFILE_SELECT)
@@ -143,7 +195,21 @@ export async function PATCH(request: NextRequest) {
       .where(eq(users.id, session.user.id))
       .limit(1);
 
-    return jsonResponse(updated ?? {}, 200, origin);
+    const payload: Record<string, unknown> = { ...(updated ?? {}) };
+
+    if (updated?.role === "doctor") {
+      const [doctorProfile] = await db
+        .select({
+          specialty: doctorProfiles.specialty,
+          availabilityInfo: doctorProfiles.availabilityInfo,
+        })
+        .from(doctorProfiles)
+        .where(eq(doctorProfiles.userId, session.user.id))
+        .limit(1);
+      payload.doctorProfile = doctorProfile ?? { specialty: null, availabilityInfo: null };
+    }
+
+    return jsonResponse(payload, 200, origin);
   } catch (err) {
     console.error("Profile PATCH error:", err);
     return jsonResponse(

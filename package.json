@@ -12,7 +12,9 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit push",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "db:seed-admin": "tsx scripts/seed-admin.ts",
+    "db:seed-doctors": "tsx scripts/seed-doctors.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
@@ -46,6 +48,7 @@
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "tailwindcss": "^4.1.18",
+    "tsx": "^4.19.2",
     "typescript": "^5.9.3"
   }
 }

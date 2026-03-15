@@ -6,6 +6,11 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /* ─── Types matching the API response ────────────────────────── */
+interface DoctorProfileFragment {
+  specialty: string | null;
+  availabilityInfo: string | null;
+}
+
 interface UserProfile {
   id: string;
   email: string;
@@ -18,6 +23,7 @@ interface UserProfile {
   location: string | null;
   createdAt: string;
   updatedAt: string;
+  doctorProfile?: DoctorProfileFragment | null;
 }
 
 /* ─── Avatar from initials ───────────────────────────────────── */
@@ -116,6 +122,8 @@ export default function ProfilePage() {
   const [ageGroup, setAgeGroup] = useState("");
   const [gender, setGender] = useState("");
   const [location, setLocation] = useState("");
+  const [specialty, setSpecialty] = useState("");
+  const [availabilityInfo, setAvailabilityInfo] = useState("");
 
   // Save state
   const [saving, setSaving] = useState(false);
@@ -138,6 +146,8 @@ export default function ProfilePage() {
       setAgeGroup(data.ageGroup ?? "");
       setGender(data.gender ?? "");
       setLocation(data.location ?? "");
+      setSpecialty(data.doctorProfile?.specialty ?? "");
+      setAvailabilityInfo(data.doctorProfile?.availabilityInfo ?? "");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -166,17 +176,24 @@ export default function ProfilePage() {
     return data as UserProfile;
   }
 
-  /* ── Save personal details ───────────────────────────────── */
+  /* ── Save personal details (and doctor profile when applicable) ── */
   async function handleSave() {
     setSaving(true);
     setSaveMsg(null);
     try {
-      const updated = await patchProfile({
+      const body: Record<string, unknown> = {
         ageGroup: ageGroup || null,
         gender: gender || null,
         location: location || null,
-      });
+      };
+      if (profile?.role === "doctor") {
+        body.specialty = specialty.trim() || null;
+        body.availabilityInfo = availabilityInfo.trim() || null;
+      }
+      const updated = await patchProfile(body);
       setProfile(updated);
+      setSpecialty(updated.doctorProfile?.specialty ?? "");
+      setAvailabilityInfo(updated.doctorProfile?.availabilityInfo ?? "");
       setSaveMsg({ type: "success", text: "Profile updated successfully." });
       setTimeout(() => setSaveMsg(null), 3000);
     } catch (err) {
@@ -210,7 +227,10 @@ export default function ProfilePage() {
     profile &&
     (ageGroup !== (profile.ageGroup ?? "") ||
       gender !== (profile.gender ?? "") ||
-      location !== (profile.location ?? ""));
+      location !== (profile.location ?? "") ||
+      (profile.role === "doctor" &&
+        (specialty !== (profile.doctorProfile?.specialty ?? "") ||
+          availabilityInfo !== (profile.doctorProfile?.availabilityInfo ?? ""))));
 
   /* ── Render ──────────────────────────────────────────────── */
   if (loading) return <ProfileSkeleton />;
@@ -286,6 +306,42 @@ export default function ProfilePage() {
             </div>
           </section>
 
+          {/* Admin callout */}
+          {profile.role === "admin" && (
+            <section className="bg-primary/5 rounded-2xl border border-primary/15 p-5">
+              <p className="font-mono text-xs tracking-widest text-primary uppercase mb-2">
+                Admin access
+              </p>
+              <p className="text-sm text-foreground leading-relaxed">
+                You have admin access. Doctors are onboarded by admins; use the admin area to manage roles and verification.
+              </p>
+            </section>
+          )}
+
+          {/* Doctor: read-only professional summary in left column */}
+          {profile.role === "doctor" && (
+            <section className="bg-card rounded-2xl border border-secondary/20 p-6">
+              <h2 className="font-heading text-base font-semibold text-foreground tracking-tight mb-2">
+                Professional profile
+              </h2>
+              <p className="text-xs text-muted-foreground mb-4">
+                Visible to users in Doctor&apos;s Help. Edit below.
+              </p>
+              <div className="space-y-3">
+                <InfoRow
+                  label="Specialty"
+                  value={profile.doctorProfile?.specialty ?? "—"}
+                />
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Availability</p>
+                  <p className="text-sm text-foreground whitespace-pre-wrap">
+                    {profile.doctorProfile?.availabilityInfo || "—"}
+                  </p>
+                </div>
+              </div>
+            </section>
+          )}
+
           {/* Privacy */}
           <section className="bg-card rounded-2xl border border-border p-6">
             <h2 className="font-heading text-base font-semibold text-foreground tracking-tight mb-5">
@@ -356,6 +412,45 @@ export default function ProfilePage() {
 
         {/* Right column — editable */}
         <section className="bg-card rounded-2xl border border-primary/15 shadow-sm p-6 h-fit">
+          {profile.role === "doctor" && (
+            <>
+              <h2 className="font-heading text-base font-semibold text-foreground tracking-tight mb-1">
+                Professional profile
+              </h2>
+              <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
+                Shown to users in Doctor&apos;s Help. Keeps your listing up to date.
+              </p>
+              <div className="space-y-5 mb-8">
+                <div>
+                  <label htmlFor="profile-specialty" className="block text-sm font-medium text-foreground mb-1.5">
+                    Specialty
+                  </label>
+                  <input
+                    id="profile-specialty"
+                    type="text"
+                    value={specialty}
+                    onChange={(e) => setSpecialty(e.target.value)}
+                    placeholder="e.g. Gynecology, Reproductive Health"
+                    className="w-full h-11 px-3.5 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-primary/50 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="profile-availability" className="block text-sm font-medium text-foreground mb-1.5">
+                    Availability
+                  </label>
+                  <textarea
+                    id="profile-availability"
+                    value={availabilityInfo}
+                    onChange={(e) => setAvailabilityInfo(e.target.value)}
+                    placeholder="e.g. Weekdays 9–5, or timezone and hours"
+                    rows={3}
+                    className="w-full px-3.5 py-3 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-primary/50 transition-colors resize-none"
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
           <h2 className="font-heading text-base font-semibold text-foreground tracking-tight mb-1">
             Personal details
           </h2>
