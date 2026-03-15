@@ -371,7 +371,7 @@ function FeaturesSection() {
               className="py-10 flex gap-6 md:gap-10 items-start group"
             >
               {/* Number */}
-              <span className="font-mono text-sm tabular-nums text-muted-foreground/40 pt-1.5 w-8 flex-shrink-0 group-hover:text-primary/50 transition-colors">
+              <span className="font-mono text-lg tabular-nums text-muted-foreground/40 pt-1.5 w-8 flex-shrink-0 group-hover:text-primary/50 transition-colors">
                 {String(i + 1).padStart(2, "0")}
               </span>
 

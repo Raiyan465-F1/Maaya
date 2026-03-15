@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { signIn } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
 /* ─── Left brand panel ────────────────────────────────────── */
@@ -69,13 +71,38 @@ function BrandPanel() {
 
 /* ─── Login page ──────────────────────────────────────────── */
 export default function LoginPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") ?? "/";
+  const justRegistered = searchParams.get("registered") === "1";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // API integration in a later session
-    console.log("Login submitted", { email, password });
+    setError(null);
+    setIsLoading(true);
+
+    const result = await signIn("credentials", {
+      email: email.trim().toLowerCase(),
+      password,
+      redirect: false,
+    });
+
+    setIsLoading(false);
+
+    if (result?.error) {
+      setError("Invalid email or password. Please try again.");
+      return;
+    }
+
+    if (result?.ok) {
+      router.push(callbackUrl);
+      router.refresh();
+    }
   }
 
   return (
@@ -117,6 +144,16 @@ export default function LoginPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
+              {justRegistered && (
+                <div className="rounded-xl border border-primary/30 bg-primary/10 px-3.5 py-2.5 text-sm text-primary">
+                  Account created. Please log in.
+                </div>
+              )}
+              {error && (
+                <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">
+                  {error}
+                </div>
+              )}
               <div>
                 <label htmlFor="login-email" className="block text-sm font-medium text-foreground mb-1.5">
                   Email
@@ -151,9 +188,10 @@ export default function LoginPage() {
 
               <Button
                 type="submit"
-                className="w-full h-11 text-base font-semibold bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-xl hover:opacity-90 transition-opacity shadow-sm"
+                disabled={isLoading}
+                className="w-full h-11 text-base font-semibold bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-xl hover:opacity-90 transition-opacity shadow-sm disabled:opacity-70"
               >
-                Log in
+                {isLoading ? "Signing in…" : "Log in"}
               </Button>
             </form>
 

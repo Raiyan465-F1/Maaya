@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -71,14 +72,44 @@ function BrandPanel() {
 
 /* ─── Register page ───────────────────────────────────────── */
 export default function RegisterPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // API integration in a later session
-    console.log("Register submitted", { email, password });
+    setError(null);
+    if (!passwordValid || !passwordsMatch) return;
+    setIsLoading(true);
+
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setError((data.error as string) || "Registration failed. Please try again.");
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(false);
+      router.push("/login?registered=1");
+      router.refresh();
+    } catch {
+      setError("Something went wrong. Please try again.");
+      setIsLoading(false);
+    }
   }
 
   const passwordValid = password.length >= MIN_PASSWORD_LENGTH;
@@ -124,6 +155,11 @@ export default function RegisterPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
+              {error && (
+                <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">
+                  {error}
+                </div>
+              )}
               <div>
                 <label htmlFor="register-email" className="block text-sm font-medium text-foreground mb-1.5">
                   Email
@@ -189,9 +225,10 @@ export default function RegisterPage() {
 
               <Button
                 type="submit"
-                className="w-full h-11 text-base font-semibold bg-gradient-to-r from-secondary to-primary text-primary-foreground rounded-xl hover:opacity-90 transition-opacity shadow-sm"
+                disabled={isLoading || !passwordValid || !passwordsMatch}
+                className="w-full h-11 text-base font-semibold bg-gradient-to-r from-secondary to-primary text-primary-foreground rounded-xl hover:opacity-90 transition-opacity shadow-sm disabled:opacity-70"
               >
-                Register
+                {isLoading ? "Creating account…" : "Register"}
               </Button>
             </form>
 
