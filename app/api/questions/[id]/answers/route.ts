@@ -20,11 +20,12 @@ function jsonResponse(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const origin = request.headers.get("origin");
-    const questionId = parseInt(params.id);
+    const questionId = parseInt(id);
 
     if (isNaN(questionId)) {
       return jsonResponse({ error: "Invalid question ID" }, 400, origin);
@@ -55,12 +56,13 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const origin = request.headers.get("origin");
     const session = await getServerSession(authOptions);
-    const questionId = parseInt(params.id);
+    const questionId = parseInt(id);
 
     if (!session?.user?.id) {
       return jsonResponse({ error: "Unauthorized" }, 401, origin);
