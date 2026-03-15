@@ -6,6 +6,7 @@ export const accountStatusEnum = pgEnum("account_status", accountStatus);
 
 export const users = pgTable("users", {
   id: uuid("user_id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 255 }),
   email: varchar("email", { length: 255 }).notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   role: userRoleEnum("role").notNull(),
