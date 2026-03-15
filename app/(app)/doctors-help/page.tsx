@@ -388,8 +388,8 @@ export default function DoctorsHelpPage() {
       {/* Sidebar */}
       <div className="w-80 shrink-0">
         <div className="sticky top-8 space-y-6">
-          <div className="bg-gradient-to-r from-secondary to-primary p-6 rounded-2xl border border-border">
-            <h2 className="font-heading text-xl font-semibold text-white mb-4">
+          <div className="bg-card rounded-2xl border border-border p-6">
+            <h2 className="font-heading text-xl font-semibold text-foreground mb-4">
               Share your question 🌸
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
