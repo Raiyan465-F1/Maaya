@@ -23,10 +23,11 @@ export async function GET(request: NextRequest) {
     const doctors = await db
       .select({
         id: doctorProfiles.id,
+        email: users.email,
         specialty: doctorProfiles.specialty,
         availabilityInfo: doctorProfiles.availabilityInfo,
         userId: doctorProfiles.userId,
-        // Add user fields as needed
+        location: users.location,
       })
       .from(doctorProfiles)
       .innerJoin(users, eq(doctorProfiles.userId, users.id))

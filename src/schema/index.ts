@@ -20,6 +20,9 @@ export * from "./reports";
 // Doctor Q&A
 export * from "./doctor-qa";
 
+// Doctor Ratings (for ranking doctors)
+export * from "./doctor-ratings";
+
 // Alerts
 export * from "./alerts";
 

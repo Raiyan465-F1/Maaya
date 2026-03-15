@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
 interface Question {
@@ -25,9 +26,23 @@ export default function DoctorsHelpPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [answeringQuestionId, setAnsweringQuestionId] = useState<number | null>(null);
+  const [answerText, setAnswerText] = useState('');
+  const [isSubmittingAnswer, setIsSubmittingAnswer] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [topDoctors, setTopDoctors] = useState<Array<{
+    userId: string;
+    email: string;
+    specialty: string;
+    availabilityInfo: string;
+    activityCount: number;
+    avgRating: number;
+  }>>([]);
 
   useEffect(() => {
     fetchQuestions();
+    fetchTopDoctors();
+    fetchUserRole();
   }, []);
 
   useEffect(() => {
@@ -50,6 +65,30 @@ export default function DoctorsHelpPage() {
       console.error('Error fetching questions:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchTopDoctors = async () => {
+    try {
+      const response = await fetch('/api/doctors/top');
+      if (response.ok) {
+        const data = await response.json();
+        setTopDoctors(data);
+      }
+    } catch (error) {
+      console.error('Error fetching top doctors:', error);
+    }
+  };
+
+  const fetchUserRole = async () => {
+    try {
+      const response = await fetch('/api/profile');
+      if (response.ok) {
+        const userData = await response.json();
+        setUserRole(userData.role);
+      }
+    } catch (error) {
+      console.error('Error fetching user role:', error);
     }
   };
 
@@ -83,6 +122,38 @@ export default function DoctorsHelpPage() {
       alert('An error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleAnswerSubmit = async (e: React.FormEvent, questionId: number) => {
+    e.preventDefault();
+    if (!answerText.trim()) return;
+
+    setIsSubmittingAnswer(true);
+    try {
+      const response = await fetch(`/api/questions/${questionId}/answers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          answerText: answerText.trim(),
+        }),
+      });
+
+      if (response.ok) {
+        setAnswerText('');
+        setAnsweringQuestionId(null);
+        alert('Answer posted successfully!');
+        fetchQuestions(); // Refresh to show the new answer
+      } else {
+        alert('Failed to post answer. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error posting answer:', error);
+      alert('An error occurred. Please try again.');
+    } finally {
+      setIsSubmittingAnswer(false);
     }
   };
 
@@ -236,21 +307,78 @@ export default function DoctorsHelpPage() {
                       <span>
                         {question.isAnonymous ? 'Anonymous' : question.userEmail}
                       </span>
-                      {!question.isAnonymous && question.userAgeGroup && (
-                        <span>{question.userAgeGroup}</span>
-                      )}
-                      {!question.isAnonymous && question.userGender && (
-                        <span>{question.userGender}</span>
-                      )}
                       <span>{formatDate(question.createdAt)}</span>
                     </div>
                   </div>
-                  <div className="ml-4">
+                  <div className="ml-4 flex flex-col items-end gap-2">
                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300">
                       Pending Answer
                     </span>
+                    {userRole === 'doctor' && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setAnsweringQuestionId(answeringQuestionId === question.id ? null : question.id);
+                            setAnswerText('');
+                          }}
+                          className="text-xs"
+                        >
+                          {answeringQuestionId === question.id ? 'Cancel' : 'Answer'}
+                        </Button>
+                        {!question.isAnonymous && (question.userAgeGroup || question.userGender) && (
+                          <div className="text-xs text-muted-foreground text-right">
+                            {question.userAgeGroup && <span>Age: {question.userAgeGroup}</span>}
+                            {question.userAgeGroup && question.userGender && <span className="mx-1">•</span>}
+                            {question.userGender && <span>Gender: {question.userGender}</span>}
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
+
+                {/* Answer Form */}
+                {answeringQuestionId === question.id && userRole === 'doctor' && (
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <form onSubmit={(e) => handleAnswerSubmit(e, question.id)} className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-2">
+                          Your Answer
+                        </label>
+                        <textarea
+                          value={answerText}
+                          onChange={(e) => setAnswerText(e.target.value)}
+                          placeholder="Provide a helpful answer to this question..."
+                          className="w-full min-h-[100px] px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                          required
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          type="submit"
+                          size="sm"
+                          disabled={isSubmittingAnswer || !answerText.trim()}
+                        >
+                          {isSubmittingAnswer ? 'Posting...' : 'Post Answer'}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setAnsweringQuestionId(null);
+                            setAnswerText('');
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
               </div>
             ))
           )}
@@ -259,16 +387,13 @@ export default function DoctorsHelpPage() {
 
       {/* Sidebar */}
       <div className="w-80 shrink-0">
-        <div className="sticky top-8">
+        <div className="sticky top-8 space-y-6">
           <div className="bg-card rounded-2xl border border-border p-6">
             <h2 className="font-heading text-xl font-semibold text-foreground mb-4">
-              Post a Question
+              Share your question 🌸
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="question" className="block text-sm font-medium text-foreground mb-2">
-                  Your Question
-                </label>
                 <textarea
                   id="question"
                   value={questionText}
@@ -305,6 +430,46 @@ export default function DoctorsHelpPage() {
               <p className="text-xs text-muted-foreground">
                 Your question will be reviewed by our medical professionals before being published.
               </p>
+            </div>
+          </div>
+
+          {/* Top Doctors Panel */}
+          <div className="bg-card rounded-2xl border border-border overflow-hidden">
+            <div className="p-6">
+              <h2 className="font-heading text-xl font-semibold text-foreground mb-4">
+                Doctors of The Day!
+              </h2>
+              {topDoctors.length === 0 ? (
+                <div className="text-sm text-muted-foreground">
+                  No activity yet. Answers will appear here once doctors start responding.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {topDoctors.map((doctor) => (
+                    <div key={doctor.userId} className="rounded-xl border border-border p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{doctor.email}</p>
+                          <p className="text-xs text-muted-foreground">{doctor.specialty}</p>
+                          <p className="text-xs text-muted-foreground">{doctor.availabilityInfo}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-foreground">{doctor.avgRating.toFixed(1)}★</p>
+                          <p className="text-xs text-muted-foreground">{doctor.activityCount} answers</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-6 flex justify-end">
+                <Link href="/doctors-help/verified" className="mt-1">
+                  <Button variant="secondary" size="sm">
+                    View all verified doctors
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
         </div>
