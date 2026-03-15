@@ -388,15 +388,12 @@ export default function DoctorsHelpPage() {
       {/* Sidebar */}
       <div className="w-80 shrink-0">
         <div className="sticky top-8 space-y-6">
-          <div className="bg-card rounded-2xl border border-border p-6">
-            <h2 className="font-heading text-xl font-semibold text-foreground mb-4">
-              Post a Question
+          <div className="bg-gradient-to-r from-secondary to-primary p-6 rounded-2xl border border-border">
+            <h2 className="font-heading text-xl font-semibold text-white mb-4">
+              Share your question 🌸
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="question" className="block text-sm font-medium text-foreground mb-2">
-                  Your Question
-                </label>
                 <textarea
                   id="question"
                   value={questionText}
@@ -437,8 +434,8 @@ export default function DoctorsHelpPage() {
           </div>
 
           {/* Top Doctors Panel */}
-          <div className="rounded-2xl border border-border overflow-hidden">
-            <div className="bg-gradient-to-r from-secondary to-primary p-6">
+          <div className="bg-card rounded-2xl border border-border overflow-hidden">
+            <div className="p-6">
               <h2 className="font-heading text-xl font-semibold text-foreground mb-4">
                 Doctors of The Day!
               </h2>

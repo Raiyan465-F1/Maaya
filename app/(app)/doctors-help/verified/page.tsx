@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 interface Doctor {
   userId: string;
   email: string;
-  specialty: string;
-  availabilityInfo: string;
+  specialty: string | null;
+  availabilityInfo: string | null;
+  location: string | null;
 }
 
 export default function VerifiedDoctorsPage() {
@@ -39,8 +40,9 @@ export default function VerifiedDoctorsPage() {
     const term = searchTerm.toLowerCase();
     return (
       doc.email.toLowerCase().includes(term) ||
-      doc.specialty.toLowerCase().includes(term) ||
-      doc.availabilityInfo.toLowerCase().includes(term)
+      (doc.specialty ?? '').toLowerCase().includes(term) ||
+      (doc.availabilityInfo ?? '').toLowerCase().includes(term) ||
+      (doc.location ?? '').toLowerCase().includes(term)
     );
   });
 
@@ -94,8 +96,11 @@ export default function VerifiedDoctorsPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-sm font-semibold text-foreground">{doctor.email}</p>
-                    <p className="text-xs text-muted-foreground">{doctor.specialty}</p>
-                    <p className="text-xs text-muted-foreground">{doctor.availabilityInfo}</p>
+                    <p className="text-xs text-muted-foreground">{doctor.specialty ?? 'Specialty not added yet'}</p>
+                    {doctor.location && (
+                      <p className="text-xs text-muted-foreground">{doctor.location}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">{doctor.availabilityInfo ?? 'Availability not added yet'}</p>
                   </div>
                 </div>
               </div>
