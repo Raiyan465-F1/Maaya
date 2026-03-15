@@ -71,7 +71,7 @@ export default function AppLayout({
           "pt-14 lg:pt-0"
         )}
       >
-        <div className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-8 lg:py-12">
+        <div className="flex-1 w-full px-4 sm:px-6 py-8 lg:px-8 lg:py-12">
           {children}
         </div>
       </main>

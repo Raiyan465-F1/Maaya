@@ -44,7 +44,9 @@ export type ForumPostRecord = {
   };
   media: ForumMediaRecord[];
   upvotes: number;
+  downvotes: number;
   viewerHasUpvoted: boolean;
+  viewerHasDownvoted: boolean;
   canManage: boolean;
   comments: ForumCommentRecord[];
 };

@@ -4,7 +4,7 @@ import { comments, commentVotes, forumPostMedia, forumPosts, forumPostVotes } fr
 import { users } from "@/src/schema/users";
 import type { ForumResponse, ForumCommentRecord, ForumMediaInput } from "@/lib/forum-types";
 import { FORUM_MEDIA_LIMIT, FORUM_TAG_LIMIT } from "@/lib/forum-types";
-import type { UserRole } from "@/src/schema/enums";
+import type { UserRole, VoteType } from "@/src/schema/enums";
 
 function toIsoString(value: Date | string | null | undefined) {
   if (value instanceof Date) return value.toISOString();
@@ -126,12 +126,22 @@ export async function getForumSnapshot(viewerId: string | null, viewerRole: stri
     postMediaMap.set(media.postId, current);
   }
 
-  const postVoteCountMap = new Map<number, number>();
-  const viewerPostVotes = new Set<number>();
+  const postUpvoteCountMap = new Map<number, number>();
+  const postDownvoteCountMap = new Map<number, number>();
+  const viewerPostUpvotes = new Set<number>();
+  const viewerPostDownvotes = new Set<number>();
   for (const vote of postVoteRows) {
-    postVoteCountMap.set(vote.postId, (postVoteCountMap.get(vote.postId) ?? 0) + 1);
+    if (vote.voteType === "downvote") {
+      postDownvoteCountMap.set(vote.postId, (postDownvoteCountMap.get(vote.postId) ?? 0) + 1);
+      if (viewerId && vote.userId === viewerId) {
+        viewerPostDownvotes.add(vote.postId);
+      }
+      continue;
+    }
+
+    postUpvoteCountMap.set(vote.postId, (postUpvoteCountMap.get(vote.postId) ?? 0) + 1);
     if (viewerId && vote.userId === viewerId) {
-      viewerPostVotes.add(vote.postId);
+      viewerPostUpvotes.add(vote.postId);
     }
   }
 
@@ -211,8 +221,10 @@ export async function getForumSnapshot(viewerId: string | null, viewerRole: stri
         tag: toAuthorTag(post.authorRole),
       },
       media: postMediaMap.get(post.id) ?? [],
-      upvotes: postVoteCountMap.get(post.id) ?? 0,
-      viewerHasUpvoted: viewerPostVotes.has(post.id),
+      upvotes: postUpvoteCountMap.get(post.id) ?? 0,
+      downvotes: postDownvoteCountMap.get(post.id) ?? 0,
+      viewerHasUpvoted: viewerPostUpvotes.has(post.id),
+      viewerHasDownvoted: viewerPostDownvotes.has(post.id),
       canManage: canManageContent(viewerId, viewerRole, post.authorId),
       comments: commentsByPostId.get(post.id) ?? [],
     })),
@@ -261,7 +273,7 @@ export async function replacePostMedia(postId: number, media: ForumMediaInput[])
   );
 }
 
-export async function toggleUpvoteForPost(postId: number, userId: string) {
+export async function toggleVoteForPost(postId: number, userId: string, voteType: VoteType) {
   const [existing] = await db
     .select()
     .from(forumPostVotes)
@@ -269,14 +281,26 @@ export async function toggleUpvoteForPost(postId: number, userId: string) {
     .limit(1);
 
   if (existing) {
-    await db.delete(forumPostVotes).where(and(eq(forumPostVotes.postId, postId), eq(forumPostVotes.userId, userId)));
-    return false;
+    if (existing.voteType === voteType) {
+      await db.delete(forumPostVotes).where(and(eq(forumPostVotes.postId, postId), eq(forumPostVotes.userId, userId)));
+      return false;
+    }
+
+    await db
+      .update(forumPostVotes)
+      .set({
+        voteType,
+        createdAt: new Date(),
+      })
+      .where(and(eq(forumPostVotes.postId, postId), eq(forumPostVotes.userId, userId)));
+
+    return true;
   }
 
   await db.insert(forumPostVotes).values({
     postId,
     userId,
-    voteType: "upvote",
+    voteType,
   });
 
   return true;

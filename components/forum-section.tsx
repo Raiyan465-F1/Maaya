@@ -1,6 +1,7 @@
 "use client";
 
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { ArrowDown, ArrowUp, MessageSquare, MoreHorizontal } from "lucide-react";
 import type {
   ForumCommentRecord,
   ForumMediaInput,
@@ -60,19 +61,15 @@ function tagStyles(tag: "Admin" | "User") {
     : "bg-primary/10 text-primary border-primary/20";
 }
 
-function viewerChipClass(active: boolean) {
-  return active
-    ? "border-primary/25 bg-primary text-primary-foreground shadow-sm"
-    : "border-primary/15 bg-card text-muted-foreground";
-}
-
 function StatChip({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 rounded-3xl border border-primary/15 bg-white/75 px-3 py-3 shadow-sm backdrop-blur">
-      <p className="whitespace-nowrap text-[8px] leading-none font-bold uppercase tracking-[0.06em] text-foreground sm:text-[9px] sm:tracking-[0.08em]">
+    <div className="flex min-w-0 flex-col items-center">
+      <p className="mb-2 min-h-[1.75rem] text-center text-[10px] leading-tight font-bold uppercase tracking-[0.04em] text-foreground sm:text-[11px]">
         {label}
       </p>
-      <p className="mt-2 whitespace-nowrap text-[30px] leading-none font-semibold text-foreground">{value}</p>
+      <div className="flex h-[4.75rem] w-full max-w-[5.5rem] items-end rounded-[1.1rem] border border-primary/15 bg-white/80 px-4 py-3 shadow-sm backdrop-blur sm:h-20 sm:max-w-[5.75rem]">
+        <p className="text-[22px] leading-none font-semibold text-foreground sm:text-[26px]">{value}</p>
+      </div>
     </div>
   );
 }
@@ -124,6 +121,76 @@ function ActionButton({
   );
 }
 
+function InlineActionButton({
+  active,
+  children,
+  onClick,
+  disabled,
+}: {
+  active?: boolean;
+  children: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={[
+        "inline-flex items-center gap-2 text-sm font-medium transition",
+        active ? "text-primary" : "text-muted-foreground hover:text-foreground",
+        disabled ? "cursor-not-allowed opacity-50" : "",
+      ].join(" ")}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ManagementMenu({
+  onEdit,
+  onDelete,
+  deleteDisabled,
+}: {
+  onEdit: () => void;
+  onDelete: () => void;
+  deleteDisabled?: boolean;
+}) {
+  return (
+    <details className="relative">
+      <summary className="flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-full text-muted-foreground transition hover:bg-primary/8 hover:text-foreground">
+        <MoreHorizontal className="h-4 w-4" />
+      </summary>
+      <div className="absolute right-0 top-11 z-10 min-w-32 rounded-2xl border border-primary/12 bg-white p-2 shadow-lg">
+        <button
+          type="button"
+          onClick={onEdit}
+          className="block w-full rounded-xl px-3 py-2 text-left text-sm text-foreground transition hover:bg-primary/8"
+        >
+          Edit
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={deleteDisabled}
+          className="block w-full rounded-xl px-3 py-2 text-left text-sm text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Delete
+        </button>
+      </div>
+    </details>
+  );
+}
+
+function countReplies(items: ForumCommentRecord[]): number {
+  return items.reduce((sum, item) => sum + 1 + countReplies(item.replies), 0);
+}
+
+function normalizeSearchValue(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
 function CommentTree({
   comments,
   busyKey,
@@ -152,6 +219,7 @@ function CommentTree({
       {comments.map((comment) => {
         const draft = drafts[comment.id] ?? "";
         const busy = busyKey === `comment-${comment.id}`;
+        const replyCount = countReplies(comment.replies);
 
         return (
           <div key={comment.id} className="rounded-[1.6rem] border border-primary/12 bg-white/85 p-4 shadow-sm">
@@ -194,33 +262,32 @@ function CommentTree({
                   <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-foreground/90">{comment.content}</p>
                 )}
 
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <ActionButton active={comment.viewerHasUpvoted} disabled={busy} onClick={() => onVote(comment.id)}>
-                    Upvote {comment.upvotes > 0 ? `(${comment.upvotes})` : ""}
-                  </ActionButton>
-                  <ActionButton
-                    onClick={() => {
-                      setReplyingTo(replyingTo === comment.id ? null : comment.id);
-                      setEditingId(null);
-                    }}
-                  >
-                    Reply
-                  </ActionButton>
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-4">
+                    <InlineActionButton active={comment.viewerHasUpvoted} disabled={busy} onClick={() => onVote(comment.id)}>
+                      <ArrowUp className="h-4 w-4" />
+                      <span>{comment.upvotes > 0 ? comment.upvotes : "Upvote"}</span>
+                    </InlineActionButton>
+                    <InlineActionButton
+                      onClick={() => {
+                        setReplyingTo(replyingTo === comment.id ? null : comment.id);
+                        setEditingId(null);
+                      }}
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      <span>{replyCount > 0 ? `${replyCount} replies` : "Reply"}</span>
+                    </InlineActionButton>
+                  </div>
                   {comment.canManage ? (
-                    <>
-                      <ActionButton
-                        onClick={() => {
-                          setEditingId(comment.id);
-                          setReplyingTo(null);
-                          setDrafts((current) => ({ ...current, [comment.id]: comment.content }));
-                        }}
-                      >
-                        Edit
-                      </ActionButton>
-                      <ActionButton disabled={busy} onClick={() => onDelete(comment.id)}>
-                        Delete
-                      </ActionButton>
-                    </>
+                    <ManagementMenu
+                      deleteDisabled={busy}
+                      onEdit={() => {
+                        setEditingId(comment.id);
+                        setReplyingTo(null);
+                        setDrafts((current) => ({ ...current, [comment.id]: comment.content }));
+                      }}
+                      onDelete={() => onDelete(comment.id)}
+                    />
                   ) : null}
                 </div>
 
@@ -275,6 +342,8 @@ export function ForumSection() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [focusedPostId, setFocusedPostId] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
 
@@ -287,25 +356,30 @@ export function ForumSection() {
 
   const discussionCount = forum.posts.length;
   const replyCount = useMemo(() => {
-    const countReplies = (items: ForumCommentRecord[]): number =>
-      items.reduce((sum, item) => sum + 1 + countReplies(item.replies), 0);
-
     return forum.posts.reduce((sum, post) => sum + countReplies(post.comments), 0);
   }, [forum.posts]);
 
   const uniqueTagCount = useMemo(() => new Set(forum.posts.flatMap((post) => post.tags)).size, [forum.posts]);
   const normalizedSearchTerm = deferredSearchTerm.trim().toLowerCase();
+  const compactSearchTerm = normalizeSearchValue(deferredSearchTerm.trim());
   const filteredPosts = useMemo(() => {
     return forum.posts.filter((post) => {
       const matchesTag = activeTag ? post.tags.includes(activeTag) : true;
+      const searchableValues = [
+        post.title,
+        ...post.tags,
+        post.author.id,
+        post.author.email,
+        String(post.id),
+      ];
       const matchesSearch = normalizedSearchTerm
-        ? post.title.toLowerCase().includes(normalizedSearchTerm) ||
-          post.tags.some((tag) => tag.toLowerCase().includes(normalizedSearchTerm))
+        ? searchableValues.some((value) => value.toLowerCase().includes(normalizedSearchTerm)) ||
+          searchableValues.some((value) => normalizeSearchValue(value).includes(compactSearchTerm))
         : true;
 
       return matchesTag && matchesSearch;
     });
-  }, [activeTag, forum.posts, normalizedSearchTerm]);
+  }, [activeTag, compactSearchTerm, forum.posts, normalizedSearchTerm]);
 
   async function refreshForum() {
     setIsLoading(true);
@@ -364,6 +438,8 @@ export function ForumSection() {
     }
   }
 
+  const focusedPost = forum.posts.find((post) => post.id === focusedPostId) ?? null;
+
   async function handleCreatePost() {
     const wasSuccessful = await submitJson(
       "/api/forum",
@@ -386,6 +462,7 @@ export function ForumSection() {
       setTagInput("");
       setIsAnonymous(false);
       setMedia([{ key: Date.now(), kind: "image", url: "" }]);
+      setIsComposerOpen(false);
     }
   }
 
@@ -396,7 +473,7 @@ export function ForumSection() {
 
   if (isLoading) {
     return (
-      <section className="mx-auto max-w-7xl space-y-8 px-4 py-10 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-[96rem] space-y-8 px-4 py-10 sm:px-6 lg:px-8">
         <div className="h-64 animate-pulse rounded-[2rem] border border-primary/10 bg-card/70" />
         <div className="grid gap-8 xl:grid-cols-[0.95fr_1.35fr]">
           <div className="h-[32rem] animate-pulse rounded-[2rem] border border-primary/10 bg-card/70" />
@@ -410,31 +487,20 @@ export function ForumSection() {
   }
 
   return (
-    <section className="mx-auto max-w-7xl space-y-8 px-4 py-10 sm:px-6 lg:px-8">
+    <section className="mx-auto max-w-[96rem] space-y-8 px-4 py-10 pb-28 sm:px-6 lg:px-8">
       <div className="overflow-hidden rounded-[2rem] border border-primary/15 bg-gradient-to-br from-card via-card to-primary/5 shadow-sm">
-        <div className="grid gap-8 p-6 lg:grid-cols-[0.85fr_1.15fr] lg:p-8">
+        <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(17rem,0.8fr)] lg:p-6">
           <div>
-            <p className="font-mono text-xl tracking-[0.28em] text-primary uppercase sm:text-2xl">Forum</p>
-            <h1 className="mt-3 max-w-lg font-heading text-3xl font-bold leading-[0.95] tracking-tight text-foreground sm:text-4xl">
+            <p className="font-mono text-lg tracking-[0.22em] text-primary uppercase sm:text-xl">Forum</p>
+            <h1 className="mt-2 max-w-lg font-heading text-3xl font-bold leading-[0.95] tracking-tight text-foreground sm:text-[3.15rem]">
               Community <span className="text-primary italic">discussions</span>
             </h1>
-            <p className="mt-4 max-w-lg text-xs leading-6 text-muted-foreground sm:text-sm">
+            <p className="mt-3 max-w-lg text-xs leading-6 text-muted-foreground sm:text-sm">
               Ask questions, share experiences, and build practical support around women&apos;s health in one calm space.
             </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <span className={`rounded-full border px-4 py-2 text-sm ${viewerChipClass(Boolean(forum.viewer.isAuthenticated))}`}>
-                {forum.viewer.isAuthenticated ? `Signed in as ${forum.viewer.tag ?? "User"}` : "Read-only preview"}
-              </span>
-              <a
-                href="/dashboard"
-                className="rounded-full border border-primary/15 bg-card px-4 py-2 text-sm font-medium text-primary transition hover:border-primary/30"
-              >
-                Back to dashboard
-              </a>
-            </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
             <StatChip label="Discussions" value={String(discussionCount)} />
             <StatChip label="Replies" value={String(replyCount)} />
             <StatChip label="Active Tags" value={String(uniqueTagCount)} />
@@ -442,12 +508,180 @@ export function ForumSection() {
         </div>
       </div>
 
-      <div className="space-y-8">
-        <aside>
-          <div className="rounded-[2rem] border border-primary/15 bg-card p-6 shadow-sm">
-            <div className="flex items-center justify-between gap-4">
+      <div className="space-y-6">
+          <div className="rounded-[2rem] border border-primary/15 bg-card p-5 shadow-sm">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <p className="font-heading text-2xl font-semibold text-foreground">Start a discussion</p>
+                <p className="font-heading text-2xl font-semibold text-foreground">Find a discussion</p>
+                <p className="mt-1 text-sm text-muted-foreground">Search by title or tag, or click a tag chip to narrow the list.</p>
+              </div>
+              {(searchTerm || activeTag) ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setActiveTag(null);
+                  }}
+                  className="rounded-full border border-primary/15 px-4 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+                >
+                  Clear filters
+                </button>
+              ) : null}
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <input
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Search by title, tag, user ID, email, or discussion ID"
+                className="w-full rounded-3xl border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40"
+              />
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="text-muted-foreground">
+                  Showing {filteredPosts.length} of {forum.posts.length} discussions
+                </span>
+                {activeTag ? (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTag(null)}
+                    className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
+                  >
+                    Tag: #{activeTag} x
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
+          {error ? (
+            <div className="rounded-[1.75rem] border border-red-300 bg-red-50 px-5 py-4 text-sm text-red-600">{error}</div>
+          ) : null}
+
+          {!filteredPosts.length ? (
+            <div className="rounded-[2rem] border border-dashed border-primary/20 bg-card/60 px-6 py-16 text-center shadow-sm">
+              <p className="font-heading text-3xl text-foreground">No matching discussions</p>
+              <p className="mt-3 text-sm text-muted-foreground">
+                Try a different title search or clear the selected tag filter.
+              </p>
+            </div>
+          ) : null}
+
+          {filteredPosts.map((post) => (
+            <ForumPostCard
+              key={post.id}
+              post={post}
+              busyKey={busyKey}
+              expanded={false}
+              canInteract={forum.viewer.isAuthenticated}
+              activeTag={activeTag}
+              onOpen={(postId) => setFocusedPostId(postId)}
+              onClose={() => setFocusedPostId(null)}
+              onTagClick={(tag) => setActiveTag((current) => (current === tag ? null : tag))}
+              onVote={(postId, voteType) =>
+                submitJson(
+                  `/api/forum/posts/${postId}/vote`,
+                  { method: "POST", body: JSON.stringify({ voteType }) },
+                  `post-${postId}`
+                )
+              }
+              onDelete={(postId) => {
+                if (!window.confirm("Delete this post? This action cannot be undone.")) {
+                  return Promise.resolve(false);
+                }
+
+                return submitJson(`/api/forum/posts/${postId}`, { method: "DELETE" }, `post-${postId}`);
+              }}
+              onEdit={(postId, payload) =>
+                submitJson(`/api/forum/posts/${postId}`, { method: "PATCH", body: JSON.stringify(payload) }, `post-${postId}`)
+              }
+              onComment={(postId, replyTo, nextContent) =>
+                submitJson(
+                  "/api/forum/comments",
+                  { method: "POST", body: JSON.stringify({ postId, parentCommentId: replyTo, content: nextContent }) },
+                  replyTo ? `comment-${replyTo}` : `post-${postId}`
+                )
+              }
+              onCommentVote={(commentId) =>
+                submitJson(`/api/forum/comments/${commentId}/vote`, { method: "POST" }, `comment-${commentId}`)
+              }
+              onCommentDelete={(commentId) =>
+                submitJson(`/api/forum/comments/${commentId}`, { method: "DELETE" }, `comment-${commentId}`)
+              }
+              onCommentEdit={(commentId, nextContent) =>
+                submitJson(
+                  `/api/forum/comments/${commentId}`,
+                  { method: "PATCH", body: JSON.stringify({ content: nextContent }) },
+                  `comment-${commentId}`
+                )
+              }
+            />
+          ))}
+      </div>
+
+      {focusedPost ? (
+        <div
+          className="fixed inset-0 z-40 flex items-start justify-center bg-black/40 px-4 py-6 backdrop-blur-sm sm:px-6"
+          onClick={() => setFocusedPostId(null)}
+        >
+          <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto" onClick={(event) => event.stopPropagation()}>
+            <ForumPostCard
+              post={focusedPost}
+              busyKey={busyKey}
+              expanded
+              canInteract={forum.viewer.isAuthenticated}
+              activeTag={activeTag}
+              onOpen={() => undefined}
+              onClose={() => setFocusedPostId(null)}
+              onTagClick={(tag) => setActiveTag((current) => (current === tag ? null : tag))}
+              onVote={(postId, voteType) =>
+                submitJson(
+                  `/api/forum/posts/${postId}/vote`,
+                  { method: "POST", body: JSON.stringify({ voteType }) },
+                  `post-${postId}`
+                )
+              }
+              onDelete={(postId) => {
+                if (!window.confirm("Delete this post? This action cannot be undone.")) {
+                  return Promise.resolve(false);
+                }
+
+                setFocusedPostId(null);
+                return submitJson(`/api/forum/posts/${postId}`, { method: "DELETE" }, `post-${postId}`);
+              }}
+              onEdit={(postId, payload) =>
+                submitJson(`/api/forum/posts/${postId}`, { method: "PATCH", body: JSON.stringify(payload) }, `post-${postId}`)
+              }
+              onComment={(postId, replyTo, nextContent) =>
+                submitJson(
+                  "/api/forum/comments",
+                  { method: "POST", body: JSON.stringify({ postId, parentCommentId: replyTo, content: nextContent }) },
+                  replyTo ? `comment-${replyTo}` : `post-${postId}`
+                )
+              }
+              onCommentVote={(commentId) =>
+                submitJson(`/api/forum/comments/${commentId}/vote`, { method: "POST" }, `comment-${commentId}`)
+              }
+              onCommentDelete={(commentId) =>
+                submitJson(`/api/forum/comments/${commentId}`, { method: "DELETE" }, `comment-${commentId}`)
+              }
+              onCommentEdit={(commentId, nextContent) =>
+                submitJson(
+                  `/api/forum/comments/${commentId}`,
+                  { method: "PATCH", body: JSON.stringify({ content: nextContent }) },
+                  `comment-${commentId}`
+                )
+              }
+            />
+          </div>
+        </div>
+      ) : null}
+
+      <div className="fixed right-4 bottom-4 z-30 sm:right-6 sm:bottom-6">
+        {isComposerOpen ? (
+          <div className="mb-4 w-[min(92vw,30rem)] rounded-[2rem] border border-primary/15 bg-card p-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-heading text-xl font-semibold text-foreground">Start a discussion</p>
                 <p className="mt-1 text-sm text-muted-foreground">Clear titles and a little context make replies much faster.</p>
               </div>
               <div className="rounded-2xl bg-primary/8 px-3 py-2 text-xs font-medium text-primary">
@@ -455,7 +689,7 @@ export function ForumSection() {
               </div>
             </div>
 
-            <div className="mt-6 space-y-4">
+            <div className="mt-5 space-y-4">
               <input
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
@@ -465,7 +699,7 @@ export function ForumSection() {
               <textarea
                 value={content}
                 onChange={(event) => setContent(event.target.value)}
-                rows={6}
+                rows={5}
                 placeholder="What would you like help with?"
                 className="w-full rounded-[1.75rem] border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40"
               />
@@ -536,111 +770,46 @@ export function ForumSection() {
                 Post as anonymous user
               </label>
 
-              <button
-                type="button"
-                onClick={handleCreatePost}
-                disabled={!forum.viewer.isAuthenticated || busyKey === "create-post"}
-                className="w-full rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {busyKey === "create-post" ? "Saving..." : forum.viewer.isAuthenticated ? "Publish discussion" : "Sign in to post"}
-              </button>
-            </div>
-          </div>
-        </aside>
-
-        <div className="space-y-6">
-          <div className="rounded-[2rem] border border-primary/15 bg-card p-5 shadow-sm">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <p className="font-heading text-2xl font-semibold text-foreground">Find a discussion</p>
-                <p className="mt-1 text-sm text-muted-foreground">Search by title or tag, or click a tag chip to narrow the list.</p>
-              </div>
-              {(searchTerm || activeTag) ? (
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setSearchTerm("");
-                    setActiveTag(null);
-                  }}
-                  className="rounded-full border border-primary/15 px-4 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+                  onClick={handleCreatePost}
+                  disabled={!forum.viewer.isAuthenticated || busyKey === "create-post"}
+                  className="flex-1 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Clear filters
+                  {busyKey === "create-post" ? "Saving..." : forum.viewer.isAuthenticated ? "Publish discussion" : "Sign in to post"}
                 </button>
-              ) : null}
-            </div>
-
-            <div className="mt-4 space-y-3">
-              <input
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search discussions by title or tag"
-                className="w-full rounded-3xl border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40"
-              />
-              <div className="flex flex-wrap items-center gap-2 text-sm">
-                <span className="text-muted-foreground">
-                  Showing {filteredPosts.length} of {forum.posts.length} discussions
-                </span>
-                {activeTag ? (
-                  <button
-                    type="button"
-                    onClick={() => setActiveTag(null)}
-                    className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
-                  >
-                    Tag: #{activeTag} x
-                  </button>
-                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setIsComposerOpen(false)}
+                  className="rounded-full border border-primary/15 px-5 py-3 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+                >
+                  Close
+                </button>
               </div>
             </div>
           </div>
+        ) : null}
 
-          {error ? (
-            <div className="rounded-[1.75rem] border border-red-300 bg-red-50 px-5 py-4 text-sm text-red-600">{error}</div>
-          ) : null}
-
-          {!filteredPosts.length ? (
-            <div className="rounded-[2rem] border border-dashed border-primary/20 bg-card/60 px-6 py-16 text-center shadow-sm">
-              <p className="font-heading text-3xl text-foreground">No matching discussions</p>
-              <p className="mt-3 text-sm text-muted-foreground">
-                Try a different title search or clear the selected tag filter.
-              </p>
-            </div>
-          ) : null}
-
-          {filteredPosts.map((post) => (
-            <ForumPostCard
-              key={post.id}
-              post={post}
-              busyKey={busyKey}
-              canInteract={forum.viewer.isAuthenticated}
-              activeTag={activeTag}
-              onTagClick={(tag) => setActiveTag((current) => (current === tag ? null : tag))}
-              onVote={(postId) => submitJson(`/api/forum/posts/${postId}/vote`, { method: "POST" }, `post-${postId}`)}
-              onDelete={(postId) => submitJson(`/api/forum/posts/${postId}`, { method: "DELETE" }, `post-${postId}`)}
-              onEdit={(postId, payload) =>
-                submitJson(`/api/forum/posts/${postId}`, { method: "PATCH", body: JSON.stringify(payload) }, `post-${postId}`)
-              }
-              onComment={(postId, replyTo, nextContent) =>
-                submitJson(
-                  "/api/forum/comments",
-                  { method: "POST", body: JSON.stringify({ postId, parentCommentId: replyTo, content: nextContent }) },
-                  replyTo ? `comment-${replyTo}` : `post-${postId}`
-                )
-              }
-              onCommentVote={(commentId) =>
-                submitJson(`/api/forum/comments/${commentId}/vote`, { method: "POST" }, `comment-${commentId}`)
-              }
-              onCommentDelete={(commentId) =>
-                submitJson(`/api/forum/comments/${commentId}`, { method: "DELETE" }, `comment-${commentId}`)
-              }
-              onCommentEdit={(commentId, nextContent) =>
-                submitJson(
-                  `/api/forum/comments/${commentId}`,
-                  { method: "PATCH", body: JSON.stringify({ content: nextContent }) },
-                  `comment-${commentId}`
-                )
-              }
-            />
-          ))}
+        <div className="group relative flex items-center justify-end gap-3">
+          <div className="pointer-events-none absolute right-0 bottom-full mb-3 w-64 rounded-2xl border border-primary/15 bg-white/95 p-3 text-sm text-muted-foreground opacity-0 shadow-lg transition duration-200 group-hover:opacity-100">
+            Add a title, a little context, optional tags, and media links when you want the community to jump in faster.
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsComposerOpen((current) => !current)}
+            className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-3xl leading-none text-primary-foreground shadow-lg transition hover:scale-[1.03] hover:opacity-95"
+            aria-label="Start a discussion"
+          >
+            +
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsComposerOpen((current) => !current)}
+            className="rounded-full border border-primary/15 bg-card px-4 py-3 text-sm font-semibold text-foreground shadow-sm transition hover:border-primary/30"
+          >
+            Start a discussion
+          </button>
         </div>
       </div>
     </section>
@@ -650,8 +819,11 @@ export function ForumSection() {
 function ForumPostCard({
   post,
   busyKey,
+  expanded,
   canInteract,
   activeTag,
+  onOpen,
+  onClose,
   onTagClick,
   onVote,
   onDelete,
@@ -663,10 +835,13 @@ function ForumPostCard({
 }: {
   post: ForumPostRecord;
   busyKey: string | null;
+  expanded: boolean;
   canInteract: boolean;
   activeTag: string | null;
+  onOpen: (postId: number) => void;
+  onClose: () => void;
   onTagClick: (tag: string) => void;
-  onVote: (postId: number) => void;
+  onVote: (postId: number, voteType: "upvote" | "downvote") => void;
   onDelete: (postId: number) => void;
   onEdit: (
     postId: number,
@@ -678,20 +853,48 @@ function ForumPostCard({
   onCommentEdit: (commentId: number, content: string) => void;
 }) {
   const [isEditing, setIsEditing] = useState(false);
-  const [showCommentBox, setShowCommentBox] = useState(false);
+  const [showCommentBox, setShowCommentBox] = useState(expanded);
   const [draftTitle, setDraftTitle] = useState(post.title);
   const [draftContent, setDraftContent] = useState(post.content);
   const [draftTags, setDraftTags] = useState(post.tags.join(", "));
   const [draftComment, setDraftComment] = useState("");
   const [draftAnonymous, setDraftAnonymous] = useState(post.isAnonymous);
   const busy = busyKey === `post-${post.id}`;
+  const commentCount = countReplies(post.comments);
+
+  useEffect(() => {
+    if (expanded) {
+      setShowCommentBox(true);
+    }
+  }, [expanded]);
+
+  function handleOpen() {
+    onOpen(post.id);
+  }
+
+  function handleCardClick(event: React.MouseEvent<HTMLElement>) {
+    if (expanded || isEditing) return;
+
+    const target = event.target as HTMLElement;
+    if (target.closest("button, input, textarea, select, summary, video, a")) {
+      return;
+    }
+
+    handleOpen();
+  }
 
   return (
-    <article className="overflow-hidden rounded-[2rem] border border-primary/15 bg-card shadow-sm">
+    <article
+      className={[
+        "overflow-hidden rounded-[2rem] border border-primary/15 bg-card shadow-sm",
+        expanded ? "mx-auto" : "cursor-pointer transition hover:-translate-y-0.5 hover:shadow-md",
+      ].join(" ")}
+      onClick={handleCardClick}
+    >
       <div className="h-2 w-full bg-gradient-to-r from-primary via-accent to-secondary" />
-      <div className="p-6">
+      <div className={expanded ? "p-6 sm:p-7" : "p-6"}>
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
+          <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 font-mono text-sm text-primary">
                 {initialsFromEmail(post.author.email)}
@@ -707,38 +910,44 @@ function ForumPostCard({
               </div>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <ActionButton active={post.viewerHasUpvoted} disabled={!canInteract || busy} onClick={() => onVote(post.id)}>
-              Upvote {post.upvotes > 0 ? `(${post.upvotes})` : ""}
-            </ActionButton>
-            <ActionButton onClick={() => setShowCommentBox((current) => !current)}>Comment</ActionButton>
+          <div className="flex max-w-full flex-1 flex-wrap items-start justify-end gap-2 sm:max-w-[45%]">
+            {post.tags.map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onTagClick(tag);
+                }}
+                className={[
+                  "rounded-full px-3.5 py-1.5 text-sm font-medium transition",
+                  activeTag === tag
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-primary/8 text-primary hover:bg-primary/14",
+                ].join(" ")}
+              >
+                #{tag}
+              </button>
+            ))}
             {post.canManage ? (
-              <>
-                <ActionButton onClick={() => setIsEditing((current) => !current)}>{isEditing ? "Cancel" : "Edit"}</ActionButton>
-                <ActionButton disabled={busy} onClick={() => onDelete(post.id)}>
-                  Delete
-                </ActionButton>
-              </>
+              <ManagementMenu
+                deleteDisabled={busy}
+                onEdit={() => setIsEditing((current) => !current)}
+                onDelete={() => {
+                  void onDelete(post.id);
+                }}
+              />
+            ) : null}
+            {expanded ? (
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-full border border-primary/15 px-4 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+              >
+                Close
+              </button>
             ) : null}
           </div>
-        </div>
-
-        <div className="mt-5 flex flex-wrap gap-2">
-          {post.tags.map((tag) => (
-            <button
-              key={tag}
-              type="button"
-              onClick={() => onTagClick(tag)}
-              className={[
-                "rounded-full px-3 py-1 text-xs font-medium transition",
-                activeTag === tag
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-primary/8 text-primary hover:bg-primary/14",
-              ].join(" ")}
-            >
-              #{tag}
-            </button>
-          ))}
         </div>
 
         {isEditing ? (
@@ -785,15 +994,50 @@ function ForumPostCard({
           </div>
         ) : (
           <>
-            <h2 className="mt-5 font-heading text-3xl font-semibold leading-tight text-foreground">{post.title}</h2>
+            <h2 className={expanded ? "mt-5 font-heading text-4xl font-semibold leading-tight text-foreground" : "mt-5 font-heading text-3xl font-semibold leading-tight text-foreground"}>
+              {post.title}
+            </h2>
             <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-foreground/90">{post.content}</p>
             <div className="mt-5">
               <MediaPreview media={post.media} />
             </div>
+            <div className="mt-5 flex items-center justify-between gap-3 border-t border-primary/10 pt-4">
+              <div className="flex flex-wrap items-center gap-5">
+                <InlineActionButton
+                  active={post.viewerHasUpvoted}
+                  disabled={!canInteract || busy}
+                  onClick={() => onVote(post.id, "upvote")}
+                >
+                  <ArrowUp className="h-4 w-4" />
+                  <span>{post.upvotes > 0 ? post.upvotes : "Upvote"}</span>
+                </InlineActionButton>
+                <InlineActionButton
+                  active={post.viewerHasDownvoted}
+                  disabled={!canInteract || busy}
+                  onClick={() => onVote(post.id, "downvote")}
+                >
+                  <ArrowDown className="h-4 w-4" />
+                  <span>{post.downvotes > 0 ? post.downvotes : "Downvote"}</span>
+                </InlineActionButton>
+                <InlineActionButton onClick={() => setShowCommentBox((current) => !current)}>
+                  <MessageSquare className="h-4 w-4" />
+                  <span>{commentCount > 0 ? `${commentCount} comments` : "Comment"}</span>
+                </InlineActionButton>
+              </div>
+              {!expanded ? (
+                <button
+                  type="button"
+                  onClick={handleOpen}
+                  className="text-sm font-medium text-primary transition hover:text-primary/80"
+                >
+                  Open discussion
+                </button>
+              ) : null}
+            </div>
           </>
         )}
 
-        {showCommentBox ? (
+        {expanded && showCommentBox ? (
           <div className="mt-6 rounded-[1.75rem] border border-primary/12 bg-primary/5 p-4">
             <textarea
               value={draftComment}
@@ -820,16 +1064,18 @@ function ForumPostCard({
           </div>
         ) : null}
 
-        <div className="mt-6">
-          <CommentTree
-            comments={post.comments}
-            busyKey={busyKey}
-            onVote={onCommentVote}
-            onDelete={onCommentDelete}
-            onReply={(commentId, nextContent) => onComment(post.id, commentId, nextContent)}
-            onEdit={onCommentEdit}
-          />
-        </div>
+        {expanded ? (
+          <div className="mt-6">
+            <CommentTree
+              comments={post.comments}
+              busyKey={busyKey}
+              onVote={onCommentVote}
+              onDelete={onCommentDelete}
+              onReply={(commentId, nextContent) => onComment(post.id, commentId, nextContent)}
+              onEdit={onCommentEdit}
+            />
+          </div>
+        ) : null}
       </div>
     </article>
   );

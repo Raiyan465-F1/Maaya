@@ -23,7 +23,6 @@ function LandingNavbar() {
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-foreground">
           <a href="#about" className="hover:text-primary transition-colors">About</a>
           <a href="#features" className="hover:text-primary transition-colors">Features</a>
-          <a href="#forum-section" className="hover:text-primary transition-colors">Forum</a>
           <a href="#how-it-works" className="hover:text-primary transition-colors">How It Works</a>
           <a href="#for-professionals" className="hover:text-primary transition-colors">For Doctors</a>
         </nav>
@@ -56,7 +55,6 @@ function LandingNavbar() {
         <div className="md:hidden bg-card border-t border-primary/15 px-6 py-4 flex flex-col gap-4 text-sm font-medium text-foreground">
           <a href="#about" onClick={() => setMobileOpen(false)} className="hover:text-primary">About</a>
           <a href="#features" onClick={() => setMobileOpen(false)} className="hover:text-primary">Features</a>
-          <a href="#forum-section" onClick={() => setMobileOpen(false)} className="hover:text-primary">Forum</a>
           <a href="#how-it-works" onClick={() => setMobileOpen(false)} className="hover:text-primary">How It Works</a>
           <a href="#for-professionals" onClick={() => setMobileOpen(false)} className="hover:text-primary">For Doctors</a>
           <div className="flex gap-3 pt-2 border-t border-primary/15">

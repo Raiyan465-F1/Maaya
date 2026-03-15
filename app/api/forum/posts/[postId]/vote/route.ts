@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { ensurePostExists, getForumSnapshot, toggleUpvoteForPost } from "@/lib/forum-server";
+import { ensurePostExists, getForumSnapshot, toggleVoteForPost } from "@/lib/forum-server";
+import type { VoteType } from "@/src/schema/enums";
 
 function parsePostId(value: string) {
   const parsed = Number(value);
@@ -9,11 +10,13 @@ function parsePostId(value: string) {
 }
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ postId: string }> }
 ) {
   const session = await getServerSession(authOptions);
   const postId = parsePostId((await params).postId);
+  const body = await request.json().catch(() => null);
+  const voteType: VoteType = body?.voteType === "downvote" ? "downvote" : "upvote";
 
   if (!session?.user?.id) {
     return NextResponse.json({ error: "You must be logged in to vote." }, { status: 401 });
@@ -28,7 +31,7 @@ export async function POST(
     return NextResponse.json({ error: "Discussion not found." }, { status: 404 });
   }
 
-  await toggleUpvoteForPost(postId, session.user.id);
+  await toggleVoteForPost(postId, session.user.id, voteType);
 
   const data = await getForumSnapshot(session.user.id, session.user.role);
   return NextResponse.json(data);
