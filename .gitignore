@@ -44,3 +44,4 @@ docs/Db_draft.md
 .env.example
 skills-lock.json
 .cursor
+docs/design.md

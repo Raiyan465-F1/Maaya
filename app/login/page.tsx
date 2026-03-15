@@ -4,33 +4,70 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
-/* ─── Auth nav (minimal, matches landing) ──────────────────── */
-function AuthNavbar() {
+/* ─── Left brand panel ────────────────────────────────────── */
+function BrandPanel() {
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-card/80 backdrop-blur-md border-b border-primary/15 shadow-sm">
-      <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+    <div className="hidden lg:flex flex-col justify-between bg-gradient-to-br from-primary/8 via-background to-secondary/8 border-r border-primary/10 px-14 py-12 relative overflow-hidden">
+      {/* Decorative blobs */}
+      <div aria-hidden className="pointer-events-none absolute -top-24 -left-24 w-80 h-80 rounded-full bg-primary/15 blur-3xl" />
+      <div aria-hidden className="pointer-events-none absolute -bottom-24 -right-24 w-72 h-72 rounded-full bg-secondary/15 blur-3xl" />
+
+      {/* Top: Logo */}
+      <div className="relative z-10">
+        <Link href="/" className="inline-flex items-center gap-2 mb-16">
+          <span className="font-heading text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent tracking-tight">
             MAAYA
           </span>
-          <span className="hidden sm:inline text-xs text-muted-foreground font-medium tracking-wide">
-            Smart Women&apos;s Health
-          </span>
         </Link>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/register"
-            className="px-4 py-2 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-primary hover:text-primary-foreground transition-all duration-200"
-          >
-            Register
-          </Link>
+
+        {/* Large italic quote */}
+        <blockquote className="font-heading text-[2.6rem] font-normal italic text-foreground leading-[1.15] tracking-tight mb-8">
+          Your health,<br />
+          <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+            your story,
+          </span>
+          <br />your space.
+        </blockquote>
+
+        <p className="text-muted-foreground text-base leading-relaxed mb-12 max-w-xs">
+          A safe, supportive platform for reproductive health education, cycle tracking,
+          and community support.
+        </p>
+
+        <div className="flex flex-col gap-3.5">
+          {[
+            "100% anonymous posting option",
+            "Verified doctor Q&A",
+            "Private cycle & symptom tracking",
+          ].map((item) => (
+            <div key={item} className="flex items-center gap-3">
+              <span className="w-5 h-5 rounded-full bg-primary/12 flex items-center justify-center flex-shrink-0">
+                <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                  <path d="M1 4l2.5 2.5L9 1" stroke="var(--color-primary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+              <span className="text-sm text-foreground">{item}</span>
+            </div>
+          ))}
         </div>
       </div>
-    </header>
+
+      {/* Bottom: Mono stats */}
+      <div className="relative z-10 flex gap-10">
+        <div>
+          <p className="font-mono text-2xl font-medium text-primary tabular-nums">100%</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Free to join</p>
+        </div>
+        <div>
+          <p className="font-mono text-2xl font-medium text-secondary tabular-nums">Safe</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Private & secure</p>
+        </div>
+      </div>
+    </div>
   );
 }
 
-/* ─── Login form (no API integration yet) ───────────────────── */
+/* ─── Login page ──────────────────────────────────────────── */
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -42,47 +79,46 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <AuthNavbar />
+    <div className="min-h-screen bg-background lg:grid lg:grid-cols-2">
+      <BrandPanel />
 
-      <main className="relative min-h-screen flex items-center justify-center px-6 pt-16 overflow-hidden">
-        {/* Decorative blobs (same as landing) */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -top-32 -left-32 w-[480px] h-[480px] rounded-full bg-primary/20 blur-3xl"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -bottom-32 -right-32 w-[420px] h-[420px] rounded-full bg-secondary/20 blur-3xl"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-accent/10 blur-3xl"
-        />
+      {/* Right: form */}
+      <div className="relative flex flex-col min-h-screen overflow-hidden">
+        {/* Mobile-only top bar */}
+        <div className="lg:hidden flex items-center justify-between px-6 h-16 border-b border-primary/15 bg-card/80 backdrop-blur-md">
+          <Link href="/" className="font-heading text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent tracking-tight">
+            MAAYA
+          </Link>
+          <Link href="/register" className="text-sm font-medium text-primary hover:underline">
+            Register
+          </Link>
+        </div>
 
-        <div className="relative z-10 w-full max-w-md">
-          <div className="bg-card/95 backdrop-blur-sm rounded-3xl border border-primary/15 shadow-xl p-8">
-            <div className="text-center mb-8">
-              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide bg-primary/10 text-primary border border-primary/20 mb-4">
+        {/* Subtle blob — form side */}
+        <div aria-hidden className="pointer-events-none absolute top-0 right-0 w-72 h-72 rounded-full bg-accent/10 blur-3xl" />
+
+        <div className="flex flex-1 items-center justify-center px-8 py-16 relative z-10">
+          <div className="w-full max-w-sm">
+
+            {/* Form header */}
+            <div className="mb-8">
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20 mb-4">
                 Welcome back
               </span>
-              <h1 className="text-2xl font-bold text-foreground">
+              <h1 className="font-heading text-3xl font-bold text-foreground tracking-tight leading-snug">
                 Log in to{" "}
-                <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                <span className="italic bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                   MAAYA
                 </span>
               </h1>
               <p className="text-sm text-muted-foreground mt-2">
-                Your health, your story, your space.
+                Your health journey continues here.
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label
-                  htmlFor="login-email"
-                  className="block text-sm font-medium text-foreground mb-1.5"
-                >
+                <label htmlFor="login-email" className="block text-sm font-medium text-foreground mb-1.5">
                   Email
                 </label>
                 <input
@@ -92,15 +128,13 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className="w-full h-10 px-3 rounded-lg border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:border-primary/50 transition-colors"
+                  className="w-full h-11 px-3.5 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-primary/50 transition-colors"
                   required
                 />
               </div>
+
               <div>
-                <label
-                  htmlFor="login-password"
-                  className="block text-sm font-medium text-foreground mb-1.5"
-                >
+                <label htmlFor="login-password" className="block text-sm font-medium text-foreground mb-1.5">
                   Password
                 </label>
                 <input
@@ -110,7 +144,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full h-10 px-3 rounded-lg border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:border-primary/50 transition-colors"
+                  className="w-full h-11 px-3.5 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-primary/50 transition-colors"
                   required
                 />
               </div>
@@ -125,21 +159,17 @@ export default function LoginPage() {
 
             <p className="mt-6 text-center text-sm text-muted-foreground">
               Don&apos;t have an account?{" "}
-              <Link
-                href="/register"
-                className="font-medium text-primary hover:underline"
-              >
+              <Link href="/register" className="font-medium text-primary hover:underline">
                 Register
               </Link>
             </p>
-          </div>
 
-          <p className="mt-6 text-center text-xs text-muted-foreground">
-            User type is determined by the platform — just sign in with your
-            email and password.
-          </p>
+            <p className="mt-8 text-center text-xs text-muted-foreground">
+              User type is determined automatically — just log in with your email and password.
+            </p>
+          </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

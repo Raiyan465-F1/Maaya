@@ -83,6 +83,7 @@
 
 @theme inline {
     --font-sans: var(--font-sans);
+    --font-heading: var(--font-heading);
     --font-mono: var(--font-mono);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
@@ -134,4 +135,8 @@
   html {
     @apply font-sans;
     }
+  /* Fraunces optical sizing — uses the best glyph shapes per font-size */
+  .font-heading {
+    font-optical-sizing: auto;
+  }
 }
