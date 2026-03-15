@@ -6,15 +6,12 @@ import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
-/* ─── Left brand panel ────────────────────────────────────── */
 function BrandPanel() {
   return (
     <div className="hidden lg:flex flex-col justify-between bg-gradient-to-br from-primary/8 via-background to-secondary/8 border-r border-primary/10 px-14 py-12 relative overflow-hidden">
-      {/* Decorative blobs */}
       <div aria-hidden className="pointer-events-none absolute -top-24 -left-24 w-80 h-80 rounded-full bg-primary/15 blur-3xl" />
       <div aria-hidden className="pointer-events-none absolute -bottom-24 -right-24 w-72 h-72 rounded-full bg-secondary/15 blur-3xl" />
 
-      {/* Top: Logo */}
       <div className="relative z-10">
         <Link href="/" className="inline-flex items-center gap-2 mb-16">
           <span className="font-heading text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent tracking-tight">
@@ -22,7 +19,6 @@ function BrandPanel() {
           </span>
         </Link>
 
-        {/* Large italic quote */}
         <blockquote className="font-heading text-[2.6rem] font-normal italic text-foreground leading-[1.15] tracking-tight mb-8">
           Your health,<br />
           <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
@@ -40,7 +36,7 @@ function BrandPanel() {
           {[
             "100% anonymous posting option",
             "Verified doctor Q&A",
-            "Private cycle & symptom tracking",
+            "Private cycle and symptom tracking",
           ].map((item) => (
             <div key={item} className="flex items-center gap-3">
               <span className="w-5 h-5 rounded-full bg-primary/12 flex items-center justify-center flex-shrink-0">
@@ -54,7 +50,6 @@ function BrandPanel() {
         </div>
       </div>
 
-      {/* Bottom: Mono stats */}
       <div className="relative z-10 flex gap-10">
         <div>
           <p className="font-mono text-2xl font-medium text-primary tabular-nums">100%</p>
@@ -62,18 +57,17 @@ function BrandPanel() {
         </div>
         <div>
           <p className="font-mono text-2xl font-medium text-secondary tabular-nums">Safe</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Private & secure</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Private and secure</p>
         </div>
       </div>
     </div>
   );
 }
 
-/* ─── Login page ──────────────────────────────────────────── */
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/";
+  const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
   const justRegistered = searchParams.get("registered") === "1";
 
   const [email, setEmail] = useState("");
@@ -109,9 +103,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-background lg:grid lg:grid-cols-2">
       <BrandPanel />
 
-      {/* Right: form */}
       <div className="relative flex flex-col min-h-screen overflow-hidden">
-        {/* Mobile-only top bar */}
         <div className="lg:hidden flex items-center justify-between px-6 h-16 border-b border-primary/15 bg-card/80 backdrop-blur-md">
           <Link href="/" className="font-heading text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent tracking-tight">
             MAAYA
@@ -121,22 +113,16 @@ export default function LoginPage() {
           </Link>
         </div>
 
-        {/* Subtle blob — form side */}
         <div aria-hidden className="pointer-events-none absolute top-0 right-0 w-72 h-72 rounded-full bg-accent/10 blur-3xl" />
 
         <div className="flex flex-1 items-center justify-center px-8 py-16 relative z-10">
           <div className="w-full max-w-sm">
-
-            {/* Form header */}
             <div className="mb-8">
               <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20 mb-4">
                 Welcome back
               </span>
               <h1 className="font-heading text-3xl font-bold text-foreground tracking-tight leading-snug">
-                Log in to{" "}
-                <span className="italic bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                  MAAYA
-                </span>
+                Log in to <span className="italic bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">MAAYA</span>
               </h1>
               <p className="text-sm text-muted-foreground mt-2">
                 Your health journey continues here.
@@ -180,7 +166,7 @@ export default function LoginPage() {
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="........"
                   className="w-full h-11 px-3.5 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-primary/50 transition-colors"
                   required
                 />
@@ -191,19 +177,16 @@ export default function LoginPage() {
                 disabled={isLoading}
                 className="w-full h-11 text-base font-semibold bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-xl hover:opacity-90 transition-opacity shadow-sm disabled:opacity-70"
               >
-                {isLoading ? "Signing in…" : "Log in"}
+                {isLoading ? "Signing in..." : "Log in"}
               </Button>
             </form>
 
             <p className="mt-6 text-center text-sm text-muted-foreground">
-              Don&apos;t have an account?{" "}
-              <Link href="/register" className="font-medium text-primary hover:underline">
-                Register
-              </Link>
+              Don&apos;t have an account? <Link href="/register" className="font-medium text-primary hover:underline">Register</Link>
             </p>
 
-            <p className="mt-8 text-center text-xs text-muted-foreground">
-              User type is determined automatically — just log in with your email and password.
+            <p className="mt-4 text-center text-sm text-muted-foreground">
+              Are you a doctor? <Link href="/register/doctor" className="font-medium text-primary hover:underline">Create a doctor account</Link>
             </p>
           </div>
         </div>
