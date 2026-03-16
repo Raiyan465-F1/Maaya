@@ -73,6 +73,7 @@ function BrandPanel() {
 /* ─── Register page ───────────────────────────────────────── */
 export default function RegisterPage() {
   const router = useRouter();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -90,6 +91,7 @@ export default function RegisterPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          name: name.trim() || undefined,
           email: email.trim().toLowerCase(),
           password,
         }),
@@ -160,6 +162,20 @@ export default function RegisterPage() {
                   {error}
                 </div>
               )}
+              <div>
+                <label htmlFor="register-name" className="block text-sm font-medium text-foreground mb-1.5">
+                  Name <span className="text-muted-foreground font-normal">(optional)</span>
+                </label>
+                <input
+                  id="register-name"
+                  type="text"
+                  autoComplete="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                  className="w-full h-11 px-3.5 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-primary/50 transition-colors"
+                />
+              </div>
               <div>
                 <label htmlFor="register-email" className="block text-sm font-medium text-foreground mb-1.5">
                   Email

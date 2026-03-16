@@ -5,14 +5,17 @@ import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-/* ─── Types matching the API response ────────────────────────── */
 interface DoctorProfileFragment {
   specialty: string | null;
+  bio: string | null;
+  qualifications: string | null;
+  institution: string | null;
   availabilityInfo: string | null;
 }
 
 interface UserProfile {
   id: string;
+  name: string | null;
   email: string;
   role: "user" | "doctor" | "admin";
   accountStatus: "pending" | "active" | "banned" | "suspended" | null;
@@ -26,18 +29,33 @@ interface UserProfile {
   doctorProfile?: DoctorProfileFragment | null;
 }
 
-/* ─── Avatar from initials ───────────────────────────────────── */
-function ProfileAvatar({ email, size = "lg" }: { email: string; size?: "sm" | "lg" }) {
-  const initial = email ? email[0].toUpperCase() : "?";
-  const sizeClasses = size === "lg"
-    ? "w-24 h-24 text-3xl"
-    : "w-10 h-10 text-sm";
+function ProfileAvatar({
+  name,
+  email,
+  role,
+  size = "lg",
+}: {
+  name: string | null;
+  email: string;
+  role: "user" | "doctor" | "admin";
+  size?: "sm" | "lg";
+}) {
+  const initial = name ? name[0].toUpperCase() : email ? email[0].toUpperCase() : "?";
+  const sizeClasses = size === "lg" ? "w-24 h-24 text-3xl" : "w-10 h-10 text-sm";
+
+  const gradientClasses =
+    role === "doctor"
+      ? "from-secondary to-primary"
+      : role === "admin"
+        ? "from-primary via-accent to-secondary"
+        : "from-primary to-secondary";
 
   return (
     <div
       className={cn(
-        "rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-primary-foreground font-heading font-bold shadow-lg ring-4 ring-card",
-        sizeClasses
+        "flex items-center justify-center rounded-full bg-gradient-to-br font-heading font-bold text-primary-foreground shadow-lg ring-4 ring-card",
+        gradientClasses,
+        sizeClasses,
       )}
     >
       {initial}
@@ -45,7 +63,6 @@ function ProfileAvatar({ email, size = "lg" }: { email: string; size?: "sm" | "l
   );
 }
 
-/* ─── Status badge ───────────────────────────────────────────── */
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
     active: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400",
@@ -55,82 +72,104 @@ function StatusBadge({ status }: { status: string }) {
   };
 
   return (
-    <span className={cn(
-      "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border",
-      styles[status] ?? styles.pending
-    )}>
-      <span className={cn(
-        "w-1.5 h-1.5 rounded-full",
-        status === "active" ? "bg-emerald-500" : status === "pending" ? "bg-amber-500" : "bg-destructive"
-      )} />
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium",
+        styles[status] ?? styles.pending,
+      )}
+    >
+      <span
+        className={cn(
+          "h-1.5 w-1.5 rounded-full",
+          status === "active"
+            ? "bg-emerald-500"
+            : status === "pending"
+              ? "bg-amber-500"
+              : "bg-destructive",
+        )}
+      />
       {status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
   );
 }
 
-/* ─── Info row ───────────────────────────────────────────────── */
 function InfoRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div>
-      <p className="text-xs text-muted-foreground mb-1">{label}</p>
-      <p className={cn(
-        "text-sm text-foreground",
-        mono && "font-mono tabular-nums"
-      )}>
-        {value || "—"}
-      </p>
+      <p className="mb-1 text-xs text-muted-foreground">{label}</p>
+      <p className={cn("text-sm text-foreground", mono && "font-mono tabular-nums")}>{value || "—"}</p>
     </div>
   );
 }
 
-/* ─── Loading skeleton ───────────────────────────────────────── */
 function ProfileSkeleton() {
   return (
     <>
       <div className="relative mb-10">
-        <div className="h-40 sm:h-48 rounded-3xl bg-muted animate-pulse" />
+        <div className="h-40 animate-pulse rounded-3xl bg-muted sm:h-48" />
         <div className="absolute -bottom-10 left-6 sm:left-8">
-          <div className="w-24 h-24 rounded-full bg-muted animate-pulse ring-4 ring-card" />
+          <div className="h-24 w-24 animate-pulse rounded-full bg-muted ring-4 ring-card" />
         </div>
       </div>
-      <div className="mb-10 pl-1 space-y-3">
-        <div className="h-7 w-48 bg-muted rounded-lg animate-pulse" />
-        <div className="h-4 w-56 bg-muted rounded animate-pulse" />
-        <div className="h-3 w-36 bg-muted rounded animate-pulse" />
+      <div className="mb-10 space-y-3 pl-1">
+        <div className="h-7 w-48 animate-pulse rounded-lg bg-muted" />
+        <div className="h-4 w-56 animate-pulse rounded bg-muted" />
+        <div className="h-3 w-36 animate-pulse rounded bg-muted" />
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1.2fr]">
         <div className="space-y-6">
-          <div className="bg-card rounded-2xl border border-border p-6 h-40 animate-pulse" />
-          <div className="bg-card rounded-2xl border border-border p-6 h-28 animate-pulse" />
-          <div className="bg-card rounded-2xl border border-border p-6 h-24 animate-pulse" />
+          <div className="h-40 animate-pulse rounded-2xl border border-border bg-card p-6" />
+          <div className="h-28 animate-pulse rounded-2xl border border-border bg-card p-6" />
+          <div className="h-24 animate-pulse rounded-2xl border border-border bg-card p-6" />
         </div>
-        <div className="bg-card rounded-2xl border border-border p-6 h-80 animate-pulse" />
+        <div className="h-80 animate-pulse rounded-2xl border border-border bg-card p-6" />
       </div>
     </>
   );
 }
 
-/* ─── Profile page ───────────────────────────────────────────── */
+function RoleBadge({ role }: { role: "user" | "doctor" | "admin" }) {
+  const styles = {
+    user: "bg-primary/10 text-primary border-primary/20",
+    doctor: "bg-secondary/10 text-secondary border-secondary/20",
+    admin: "bg-accent/10 text-accent border-accent/20",
+  };
+
+  const labels = { user: "User", doctor: "Doctor", admin: "Admin" };
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize",
+        styles[role],
+      )}
+    >
+      {labels[role]}
+    </span>
+  );
+}
+
 export default function ProfilePage() {
   const { status: sessionStatus } = useSession();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Editable fields
+  const [displayName, setDisplayName] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [ageGroup, setAgeGroup] = useState("");
   const [gender, setGender] = useState("");
   const [location, setLocation] = useState("");
   const [specialty, setSpecialty] = useState("");
+  const [bio, setBio] = useState("");
+  const [qualifications, setQualifications] = useState("");
+  const [institution, setInstitution] = useState("");
   const [availabilityInfo, setAvailabilityInfo] = useState("");
 
-  // Save state
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [togglingAnon, setTogglingAnon] = useState(false);
 
-  /* ── Fetch profile ───────────────────────────────────────── */
   const fetchProfile = useCallback(async () => {
     try {
       setLoading(true);
@@ -142,11 +181,15 @@ export default function ProfilePage() {
       }
       const data: UserProfile = await res.json();
       setProfile(data);
+      setDisplayName(data.name ?? "");
       setIsAnonymous(data.isAnonymous ?? false);
       setAgeGroup(data.ageGroup ?? "");
       setGender(data.gender ?? "");
       setLocation(data.location ?? "");
       setSpecialty(data.doctorProfile?.specialty ?? "");
+      setBio(data.doctorProfile?.bio ?? "");
+      setQualifications(data.doctorProfile?.qualifications ?? "");
+      setInstitution(data.doctorProfile?.institution ?? "");
       setAvailabilityInfo(data.doctorProfile?.availabilityInfo ?? "");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -164,7 +207,6 @@ export default function ProfilePage() {
     }
   }, [sessionStatus, fetchProfile]);
 
-  /* ── PATCH helper ────────────────────────────────────────── */
   async function patchProfile(body: Record<string, unknown>) {
     const res = await fetch("/api/profile", {
       method: "PATCH",
@@ -176,24 +218,30 @@ export default function ProfilePage() {
     return data as UserProfile;
   }
 
-  /* ── Save personal details (and doctor profile when applicable) ── */
-  /* ── Save personal details (and doctor profile when applicable) ── */
   async function handleSave() {
     setSaving(true);
     setSaveMsg(null);
     try {
       const body: Record<string, unknown> = {
+        name: displayName.trim() || null,
         ageGroup: ageGroup || null,
         gender: gender || null,
         location: location || null,
       };
       if (profile?.role === "doctor") {
         body.specialty = specialty.trim() || null;
+        body.bio = bio.trim() || null;
+        body.qualifications = qualifications.trim() || null;
+        body.institution = institution.trim() || null;
         body.availabilityInfo = availabilityInfo.trim() || null;
       }
       const updated = await patchProfile(body);
       setProfile(updated);
+      setDisplayName(updated.name ?? "");
       setSpecialty(updated.doctorProfile?.specialty ?? "");
+      setBio(updated.doctorProfile?.bio ?? "");
+      setQualifications(updated.doctorProfile?.qualifications ?? "");
+      setInstitution(updated.doctorProfile?.institution ?? "");
       setAvailabilityInfo(updated.doctorProfile?.availabilityInfo ?? "");
       setSaveMsg({ type: "success", text: "Profile updated successfully." });
       setTimeout(() => setSaveMsg(null), 3000);
@@ -204,7 +252,6 @@ export default function ProfilePage() {
     }
   }
 
-  /* ── Toggle anonymous ────────────────────────────────────── */
   async function handleToggleAnonymous() {
     const newValue = !isAnonymous;
     setIsAnonymous(newValue);
@@ -219,30 +266,30 @@ export default function ProfilePage() {
     }
   }
 
-  /* ── Derived values ──────────────────────────────────────── */
   const memberSince = profile
     ? new Date(profile.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })
     : "";
 
   const hasUnsavedChanges =
     profile &&
-    (ageGroup !== (profile.ageGroup ?? "") ||
+    (displayName !== (profile.name ?? "") ||
+      ageGroup !== (profile.ageGroup ?? "") ||
       gender !== (profile.gender ?? "") ||
       location !== (profile.location ?? "") ||
       (profile.role === "doctor" &&
         (specialty !== (profile.doctorProfile?.specialty ?? "") ||
+          bio !== (profile.doctorProfile?.bio ?? "") ||
+          qualifications !== (profile.doctorProfile?.qualifications ?? "") ||
+          institution !== (profile.doctorProfile?.institution ?? "") ||
           availabilityInfo !== (profile.doctorProfile?.availabilityInfo ?? ""))));
 
-  /* ── Render ──────────────────────────────────────────────── */
   if (loading) return <ProfileSkeleton />;
 
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
-        <p className="font-heading text-xl font-semibold text-foreground mb-2">
-          Couldn&apos;t load profile
-        </p>
-        <p className="text-sm text-muted-foreground mb-6">{error}</p>
+        <p className="mb-2 font-heading text-xl font-semibold text-foreground">Couldn&apos;t load profile</p>
+        <p className="mb-6 text-sm text-muted-foreground">{error}</p>
         <Button onClick={fetchProfile} className="rounded-xl px-6">
           Try again
         </Button>
@@ -252,90 +299,144 @@ export default function ProfilePage() {
 
   if (!profile) return null;
 
+  const isDoctor = profile.role === "doctor";
+  const isAdmin = profile.role === "admin";
+
+  const bannerGradient = isDoctor
+    ? "from-secondary/15 via-accent/8 to-primary/12"
+    : isAdmin
+      ? "from-primary/15 via-accent/10 to-secondary/12"
+      : "from-primary/15 via-accent/10 to-secondary/15";
+
+  const blobColor1 = isDoctor ? "bg-secondary/12" : "bg-primary/10";
+  const blobColor2 = isDoctor ? "bg-primary/10" : "bg-secondary/10";
+
   return (
     <>
-      {/* ── Hero banner with avatar ─────────────────────────── */}
+      {/* Hero banner */}
       <div className="relative mb-10">
-        <div className="h-40 sm:h-48 rounded-3xl bg-gradient-to-br from-primary/15 via-accent/10 to-secondary/15 border border-primary/10 overflow-hidden relative">
-          <div aria-hidden className="pointer-events-none absolute -top-16 -right-16 w-60 h-60 rounded-full bg-primary/10 blur-3xl" />
-          <div aria-hidden className="pointer-events-none absolute -bottom-16 -left-16 w-48 h-48 rounded-full bg-secondary/10 blur-3xl" />
+        <div
+          className={cn(
+            "relative h-40 overflow-hidden rounded-3xl border border-primary/10 sm:h-48",
+            `bg-gradient-to-br ${bannerGradient}`,
+          )}
+        >
+          <div
+            aria-hidden
+            className={cn("pointer-events-none absolute -top-16 -right-16 h-60 w-60 rounded-full blur-3xl", blobColor1)}
+          />
+          <div
+            aria-hidden
+            className={cn("pointer-events-none absolute -bottom-16 -left-16 h-48 w-48 rounded-full blur-3xl", blobColor2)}
+          />
           <div className="absolute top-5 left-6">
-            <p className="font-mono text-xs tracking-widest text-primary uppercase">Profile</p>
+            <p
+              className={cn(
+                "font-mono text-xs tracking-widest uppercase",
+                isDoctor ? "text-secondary" : "text-primary",
+              )}
+            >
+              {isDoctor ? "Doctor Profile" : isAdmin ? "Admin Profile" : "Profile"}
+            </p>
           </div>
         </div>
         <div className="absolute -bottom-10 left-6 sm:left-8">
-          <ProfileAvatar email={profile.email} size="lg" />
+          <ProfileAvatar name={profile.name} email={profile.email} role={profile.role} size="lg" />
         </div>
         <div className="absolute top-5 right-6 flex items-center gap-2">
           <StatusBadge status={profile.accountStatus ?? "pending"} />
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20 capitalize">
-            {profile.role}
-          </span>
+          <RoleBadge role={profile.role} />
         </div>
       </div>
 
-      {/* ── Identity row ─────────────────────────────────────── */}
+      {/* Identity row */}
       <div className="mb-10 pl-1">
-        <h1 className="font-heading text-2xl font-bold text-foreground tracking-tight leading-snug">
-          Your{" "}
-          <span className="italic bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            account
-          </span>
+        <h1 className="font-heading text-2xl font-bold leading-snug tracking-tight text-foreground">
+          {profile.name ? (
+            <>
+              {profile.name.split(" ")[0]}&apos;s{" "}
+              <span
+                className={cn(
+                  "bg-clip-text italic text-transparent",
+                  isDoctor
+                    ? "bg-gradient-to-r from-secondary to-primary"
+                    : "bg-gradient-to-r from-primary to-secondary",
+                )}
+              >
+                {isDoctor ? "practice" : isAdmin ? "dashboard" : "account"}
+              </span>
+            </>
+          ) : (
+            <>
+              Your{" "}
+              <span
+                className={cn(
+                  "bg-clip-text italic text-transparent",
+                  isDoctor
+                    ? "bg-gradient-to-r from-secondary to-primary"
+                    : "bg-gradient-to-r from-primary to-secondary",
+                )}
+              >
+                {isDoctor ? "practice" : isAdmin ? "dashboard" : "account"}
+              </span>
+            </>
+          )}
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">{profile.email}</p>
-        <p className="font-mono text-xs text-muted-foreground/60 mt-1 tabular-nums">
-          Member since {memberSince}
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">{profile.email}</p>
+        <p className="mt-1 font-mono text-xs text-muted-foreground/60 tabular-nums">Member since {memberSince}</p>
       </div>
 
-      {/* ── Content grid ─────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-6">
-        {/* Left column */}
+      {/* Content grid */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1.2fr]">
+        {/* Left column — info cards */}
         <div className="space-y-6">
           {/* Account details */}
-          <section className="bg-card rounded-2xl border border-border p-6">
-            <h2 className="font-heading text-base font-semibold text-foreground tracking-tight mb-5">
-              Account details
-            </h2>
+          <section className="rounded-2xl border border-border bg-card p-6">
+            <h2 className="mb-5 font-heading text-base font-semibold tracking-tight text-foreground">Account details</h2>
             <div className="space-y-5">
+              <InfoRow label="Name" value={profile.name ?? "Not set"} />
               <InfoRow label="Email" value={profile.email} />
               <div className="grid grid-cols-3 gap-5">
                 <InfoRow label="Role" value={profile.role.charAt(0).toUpperCase() + profile.role.slice(1)} />
-                <InfoRow label="Status" value={(profile.accountStatus ?? "pending").charAt(0).toUpperCase() + (profile.accountStatus ?? "pending").slice(1)} />
+                <InfoRow
+                  label="Status"
+                  value={
+                    (profile.accountStatus ?? "pending").charAt(0).toUpperCase() +
+                    (profile.accountStatus ?? "pending").slice(1)
+                  }
+                />
                 <InfoRow label="Member since" value={memberSince} mono />
               </div>
             </div>
           </section>
 
-          {/* Admin callout */}
-          {profile.role === "admin" && (
-            <section className="bg-primary/5 rounded-2xl border border-primary/15 p-5">
-              <p className="font-mono text-xs tracking-widest text-primary uppercase mb-2">
-                Admin access
-              </p>
-              <p className="text-sm text-foreground leading-relaxed">
-                You have admin access. Doctors are onboarded by admins; use the admin area to manage roles and verification.
-              </p>
-            </section>
-          )}
-
-          {/* Doctor: read-only professional summary in left column */}
-          {profile.role === "doctor" && (
-            <section className="bg-card rounded-2xl border border-secondary/20 p-6">
-              <h2 className="font-heading text-base font-semibold text-foreground tracking-tight mb-2">
-                Professional profile
-              </h2>
-              <p className="text-xs text-muted-foreground mb-4">
-                Visible to users in Doctor&apos;s Help. Edit below.
-              </p>
-              <div className="space-y-3">
-                <InfoRow
-                  label="Specialty"
-                  value={profile.doctorProfile?.specialty ?? "—"}
-                />
+          {/* Doctor: professional summary card */}
+          {isDoctor && (
+            <section className="rounded-2xl border border-secondary/20 bg-gradient-to-br from-secondary/5 to-card p-6">
+              <div className="mb-4 flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary/12 font-mono text-xs font-medium text-secondary">
+                  Dr
+                </span>
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Availability</p>
-                  <p className="text-sm text-foreground whitespace-pre-wrap">
+                  <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
+                    Professional profile
+                  </h2>
+                  <p className="text-xs text-muted-foreground">Visible to users in Doctor&apos;s Help</p>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <InfoRow label="Specialty" value={profile.doctorProfile?.specialty ?? "—"} />
+                <InfoRow label="Institution" value={profile.doctorProfile?.institution ?? "—"} />
+                <InfoRow label="Qualifications" value={profile.doctorProfile?.qualifications ?? "—"} />
+                <div>
+                  <p className="mb-1 text-xs text-muted-foreground">Bio</p>
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+                    {profile.doctorProfile?.bio || "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="mb-1 text-xs text-muted-foreground">Availability</p>
+                  <p className="whitespace-pre-wrap text-sm text-foreground">
                     {profile.doctorProfile?.availabilityInfo || "—"}
                   </p>
                 </div>
@@ -343,11 +444,59 @@ export default function ProfilePage() {
             </section>
           )}
 
+          {/* Admin: administration panel */}
+          {isAdmin && (
+            <section className="rounded-2xl border border-accent/20 bg-gradient-to-br from-accent/5 via-primary/5 to-card p-6">
+              <div className="mb-4 flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/12 font-mono text-xs font-medium text-accent">
+                  ⚙
+                </span>
+                <div>
+                  <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
+                    Administration
+                  </h2>
+                  <p className="text-xs text-muted-foreground">System management access</p>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="rounded-xl border border-accent/10 bg-accent/5 p-4">
+                  <p className="text-sm leading-relaxed text-foreground">
+                    As an administrator, you manage user roles, content moderation, doctor onboarding, and platform
+                    safety. Use the admin tools to oversee community health and maintain platform standards.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-primary/10 bg-card p-3">
+                    <p className="font-mono text-[10px] tracking-widest text-primary uppercase">Role</p>
+                    <p className="mt-1 font-heading text-sm font-semibold text-foreground">System Admin</p>
+                  </div>
+                  <div className="rounded-xl border border-primary/10 bg-card p-3">
+                    <p className="font-mono text-[10px] tracking-widest text-primary uppercase">Access</p>
+                    <p className="mt-1 font-heading text-sm font-semibold text-foreground">Full</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">Capabilities</p>
+                  <div className="flex flex-wrap gap-2">
+                    {["User Management", "Content Moderation", "Doctor Onboarding", "Reports Review", "Article Management"].map(
+                      (cap) => (
+                        <span
+                          key={cap}
+                          className="rounded-full border border-accent/15 bg-accent/8 px-3 py-1 text-xs font-medium text-accent"
+                        >
+                          {cap}
+                        </span>
+                      ),
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
           {/* Privacy */}
-          <section className="bg-card rounded-2xl border border-border p-6">
-            <h2 className="font-heading text-base font-semibold text-foreground tracking-tight mb-5">
-              Privacy
-            </h2>
+          <section className="rounded-2xl border border-border bg-card p-6">
+            <h2 className="mb-5 font-heading text-base font-semibold tracking-tight text-foreground">Privacy</h2>
             <div className="flex items-start gap-4">
               <button
                 type="button"
@@ -357,27 +506,27 @@ export default function ProfilePage() {
                 onClick={handleToggleAnonymous}
                 className={cn(
                   "relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50",
-                  isAnonymous ? "bg-primary border-primary/30" : "bg-input border-border"
+                  isAnonymous ? "border-primary/30 bg-primary" : "border-border bg-input",
                 )}
               >
                 <span
                   className={cn(
                     "pointer-events-none inline-block h-5 w-5 rounded-full bg-card shadow ring-0 transition-transform",
-                    isAnonymous ? "translate-x-5" : "translate-x-0.5"
+                    isAnonymous ? "translate-x-5" : "translate-x-0.5",
                   )}
                   style={{ marginTop: 2 }}
                 />
               </button>
               <div>
                 <p className="text-sm font-medium text-foreground">Anonymous posting</p>
-                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
                   When enabled, your forum posts and doctor questions appear as anonymous to other users.
                 </p>
               </div>
             </div>
             {isAnonymous && (
-              <div className="mt-4 px-4 py-3 rounded-xl bg-primary/5 border border-primary/10">
-                <p className="text-xs text-primary font-medium">
+              <div className="mt-4 rounded-xl border border-primary/10 bg-primary/5 px-4 py-3">
+                <p className="text-xs font-medium text-primary">
                   Anonymous mode is on — your identity is hidden in the community.
                 </p>
               </div>
@@ -385,45 +534,78 @@ export default function ProfilePage() {
           </section>
 
           {/* Interests */}
-          <section className="bg-card rounded-2xl border border-border p-6">
-            <h2 className="font-heading text-base font-semibold text-foreground tracking-tight mb-2">
-              Interests
-            </h2>
-            <p className="text-xs text-muted-foreground mb-4">
-              Tags you follow for personalized content recommendations.
-            </p>
+          <section className="rounded-2xl border border-border bg-card p-6">
+            <h2 className="mb-2 font-heading text-base font-semibold tracking-tight text-foreground">Interests</h2>
+            <p className="mb-4 text-xs text-muted-foreground">Tags you follow for personalized content recommendations.</p>
             {profile.likedTags && profile.likedTags.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {profile.likedTags.map((tag) => (
                   <span
                     key={tag}
-                    className="text-xs px-3 py-1.5 rounded-full bg-primary/8 text-primary border border-primary/15 font-medium"
+                    className="rounded-full border border-primary/15 bg-primary/8 px-3 py-1.5 text-xs font-medium text-primary"
                   >
                     #{tag}
                   </span>
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground italic">
+              <p className="text-xs italic text-muted-foreground">
                 No tags followed yet. These will appear as you interact with the forum and articles.
               </p>
             )}
           </section>
         </div>
 
-        {/* Right column — editable */}
-        <section className="bg-card rounded-2xl border border-primary/15 shadow-sm p-6 h-fit">
-          {profile.role === "doctor" && (
-            <>
-              <h2 className="font-heading text-base font-semibold text-foreground tracking-tight mb-1">
-                Professional profile
-              </h2>
-              <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
-                Shown to users in Doctor&apos;s Help. Keeps your listing up to date.
-              </p>
-              <div className="space-y-5 mb-8">
+        {/* Right column — editable form */}
+        <section
+          className={cn(
+            "h-fit rounded-2xl border p-6 shadow-sm",
+            isDoctor ? "border-secondary/15 bg-card" : isAdmin ? "border-accent/15 bg-card" : "border-primary/15 bg-card",
+          )}
+        >
+          {/* Name field — common to all roles */}
+          <h2 className="mb-1 font-heading text-base font-semibold tracking-tight text-foreground">
+            {isDoctor ? "Your details" : isAdmin ? "Admin details" : "Personal details"}
+          </h2>
+          <p className="mb-6 text-xs leading-relaxed text-muted-foreground">
+            {isDoctor
+              ? "Keep your professional and personal information up to date."
+              : isAdmin
+                ? "Manage your admin account information."
+                : "Help us personalize your experience. All fields are optional and only visible to you."}
+          </p>
+
+          <div className="space-y-5">
+            <div>
+              <label htmlFor="profile-name" className="mb-1.5 block text-sm font-medium text-foreground">
+                Display name
+              </label>
+              <input
+                id="profile-name"
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Your name"
+                className="h-11 w-full rounded-xl border border-input bg-background px-3.5 text-foreground transition-colors placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-ring/50"
+              />
+            </div>
+
+            {/* Doctor professional fields */}
+            {isDoctor && (
+              <>
+                <div className="border-t border-secondary/10 pt-5">
+                  <p
+                    className={cn(
+                      "mb-4 font-mono text-xs tracking-widest uppercase",
+                      "text-secondary",
+                    )}
+                  >
+                    Professional information
+                  </p>
+                </div>
+
                 <div>
-                  <label htmlFor="profile-specialty" className="block text-sm font-medium text-foreground mb-1.5">
+                  <label htmlFor="profile-specialty" className="mb-1.5 block text-sm font-medium text-foreground">
                     Specialty
                   </label>
                   <input
@@ -432,11 +614,54 @@ export default function ProfilePage() {
                     value={specialty}
                     onChange={(e) => setSpecialty(e.target.value)}
                     placeholder="e.g. Gynecology, Reproductive Health"
-                    className="w-full h-11 px-3.5 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-primary/50 transition-colors"
+                    className="h-11 w-full rounded-xl border border-input bg-background px-3.5 text-foreground transition-colors placeholder:text-muted-foreground focus:border-secondary/50 focus:outline-none focus:ring-2 focus:ring-secondary/30"
                   />
                 </div>
+
                 <div>
-                  <label htmlFor="profile-availability" className="block text-sm font-medium text-foreground mb-1.5">
+                  <label htmlFor="profile-institution" className="mb-1.5 block text-sm font-medium text-foreground">
+                    Institution / Hospital
+                  </label>
+                  <input
+                    id="profile-institution"
+                    type="text"
+                    value={institution}
+                    onChange={(e) => setInstitution(e.target.value)}
+                    placeholder="e.g. Dhaka Medical College Hospital"
+                    className="h-11 w-full rounded-xl border border-input bg-background px-3.5 text-foreground transition-colors placeholder:text-muted-foreground focus:border-secondary/50 focus:outline-none focus:ring-2 focus:ring-secondary/30"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="profile-qualifications" className="mb-1.5 block text-sm font-medium text-foreground">
+                    Qualifications
+                  </label>
+                  <textarea
+                    id="profile-qualifications"
+                    value={qualifications}
+                    onChange={(e) => setQualifications(e.target.value)}
+                    placeholder="e.g. MBBS, FCPS (Obs & Gynae)"
+                    rows={2}
+                    className="w-full resize-none rounded-xl border border-input bg-background px-3.5 py-3 text-foreground transition-colors placeholder:text-muted-foreground focus:border-secondary/50 focus:outline-none focus:ring-2 focus:ring-secondary/30"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="profile-bio" className="mb-1.5 block text-sm font-medium text-foreground">
+                    Bio
+                  </label>
+                  <textarea
+                    id="profile-bio"
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    placeholder="Tell users about your experience and approach..."
+                    rows={4}
+                    className="w-full resize-none rounded-xl border border-input bg-background px-3.5 py-3 text-foreground transition-colors placeholder:text-muted-foreground focus:border-secondary/50 focus:outline-none focus:ring-2 focus:ring-secondary/30"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="profile-availability" className="mb-1.5 block text-sm font-medium text-foreground">
                     Availability
                   </label>
                   <textarea
@@ -444,31 +669,26 @@ export default function ProfilePage() {
                     value={availabilityInfo}
                     onChange={(e) => setAvailabilityInfo(e.target.value)}
                     placeholder="e.g. Weekdays 9–5, or timezone and hours"
-                    rows={3}
-                    className="w-full px-3.5 py-3 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-primary/50 transition-colors resize-none"
+                    rows={2}
+                    className="w-full resize-none rounded-xl border border-input bg-background px-3.5 py-3 text-foreground transition-colors placeholder:text-muted-foreground focus:border-secondary/50 focus:outline-none focus:ring-2 focus:ring-secondary/30"
                   />
                 </div>
-              </div>
-            </>
-          )}
 
-          <h2 className="font-heading text-base font-semibold text-foreground tracking-tight mb-1">
-            Personal details
-          </h2>
-          <p className="text-xs text-muted-foreground mb-6 leading-relaxed">
-            Help us personalize your experience. All fields are optional and only visible to you.
-          </p>
+                <div className="border-t border-secondary/10 pt-5">
+                  <p className="mb-4 font-mono text-xs tracking-widest text-secondary uppercase">Personal information</p>
+                </div>
+              </>
+            )}
 
-          <div className="space-y-5">
             <div>
-              <label htmlFor="profile-age" className="block text-sm font-medium text-foreground mb-1.5">
+              <label htmlFor="profile-age" className="mb-1.5 block text-sm font-medium text-foreground">
                 Age group
               </label>
               <select
                 id="profile-age"
                 value={ageGroup}
                 onChange={(e) => setAgeGroup(e.target.value)}
-                className="w-full h-11 px-3.5 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-primary/50 transition-colors appearance-none"
+                className="h-11 w-full appearance-none rounded-xl border border-input bg-background px-3.5 text-foreground transition-colors focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-ring/50"
               >
                 <option value="">Select age group</option>
                 <option value="13-17">13 – 17</option>
@@ -482,14 +702,14 @@ export default function ProfilePage() {
             </div>
 
             <div>
-              <label htmlFor="profile-gender" className="block text-sm font-medium text-foreground mb-1.5">
+              <label htmlFor="profile-gender" className="mb-1.5 block text-sm font-medium text-foreground">
                 Gender
               </label>
               <select
                 id="profile-gender"
                 value={gender}
                 onChange={(e) => setGender(e.target.value)}
-                className="w-full h-11 px-3.5 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-primary/50 transition-colors appearance-none"
+                className="h-11 w-full appearance-none rounded-xl border border-input bg-background px-3.5 text-foreground transition-colors focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-ring/50"
               >
                 <option value="">Select gender</option>
                 <option value="female">Female</option>
@@ -501,7 +721,7 @@ export default function ProfilePage() {
             </div>
 
             <div>
-              <label htmlFor="profile-location" className="block text-sm font-medium text-foreground mb-1.5">
+              <label htmlFor="profile-location" className="mb-1.5 block text-sm font-medium text-foreground">
                 Location
               </label>
               <input
@@ -510,7 +730,7 @@ export default function ProfilePage() {
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder="Country or region (optional)"
-                className="w-full h-11 px-3.5 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-primary/50 transition-colors"
+                className="h-11 w-full rounded-xl border border-input bg-background px-3.5 text-foreground transition-colors placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-ring/50"
               />
             </div>
 
@@ -519,43 +739,51 @@ export default function ProfilePage() {
                 type="button"
                 disabled={saving || !hasUnsavedChanges}
                 onClick={handleSave}
-                className="w-full sm:w-auto h-11 px-8 text-sm font-semibold bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-xl hover:opacity-90 transition-opacity shadow-sm disabled:opacity-60"
+                className={cn(
+                  "h-11 w-full rounded-xl px-8 text-sm font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90 disabled:opacity-60 sm:w-auto",
+                  isDoctor
+                    ? "bg-gradient-to-r from-secondary to-primary"
+                    : "bg-gradient-to-r from-primary to-accent",
+                )}
               >
                 {saving ? "Saving…" : "Save changes"}
               </Button>
 
               {saveMsg && (
-                <p className={cn(
-                  "text-xs mt-3 font-medium",
-                  saveMsg.type === "success" ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
-                )}>
+                <p
+                  className={cn(
+                    "mt-3 text-xs font-medium",
+                    saveMsg.type === "success" ? "text-emerald-600 dark:text-emerald-400" : "text-destructive",
+                  )}
+                >
                   {saveMsg.text}
                 </p>
               )}
 
               {hasUnsavedChanges && !saveMsg && (
-                <p className="text-xs text-amber-600 dark:text-amber-400 mt-3">
-                  You have unsaved changes.
-                </p>
+                <p className="mt-3 text-xs text-amber-600 dark:text-amber-400">You have unsaved changes.</p>
               )}
             </div>
           </div>
         </section>
       </div>
 
-      {/* ── Danger zone ─────────────────────────────────────── */}
-      <section className="mt-8 bg-card rounded-2xl border border-destructive/15 p-6">
-        <h2 className="font-heading text-base font-semibold text-destructive tracking-tight mb-1">
-          Danger zone
-        </h2>
-        <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
+      {/* Danger zone */}
+      <section className="mt-8 rounded-2xl border border-destructive/15 bg-card p-6">
+        <h2 className="mb-1 font-heading text-base font-semibold tracking-tight text-destructive">Danger zone</h2>
+        <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
           These actions are irreversible. Proceed with caution.
         </p>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Button type="button" disabled variant="destructive" className="h-10 px-5 text-sm rounded-xl">
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Button type="button" disabled variant="destructive" className="h-10 rounded-xl px-5 text-sm">
             Delete account
           </Button>
-          <Button type="button" disabled variant="outline" className="h-10 px-5 text-sm rounded-xl text-destructive border-destructive/30 hover:bg-destructive/5">
+          <Button
+            type="button"
+            disabled
+            variant="outline"
+            className="h-10 rounded-xl border-destructive/30 px-5 text-sm text-destructive hover:bg-destructive/5"
+          >
             Export my data
           </Button>
         </div>
