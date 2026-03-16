@@ -24,7 +24,9 @@ export type ForumCommentRecord = {
     tag: ForumAuthorTag;
   };
   upvotes: number;
+  downvotes: number;
   viewerHasUpvoted: boolean;
+  viewerHasDownvoted: boolean;
   canManage: boolean;
   replies: ForumCommentRecord[];
 };
@@ -42,6 +44,11 @@ export type ForumPostRecord = {
     email: string;
     tag: ForumAuthorTag;
   };
+  realAuthor?: {
+    id: string;
+    email: string;
+    tag: ForumAuthorTag;
+  } | null;
   media: ForumMediaRecord[];
   upvotes: number;
   downvotes: number;

@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/src/db";
 import { comments, commentVotes, forumPostMedia, forumPosts, forumPostVotes } from "@/src/schema/forum";
@@ -30,6 +31,11 @@ function buildAnonymousAlias(seed: string) {
   const suffix = String((hash % 900) + 100);
 
   return `${adjective} ${noun} ${suffix}`;
+}
+
+export function buildAnonymousOwnerHash(userId: string) {
+  const secret = process.env.NEXTAUTH_SECRET ?? "maaya-forum-anonymous";
+  return createHmac("sha256", secret).update(userId).digest("hex");
 }
 
 function sanitizeTags(tags: unknown): string[] {
@@ -67,8 +73,17 @@ export function sanitizeMedia(media: unknown): ForumMediaInput[] {
     .slice(0, FORUM_MEDIA_LIMIT);
 }
 
-export function canManageContent(viewerId: string | null, viewerRole: string | null, authorId: string) {
-  return viewerRole === "admin" || viewerId === authorId;
+export function canManageContent(
+  viewerId: string | null,
+  viewerRole: string | null,
+  authorId: string | null,
+  anonymousOwnerHash?: string | null
+) {
+  if (viewerRole === "admin") return true;
+  if (!viewerId) return false;
+  if (authorId) return viewerId === authorId;
+  if (anonymousOwnerHash) return buildAnonymousOwnerHash(viewerId) === anonymousOwnerHash;
+  return false;
 }
 
 export async function getForumSnapshot(viewerId: string | null, viewerRole: string | null): Promise<ForumResponse> {
@@ -79,6 +94,7 @@ export async function getForumSnapshot(viewerId: string | null, viewerRole: stri
       content: forumPosts.content,
       tags: forumPosts.tags,
       isAnonymous: forumPosts.isAnonymous,
+      anonymousOwnerHash: forumPosts.anonymousOwnerHash,
       createdAt: forumPosts.createdAt,
       updatedAt: forumPosts.updatedAt,
       authorId: users.id,
@@ -86,8 +102,17 @@ export async function getForumSnapshot(viewerId: string | null, viewerRole: stri
       authorRole: users.role,
     })
     .from(forumPosts)
-    .innerJoin(users, eq(forumPosts.authorId, users.id))
+    .leftJoin(users, eq(forumPosts.authorId, users.id))
     .orderBy(desc(forumPosts.createdAt));
+
+  const adminResolvedAuthors =
+    viewerRole === "admin"
+      ? new Map(
+          (
+            await db.select({ id: users.id, email: users.email, role: users.role }).from(users)
+          ).map((user) => [buildAnonymousOwnerHash(user.id), user] as const)
+        )
+      : null;
 
   const postIds = posts.map((post) => post.id);
 
@@ -145,12 +170,22 @@ export async function getForumSnapshot(viewerId: string | null, viewerRole: stri
     }
   }
 
-  const commentVoteCountMap = new Map<number, number>();
-  const viewerCommentVotes = new Set<number>();
+  const commentUpvoteCountMap = new Map<number, number>();
+  const commentDownvoteCountMap = new Map<number, number>();
+  const viewerCommentUpvotes = new Set<number>();
+  const viewerCommentDownvotes = new Set<number>();
   for (const vote of commentVoteRows) {
-    commentVoteCountMap.set(vote.commentId, (commentVoteCountMap.get(vote.commentId) ?? 0) + 1);
+    if (vote.voteType === "downvote") {
+      commentDownvoteCountMap.set(vote.commentId, (commentDownvoteCountMap.get(vote.commentId) ?? 0) + 1);
+      if (viewerId && vote.userId === viewerId) {
+        viewerCommentDownvotes.add(vote.commentId);
+      }
+      continue;
+    }
+
+    commentUpvoteCountMap.set(vote.commentId, (commentUpvoteCountMap.get(vote.commentId) ?? 0) + 1);
     if (viewerId && vote.userId === viewerId) {
-      viewerCommentVotes.add(vote.commentId);
+      viewerCommentUpvotes.add(vote.commentId);
     }
   }
 
@@ -170,8 +205,10 @@ export async function getForumSnapshot(viewerId: string | null, viewerRole: stri
         email: comment.authorEmail,
         tag: toAuthorTag(comment.authorRole),
       },
-      upvotes: commentVoteCountMap.get(comment.id) ?? 0,
-      viewerHasUpvoted: viewerCommentVotes.has(comment.id),
+      upvotes: commentUpvoteCountMap.get(comment.id) ?? 0,
+      downvotes: commentDownvoteCountMap.get(comment.id) ?? 0,
+      viewerHasUpvoted: viewerCommentUpvotes.has(comment.id),
+      viewerHasDownvoted: viewerCommentDownvotes.has(comment.id),
       canManage: canManageContent(viewerId, viewerRole, comment.authorId),
       replies: [],
     };
@@ -207,27 +244,43 @@ export async function getForumSnapshot(viewerId: string | null, viewerRole: stri
       role: viewerRole,
       tag: viewerRole ? toAuthorTag(viewerRole as UserRole) : null,
     },
-    posts: posts.map((post) => ({
-      id: post.id,
-      title: post.title,
-      content: post.content,
-      tags: sanitizeTags(post.tags ?? []),
-      isAnonymous: Boolean(post.isAnonymous),
-      createdAt: toIsoString(post.createdAt),
-      updatedAt: toIsoString(post.updatedAt),
-      author: {
-        id: post.authorId,
-        email: post.isAnonymous ? buildAnonymousAlias(`${post.id}-${post.authorId}`) : post.authorEmail,
-        tag: toAuthorTag(post.authorRole),
-      },
-      media: postMediaMap.get(post.id) ?? [],
-      upvotes: postUpvoteCountMap.get(post.id) ?? 0,
-      downvotes: postDownvoteCountMap.get(post.id) ?? 0,
-      viewerHasUpvoted: viewerPostUpvotes.has(post.id),
-      viewerHasDownvoted: viewerPostDownvotes.has(post.id),
-      canManage: canManageContent(viewerId, viewerRole, post.authorId),
-      comments: commentsByPostId.get(post.id) ?? [],
-    })),
+    posts: posts.map((post) => {
+      const resolvedAnonymousAuthor =
+        post.isAnonymous && post.anonymousOwnerHash && adminResolvedAuthors
+          ? adminResolvedAuthors.get(post.anonymousOwnerHash) ?? null
+          : null;
+
+      return {
+        id: post.id,
+        title: post.title,
+        content: post.content,
+        tags: sanitizeTags(post.tags ?? []),
+        isAnonymous: Boolean(post.isAnonymous),
+        createdAt: toIsoString(post.createdAt),
+        updatedAt: toIsoString(post.updatedAt),
+        author: {
+          id: post.authorId ?? `anonymous-${post.id}`,
+          email: post.isAnonymous
+            ? buildAnonymousAlias(`${post.id}-${post.anonymousOwnerHash ?? "anon"}`)
+            : (post.authorEmail ?? "Unknown user"),
+          tag: toAuthorTag(post.authorRole),
+        },
+        realAuthor: resolvedAnonymousAuthor
+          ? {
+              id: resolvedAnonymousAuthor.id,
+              email: resolvedAnonymousAuthor.email,
+              tag: toAuthorTag(resolvedAnonymousAuthor.role),
+            }
+          : null,
+        media: postMediaMap.get(post.id) ?? [],
+        upvotes: postUpvoteCountMap.get(post.id) ?? 0,
+        downvotes: postDownvoteCountMap.get(post.id) ?? 0,
+        viewerHasUpvoted: viewerPostUpvotes.has(post.id),
+        viewerHasDownvoted: viewerPostDownvotes.has(post.id),
+        canManage: canManageContent(viewerId, viewerRole, post.authorId, post.anonymousOwnerHash),
+        comments: commentsByPostId.get(post.id) ?? [],
+      };
+    }),
   };
 }
 
@@ -236,6 +289,7 @@ export async function ensurePostExists(postId: number) {
     .select({
       id: forumPosts.id,
       authorId: forumPosts.authorId,
+      anonymousOwnerHash: forumPosts.anonymousOwnerHash,
     })
     .from(forumPosts)
     .where(eq(forumPosts.id, postId))
@@ -306,7 +360,7 @@ export async function toggleVoteForPost(postId: number, userId: string, voteType
   return true;
 }
 
-export async function toggleUpvoteForComment(commentId: number, userId: string) {
+export async function toggleVoteForComment(commentId: number, userId: string, voteType: VoteType) {
   const [existing] = await db
     .select()
     .from(commentVotes)
@@ -314,14 +368,26 @@ export async function toggleUpvoteForComment(commentId: number, userId: string) 
     .limit(1);
 
   if (existing) {
-    await db.delete(commentVotes).where(and(eq(commentVotes.commentId, commentId), eq(commentVotes.userId, userId)));
-    return false;
+    if (existing.voteType === voteType) {
+      await db.delete(commentVotes).where(and(eq(commentVotes.commentId, commentId), eq(commentVotes.userId, userId)));
+      return false;
+    }
+
+    await db
+      .update(commentVotes)
+      .set({
+        voteType,
+        createdAt: new Date(),
+      })
+      .where(and(eq(commentVotes.commentId, commentId), eq(commentVotes.userId, userId)));
+
+    return true;
   }
 
   await db.insert(commentVotes).values({
     commentId,
     userId,
-    voteType: "upvote",
+    voteType,
   });
 
   return true;
