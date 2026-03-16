@@ -1,38 +1,80 @@
-# MAAYA
+# 🌸 MAAYA
 
-## When you clone the repo
+**MAAYA** is a platform built to make reproductive health information more accessible, supportive, and stigma-free.
 
-1. **Install dependencies**
-   ```bash
-   pnpm i
-   ```
+Many people struggle to find reliable information about reproductive health, or feel uncomfortable asking questions openly. MAAYA aims to change that by creating a space where people can **learn, track their health, and connect with others in a safe environment**.
 
-2. **Create `.env`** in the project root with:
-   - `DATABASE_URL` — PostgreSQL connection string (e.g. Neon)
-   - `NEXTAUTH_SECRET` — random string (e.g. run `openssl rand -base64 32` and paste the output)
-   - `NEXTAUTH_URL` — `http://localhost:3000` for local dev
+Our goal is to combine **education, personal health tools, and community support** into a single platform that encourages awareness and informed decision-making.
 
-3. **Create the database tables**
-   ```bash
-   pnpm db:migrate
-   ```
+---
 
-This is a Next.js template with shadcn/ui.
+## 🌿 What You Can Do With MAAYA
 
-## Adding components
+MAAYA provides a space where users can:
 
-To add components to your app, run the following command:
+- Track aspects of their reproductive health and personal symptoms
+- Access educational resources related to reproductive wellness
+- Participate in discussions with a supportive community
+- Ask questions and receive guidance from medical professionals
+- Stay informed through reminders and alerts related to their health
 
-```bash
-npx shadcn@latest add button
-```
+Rather than focusing on just one aspect of health, MAAYA brings together **knowledge, personal tracking, and community interaction** so users can better understand and manage their wellbeing.
 
-This will place the ui components in the `components` directory.
+---
 
-## Using components
+## 🎯 Our Mission
 
-To use the components in your app, import them as follows:
+Reproductive health is often surrounded by stigma, misinformation, and limited access to trusted resources.
 
-```tsx
-import { Button } from "@/components/ui/button";
-```
+MAAYA aims to help address these challenges by:
+
+- Encouraging **open and respectful conversations**
+- Providing **reliable educational content**
+- Supporting **privacy and anonymous participation**
+- Connecting users with **medical insight when needed**
+
+By creating a platform that blends **technology, education, and community**, MAAYA hopes to make reproductive health knowledge easier to access for everyone.
+
+---
+
+## 🛠 Tech Stack
+
+MAAYA is being developed using a modern web technology stack.
+
+**Frontend**
+- React / Next.js
+- Tailwind CSS
+
+**Backend**
+- Node.js
+
+**Database**
+- PostgreSQL
+- Drizzle ORM
+
+Additional tools and infrastructure will evolve as the project grows.
+
+---
+
+## 🚀 Project Status
+
+MAAYA is currently in active development.
+
+The current focus is on building the core platform infrastructure, including user systems, health tracking, educational resources, and community features.
+
+Future development will continue to expand the platform’s capabilities and accessibility.
+
+---
+
+## 🤝 Contributing
+
+MAAYA is an evolving project, and contributions are welcome.  
+Developers, designers, and contributors interested in improving reproductive health accessibility are encouraged to participate.
+
+More contribution guidelines will be added as the project develops.
+
+---
+
+## 🌸 MAAYA
+
+Creating a supportive space where people can **learn, share, and take control of their reproductive health.**
