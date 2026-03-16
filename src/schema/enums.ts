@@ -17,3 +17,6 @@ export type ReportStatus = (typeof reportStatus)[number];
 
 export const alertType = ["reminder", "reply", "doctor_response", "article_update", "system"] as const;
 export type AlertType = (typeof alertType)[number];
+
+export const forumMediaKind = ["image", "video"] as const;
+export type ForumMediaKind = (typeof forumMediaKind)[number];

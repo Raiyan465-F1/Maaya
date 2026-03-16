@@ -177,6 +177,7 @@ export default function ProfilePage() {
   }
 
   /* ── Save personal details (and doctor profile when applicable) ── */
+  /* ── Save personal details (and doctor profile when applicable) ── */
   async function handleSave() {
     setSaving(true);
     setSaveMsg(null);
