@@ -1,14 +1,14 @@
-# 🌸 MAAYA
+# MAAYA
 
 **MAAYA** is a platform built to make reproductive health information more accessible, supportive, and stigma-free.
 
 Many people struggle to find reliable information about reproductive health, or feel uncomfortable asking questions openly. MAAYA aims to change that by creating a space where people can **learn, track their health, and connect with others in a safe environment**.
 
-Our goal is to combine **education, personal health tools, and community support** into a single platform that encourages awareness and informed decision-making.
+Our goal is to combine **education, personal health tools, and community support** into a single platform that encourages awareness and informed decision-making when it comes to adulthood.
 
 ---
 
-## 🌿 What You Can Do With MAAYA
+## What You Can Do With MAAYA
 
 MAAYA provides a space where users can:
 
@@ -22,7 +22,7 @@ Rather than focusing on just one aspect of health, MAAYA brings together **knowl
 
 ---
 
-## 🎯 Our Mission
+## Our Mission
 
 Reproductive health is often surrounded by stigma, misinformation, and limited access to trusted resources.
 
@@ -37,7 +37,7 @@ By creating a platform that blends **technology, education, and community**, MAA
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 MAAYA is being developed using a modern web technology stack.
 
@@ -56,25 +56,23 @@ Additional tools and infrastructure will evolve as the project grows.
 
 ---
 
-## 🚀 Project Status
+## Project Status
 
 MAAYA is currently in active development.
 
-The current focus is on building the core platform infrastructure, including user systems, health tracking, educational resources, and community features.
+The current focus is on building the core platform infrastructure, including user systems, health tracking, educational resources, community features, and role-based doctor support workflows.
 
-Future development will continue to expand the platform’s capabilities and accessibility.
+Future development will continue to expand the platform's capabilities and accessibility.
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
-MAAYA is an evolving project, and contributions are welcome.  
+MAAYA is an evolving project, and contributions are welcome.
 Developers, designers, and contributors interested in improving reproductive health accessibility are encouraged to participate.
 
 More contribution guidelines will be added as the project develops.
 
 ---
-
-## 🌸 MAAYA
 
 Creating a supportive space where people can **learn, share, and take control of their reproductive health.**

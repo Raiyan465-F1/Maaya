@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 
 const MIN_PASSWORD_LENGTH = 8;
 
-function BrandPanel() {
+function DoctorBrandPanel() {
   return (
-    <div className="hidden lg:flex flex-col justify-between bg-gradient-to-br from-secondary/8 via-background to-primary/8 border-r border-primary/10 px-14 py-12 relative overflow-hidden">
-      <div aria-hidden className="pointer-events-none absolute -top-24 -right-24 w-80 h-80 rounded-full bg-secondary/15 blur-3xl" />
-      <div aria-hidden className="pointer-events-none absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-primary/15 blur-3xl" />
+    <div className="hidden lg:flex flex-col justify-between bg-gradient-to-br from-primary/8 via-background to-accent/10 border-r border-primary/10 px-14 py-12 relative overflow-hidden">
+      <div aria-hidden className="pointer-events-none absolute -top-20 -left-20 w-80 h-80 rounded-full bg-primary/15 blur-3xl" />
+      <div aria-hidden className="pointer-events-none absolute -bottom-20 -right-20 w-72 h-72 rounded-full bg-accent/15 blur-3xl" />
 
       <div className="relative z-10">
         <Link href="/" className="inline-flex items-center gap-2 mb-16">
@@ -21,28 +21,27 @@ function BrandPanel() {
         </Link>
 
         <blockquote className="font-heading text-[2.6rem] font-normal italic text-foreground leading-[1.15] tracking-tight mb-8">
-          Breaking the silence<br />
-          <span className="bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent">
-            around women&apos;s
+          Bring your expertise<br />
+          <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            to women&apos;s health
           </span>
-          <br />health.
+          <br />support.
         </blockquote>
 
         <p className="text-muted-foreground text-base leading-relaxed mb-12 max-w-xs">
-          Join thousands of women accessing reproductive health education, community, and
-          expert guidance all in one safe space.
+          Create a doctor account so you can review individual posts, answer users directly, and clear pending replies from the dashboard.
         </p>
 
         <div className="flex flex-col gap-3.5">
           {[
-            "Always free no premium tiers",
-            "Anonymous by default in the forum",
-            "Dedicated doctor dashboard replies",
+            "Read individual user posts",
+            "Reply from the doctor dashboard",
+            "Use a protected doctor access code",
           ].map((item) => (
             <div key={item} className="flex items-center gap-3">
-              <span className="w-5 h-5 rounded-full bg-secondary/12 flex items-center justify-center flex-shrink-0">
+              <span className="w-5 h-5 rounded-full bg-primary/12 flex items-center justify-center flex-shrink-0">
                 <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                  <path d="M1 4l2.5 2.5L9 1" stroke="var(--color-secondary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M1 4l2.5 2.5L9 1" stroke="var(--color-primary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </span>
               <span className="text-sm text-foreground">{item}</span>
@@ -53,26 +52,30 @@ function BrandPanel() {
 
       <div className="relative z-10 flex gap-10">
         <div>
-          <p className="font-mono text-2xl font-medium text-secondary tabular-nums">Open</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Community forum</p>
+          <p className="font-mono text-2xl font-medium text-primary tabular-nums">Doctor</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Account view</p>
         </div>
         <div>
-          <p className="font-mono text-2xl font-medium text-primary tabular-nums">22+</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Core features</p>
+          <p className="font-mono text-2xl font-medium text-accent tabular-nums">Live</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Reply workflow</p>
         </div>
       </div>
     </div>
   );
 }
 
-export default function RegisterPage() {
+export default function DoctorRegisterPage() {
   const router = useRouter();
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [doctorAccessCode, setDoctorAccessCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const passwordValid = password.length >= MIN_PASSWORD_LENGTH;
+  const passwordsMatch =
+    password.length > 0 && confirmPassword.length > 0 && password === confirmPassword;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -85,17 +88,17 @@ export default function RegisterPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: name.trim() || undefined,
           email: email.trim().toLowerCase(),
           password,
-          role: "user",
+          role: "doctor",
+          doctorAccessCode,
         }),
       });
 
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        setError((data.error as string) || "Registration failed. Please try again.");
+        setError((data.error as string) || "Doctor registration failed. Please try again.");
         setIsLoading(false);
         return;
       }
@@ -109,13 +112,9 @@ export default function RegisterPage() {
     }
   }
 
-  const passwordValid = password.length >= MIN_PASSWORD_LENGTH;
-  const passwordsMatch =
-    password.length > 0 && confirmPassword.length > 0 && password === confirmPassword;
-
   return (
     <div className="min-h-screen bg-background lg:grid lg:grid-cols-2">
-      <BrandPanel />
+      <DoctorBrandPanel />
 
       <div className="relative flex flex-col min-h-screen overflow-hidden">
         <div className="lg:hidden flex items-center justify-between px-6 h-16 border-b border-primary/15 bg-card/80 backdrop-blur-md">
@@ -127,19 +126,19 @@ export default function RegisterPage() {
           </Link>
         </div>
 
-        <div aria-hidden className="pointer-events-none absolute bottom-0 left-0 w-72 h-72 rounded-full bg-secondary/10 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute bottom-0 left-0 w-72 h-72 rounded-full bg-accent/10 blur-3xl" />
 
         <div className="flex flex-1 items-center justify-center px-8 py-16 relative z-10">
           <div className="w-full max-w-sm">
             <div className="mb-8">
-              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-secondary/10 text-secondary border border-secondary/20 mb-4">
-                Join MAAYA
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20 mb-4">
+                Doctor access
               </span>
               <h1 className="font-heading text-3xl font-bold text-foreground tracking-tight leading-snug">
-                Create your <span className="italic bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent">account</span>
+                Create your <span className="italic bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">doctor account</span>
               </h1>
               <p className="text-sm text-muted-foreground mt-2">
-                This page is for general users. Doctors should use the dedicated doctor sign-up.
+                Use the shared doctor registration code to unlock the doctor dashboard in practice.
               </p>
             </div>
 
@@ -149,42 +148,39 @@ export default function RegisterPage() {
                   {error}
                 </div>
               )}
+
               <div>
-                <label htmlFor="register-name" className="block text-sm font-medium text-foreground mb-1.5">
-                  Name <span className="text-muted-foreground font-normal">(optional)</span>
-                </label>
+                <label htmlFor="doctor-email" className="block text-sm font-medium text-foreground mb-1.5">Email</label>
                 <input
-                  id="register-name"
-                  type="text"
-                  autoComplete="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Your name"
-                  className="w-full h-11 px-3.5 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-primary/50 transition-colors"
-                />
-              </div>
-              <div>
-                <label htmlFor="register-email" className="block text-sm font-medium text-foreground mb-1.5">
-                  Email
-                </label>
-                <input
-                  id="register-email"
+                  id="doctor-email"
                   type="email"
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
+                  placeholder="doctor@example.com"
                   className="w-full h-11 px-3.5 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-primary/50 transition-colors"
                   required
                 />
               </div>
 
               <div>
-                <label htmlFor="register-password" className="block text-sm font-medium text-foreground mb-1.5">
-                  Password
-                </label>
+                <label htmlFor="doctor-code" className="block text-sm font-medium text-foreground mb-1.5">Doctor access code</label>
                 <input
-                  id="register-password"
+                  id="doctor-code"
+                  type="password"
+                  autoComplete="off"
+                  value={doctorAccessCode}
+                  onChange={(e) => setDoctorAccessCode(e.target.value)}
+                  placeholder="Enter the shared registration code"
+                  className="w-full h-11 px-3.5 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-primary/50 transition-colors"
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="doctor-password" className="block text-sm font-medium text-foreground mb-1.5">Password</label>
+                <input
+                  id="doctor-password"
                   type="password"
                   autoComplete="new-password"
                   value={password}
@@ -200,11 +196,9 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label htmlFor="register-confirm" className="block text-sm font-medium text-foreground mb-1.5">
-                  Confirm password
-                </label>
+                <label htmlFor="doctor-confirm" className="block text-sm font-medium text-foreground mb-1.5">Confirm password</label>
                 <input
-                  id="register-confirm"
+                  id="doctor-confirm"
                   type="password"
                   autoComplete="new-password"
                   value={confirmPassword}
@@ -220,19 +214,15 @@ export default function RegisterPage() {
 
               <Button
                 type="submit"
-                disabled={isLoading || !passwordValid || !passwordsMatch}
-                className="w-full h-11 text-base font-semibold bg-gradient-to-r from-secondary to-primary text-primary-foreground rounded-xl hover:opacity-90 transition-opacity shadow-sm disabled:opacity-70"
+                disabled={isLoading || !passwordValid || !passwordsMatch || doctorAccessCode.trim().length === 0}
+                className="w-full h-11 text-base font-semibold bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-xl hover:opacity-90 transition-opacity shadow-sm disabled:opacity-70"
               >
-                {isLoading ? "Creating account..." : "Register"}
+                {isLoading ? "Creating doctor account..." : "Create doctor account"}
               </Button>
             </form>
 
             <p className="mt-6 text-center text-sm text-muted-foreground">
-              Already have an account? <Link href="/login" className="font-medium text-primary hover:underline">Log in</Link>
-            </p>
-
-            <p className="mt-4 text-center text-sm text-muted-foreground">
-              Are you a doctor? <Link href="/register/doctor" className="font-medium text-primary hover:underline">Use doctor sign-up</Link>
+              Need a regular account instead? <Link href="/register" className="font-medium text-primary hover:underline">Register as a user</Link>
             </p>
           </div>
         </div>

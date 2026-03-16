@@ -7,6 +7,10 @@ import { withCorsHeaders } from "@/lib/cors";
 
 const MIN_PASSWORD_LENGTH = 8;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const DOCTOR_REGISTRATION_CODES = (process.env.DOCTOR_REGISTRATION_CODE ?? "")
+  .split(",")
+  .map((code) => code.trim())
+  .filter(Boolean);
 
 function jsonResponse(
   data: object,
@@ -33,31 +37,28 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
+<<<<<<< HEAD
     const { name, email, password } = body as { name?: string; email?: string; password?: string };
+=======
+    const { email, password, role, doctorAccessCode } = body as {
+      email?: string;
+      password?: string;
+      role?: string;
+      doctorAccessCode?: string;
+    };
+>>>>>>> umism7
 
     if (!email || typeof email !== "string") {
-      return jsonResponse(
-        { error: "Email is required" },
-        400,
-        origin
-      );
+      return jsonResponse({ error: "Email is required" }, 400, origin);
     }
 
     const trimmedEmail = email.trim().toLowerCase();
     if (!EMAIL_REGEX.test(trimmedEmail)) {
-      return jsonResponse(
-        { error: "Invalid email format" },
-        400,
-        origin
-      );
+      return jsonResponse({ error: "Invalid email format" }, 400, origin);
     }
 
     if (!password || typeof password !== "string") {
-      return jsonResponse(
-        { error: "Password is required" },
-        400,
-        origin
-      );
+      return jsonResponse({ error: "Password is required" }, 400, origin);
     }
 
     if (password.length < MIN_PASSWORD_LENGTH) {
@@ -66,6 +67,30 @@ export async function POST(request: NextRequest) {
         400,
         origin
       );
+    }
+
+    const normalizedRole = role === "doctor" ? "doctor" : "user";
+
+    if (normalizedRole === "doctor") {
+      if (DOCTOR_REGISTRATION_CODES.length === 0) {
+        return jsonResponse(
+          { error: "Doctor registration is not configured yet" },
+          503,
+          origin
+        );
+      }
+
+      if (
+        !doctorAccessCode ||
+        typeof doctorAccessCode !== "string" ||
+        !DOCTOR_REGISTRATION_CODES.includes(doctorAccessCode.trim())
+      ) {
+        return jsonResponse(
+          { error: "Doctor access code is invalid" },
+          403,
+          origin
+        );
+      }
     }
 
     const [existing] = await db
@@ -90,21 +115,22 @@ export async function POST(request: NextRequest) {
       name: trimmedName || null,
       email: trimmedEmail,
       passwordHash,
-      role: "user",
+      role: normalizedRole,
       accountStatus: "active",
     });
 
     return jsonResponse(
-      { message: "Registration successful" },
+      {
+        message:
+          normalizedRole === "doctor"
+            ? "Doctor account created successfully"
+            : "Registration successful",
+      },
       201,
       origin
     );
   } catch (err) {
     console.error("Register error:", err);
-    return jsonResponse(
-      { error: "Registration failed" },
-      500,
-      origin
-    );
+    return jsonResponse({ error: "Registration failed" }, 500, origin);
   }
 }
