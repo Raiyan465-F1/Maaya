@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -768,8 +768,24 @@ export default function ProfilePage() {
         </section>
       </div>
 
+      {/* Session */}
+      <section className="mt-8 rounded-2xl border border-border bg-card p-6">
+        <h2 className="mb-1 font-heading text-base font-semibold tracking-tight text-foreground">Session</h2>
+        <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
+          Signed in as <span className="font-medium text-foreground">{profile.email}</span>
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          className="h-10 rounded-xl px-5 text-sm"
+        >
+          Sign out
+        </Button>
+      </section>
+
       {/* Danger zone */}
-      <section className="mt-8 rounded-2xl border border-destructive/15 bg-card p-6">
+      <section className="mt-4 rounded-2xl border border-destructive/15 bg-card p-6">
         <h2 className="mb-1 font-heading text-base font-semibold tracking-tight text-destructive">Danger zone</h2>
         <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
           These actions are irreversible. Proceed with caution.

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import {
   LayoutDashboard,
   CalendarHeart,
@@ -10,10 +10,8 @@ import {
   Stethoscope,
   Bell,
   BookOpen,
-  User,
   UserPlus,
   Shield,
-  LogOut,
 } from "lucide-react";
 import {
   Sidebar,
@@ -202,15 +200,6 @@ export function AppSidebar() {
                   )}
                 </span>
               </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              tooltip="Sign out"
-              onClick={() => signOut({ callbackUrl: "/login" })}
-            >
-              <LogOut />
-              <span>Sign out</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
