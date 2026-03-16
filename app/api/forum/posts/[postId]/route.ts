@@ -1,10 +1,17 @@
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { db } from "@/src/db";
 import { forumPosts } from "@/src/schema/forum";
 import { authOptions } from "@/lib/auth";
-import { canManageContent, ensurePostExists, getForumSnapshot, replacePostMedia, sanitizeMedia } from "@/lib/forum-server";
+import {
+  buildAnonymousOwnerHash,
+  canManageContent,
+  ensurePostExists,
+  getForumSnapshot,
+  replacePostMedia,
+  sanitizeMedia,
+} from "@/lib/forum-server";
 import { FORUM_TAG_LIMIT } from "@/lib/forum-types";
 
 function parsePostId(value: string) {
@@ -42,7 +49,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Discussion not found." }, { status: 404 });
   }
 
-  if (!canManageContent(session.user.id, session.user.role, existing.authorId)) {
+  if (!canManageContent(session.user.id, session.user.role, existing.authorId, existing.anonymousOwnerHash)) {
     return NextResponse.json({ error: "You do not have permission to edit this discussion." }, { status: 403 });
   }
 
@@ -62,9 +69,16 @@ export async function PATCH(
       return NextResponse.json({ error: "Post content must be at least 10 characters long." }, { status: 400 });
     }
 
+    const nextAuthorId = isAnonymous ? null : (existing.authorId ?? session.user.id);
+    const nextAnonymousOwnerHash = isAnonymous
+      ? (existing.anonymousOwnerHash ?? buildAnonymousOwnerHash(existing.authorId ?? session.user.id))
+      : null;
+
     await db
       .update(forumPosts)
       .set({
+        authorId: nextAuthorId,
+        anonymousOwnerHash: nextAnonymousOwnerHash,
         title,
         content,
         tags,
@@ -102,11 +116,11 @@ export async function DELETE(
     return NextResponse.json({ error: "Discussion not found." }, { status: 404 });
   }
 
-  if (!canManageContent(session.user.id, session.user.role, existing.authorId)) {
+  if (!canManageContent(session.user.id, session.user.role, existing.authorId, existing.anonymousOwnerHash)) {
     return NextResponse.json({ error: "You do not have permission to delete this discussion." }, { status: 403 });
   }
 
-  await db.delete(forumPosts).where(and(eq(forumPosts.id, postId), eq(forumPosts.authorId, existing.authorId)));
+  await db.delete(forumPosts).where(eq(forumPosts.id, postId));
 
   const data = await getForumSnapshot(session.user.id, session.user.role);
   return NextResponse.json(data);

@@ -1,6 +1,7 @@
 "use client";
 
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, MessageSquare, MoreHorizontal } from "lucide-react";
 import type {
   ForumCommentRecord,
@@ -61,15 +62,97 @@ function tagStyles(tag: "Admin" | "User") {
     : "bg-primary/10 text-primary border-primary/20";
 }
 
+function parseTagString(value: string) {
+  return Array.from(
+    new Set(
+      value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+    )
+  );
+}
+
+function stringifyTags(tags: string[]) {
+  return tags.join(", ");
+}
+
+function toggleTag(tags: string[], tag: string) {
+  return tags.includes(tag) ? tags.filter((item) => item !== tag) : [...tags, tag];
+}
+
+function forumProfileHref(userId: string) {
+  return `/forum/users/${userId}`;
+}
+
 function StatChip({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex min-w-0 flex-col items-center">
-      <p className="mb-2 min-h-[1.75rem] text-center text-[10px] leading-tight font-bold uppercase tracking-[0.04em] text-foreground sm:text-[11px]">
+    <div className="flex min-w-0 flex-col items-center justify-end">
+      <p className="mb-3 min-h-[1.75rem] text-center text-[10px] leading-tight font-bold uppercase tracking-[0.04em] text-foreground sm:text-[11px]">
         {label}
       </p>
-      <div className="flex h-[4.75rem] w-full max-w-[5.5rem] items-end rounded-[1.1rem] border border-primary/15 bg-white/80 px-4 py-3 shadow-sm backdrop-blur sm:h-20 sm:max-w-[5.75rem]">
-        <p className="text-[22px] leading-none font-semibold text-foreground sm:text-[26px]">{value}</p>
-      </div>
+      <p className="font-mono text-[2.8rem] leading-none font-medium tracking-[-0.05em] text-foreground tabular-nums sm:text-[3.4rem]">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function TagSelector({
+  value,
+  onChange,
+  availableTags,
+  placeholder,
+}: {
+  value: string;
+  onChange: (nextValue: string) => void;
+  availableTags: string[];
+  placeholder: string;
+}) {
+  const selectedTags = parseTagString(value);
+  const suggestedTags = availableTags.filter((tag) => !selectedTags.includes(tag)).slice(0, 12);
+
+  return (
+    <div className="space-y-3">
+      <input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        className="w-full rounded-3xl border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40"
+      />
+
+      {selectedTags.length ? (
+        <div className="flex flex-wrap gap-2">
+          {selectedTags.map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => onChange(stringifyTags(selectedTags.filter((item) => item !== tag)))}
+              className="rounded-full border border-primary/15 bg-primary/8 px-3 py-1.5 text-xs font-medium text-primary transition hover:bg-primary/14"
+            >
+              #{tag} x
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {suggestedTags.length ? (
+        <div className="space-y-2">
+          <p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">Existing tags</p>
+          <div className="flex flex-wrap gap-2">
+            {suggestedTags.map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => onChange(stringifyTags(toggleTag(selectedTags, tag)))}
+                className="rounded-full border border-primary/15 bg-card px-3 py-1.5 text-xs font-medium text-foreground transition hover:border-primary/30 hover:text-primary"
+              >
+                #{tag}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -151,35 +234,92 @@ function InlineActionButton({
 function ManagementMenu({
   onEdit,
   onDelete,
+  onReport,
   deleteDisabled,
 }: {
-  onEdit: () => void;
-  onDelete: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onReport?: () => void;
   deleteDisabled?: boolean;
 }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function handlePointerDown(event: MouseEvent) {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isOpen]);
+
   return (
-    <details className="relative">
-      <summary className="flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-full text-muted-foreground transition hover:bg-primary/8 hover:text-foreground">
+    <div ref={menuRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen((current) => !current)}
+        className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition hover:bg-primary/8 hover:text-foreground"
+      >
         <MoreHorizontal className="h-4 w-4" />
-      </summary>
-      <div className="absolute right-0 top-11 z-10 min-w-32 rounded-2xl border border-primary/12 bg-white p-2 shadow-lg">
-        <button
-          type="button"
-          onClick={onEdit}
-          className="block w-full rounded-xl px-3 py-2 text-left text-sm text-foreground transition hover:bg-primary/8"
-        >
-          Edit
-        </button>
-        <button
-          type="button"
-          onClick={onDelete}
-          disabled={deleteDisabled}
-          className="block w-full rounded-xl px-3 py-2 text-left text-sm text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Delete
-        </button>
-      </div>
-    </details>
+      </button>
+      {isOpen ? (
+        <div className="absolute right-0 top-11 z-10 min-w-32 rounded-2xl border border-primary/12 bg-white p-2 shadow-lg">
+          {onEdit ? (
+            <button
+              type="button"
+              onClick={() => {
+                setIsOpen(false);
+                onEdit();
+              }}
+              className="block w-full rounded-xl px-3 py-2 text-left text-sm text-foreground transition hover:bg-primary/8"
+            >
+              Edit
+            </button>
+          ) : null}
+          {onDelete ? (
+            <button
+              type="button"
+              onClick={() => {
+                setIsOpen(false);
+                onDelete();
+              }}
+              disabled={deleteDisabled}
+              className="block w-full rounded-xl px-3 py-2 text-left text-sm text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Delete
+            </button>
+          ) : null}
+          {onReport ? (
+            <button
+              type="button"
+              onClick={() => {
+                setIsOpen(false);
+                onReport();
+              }}
+              className="block w-full rounded-xl px-3 py-2 text-left text-sm text-amber-700 transition hover:bg-amber-50"
+            >
+              Report
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -198,13 +338,15 @@ function CommentTree({
   onDelete,
   onReply,
   onEdit,
+  depth = 0,
 }: {
   comments: ForumCommentRecord[];
   busyKey: string | null;
-  onVote: (commentId: number) => void;
+  onVote: (commentId: number, voteType: "upvote" | "downvote") => void;
   onDelete: (commentId: number) => void;
   onReply: (commentId: number, content: string) => void;
   onEdit: (commentId: number, content: string) => void;
+  depth?: number;
 }) {
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -224,12 +366,22 @@ function CommentTree({
         return (
           <div key={comment.id} className="rounded-[1.6rem] border border-primary/12 bg-white/85 p-4 shadow-sm">
             <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/12 font-mono text-xs text-primary">
+              <Link
+                href={forumProfileHref(comment.author.id)}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/12 font-mono text-xs text-primary transition hover:bg-primary/18"
+                onClick={(event) => event.stopPropagation()}
+              >
                 {initialsFromEmail(comment.author.email)}
-              </div>
+              </Link>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-semibold text-foreground">{comment.author.email}</p>
+                  <Link
+                    href={forumProfileHref(comment.author.id)}
+                    className="text-sm font-semibold text-foreground transition hover:text-primary"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    {comment.author.email}
+                  </Link>
                   <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${tagStyles(comment.author.tag)}`}>
                     {comment.author.tag}
                   </span>
@@ -264,9 +416,13 @@ function CommentTree({
 
                 <div className="mt-4 flex items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-4">
-                    <InlineActionButton active={comment.viewerHasUpvoted} disabled={busy} onClick={() => onVote(comment.id)}>
+                    <InlineActionButton active={comment.viewerHasUpvoted} disabled={busy} onClick={() => onVote(comment.id, "upvote")}>
                       <ArrowUp className="h-4 w-4" />
                       <span>{comment.upvotes > 0 ? comment.upvotes : "Upvote"}</span>
+                    </InlineActionButton>
+                    <InlineActionButton active={comment.viewerHasDownvoted} disabled={busy} onClick={() => onVote(comment.id, "downvote")}>
+                      <ArrowDown className="h-4 w-4" />
+                      <span>{comment.downvotes > 0 ? comment.downvotes : "Downvote"}</span>
                     </InlineActionButton>
                     <InlineActionButton
                       onClick={() => {
@@ -316,20 +472,27 @@ function CommentTree({
                   </div>
                 ) : null}
 
-                {comment.replies.length ? (
-                  <div className="mt-5 border-l border-primary/12 pl-4 sm:pl-6">
-                    <CommentTree
-                      comments={comment.replies}
-                      busyKey={busyKey}
-                      onVote={onVote}
-                      onDelete={onDelete}
-                      onReply={onReply}
-                      onEdit={onEdit}
-                    />
-                  </div>
-                ) : null}
               </div>
             </div>
+
+            {comment.replies.length ? (
+              <div
+                className={[
+                  "mt-5 border-t border-primary/10 pt-4",
+                  depth > 0 ? "border-dashed" : "",
+                ].join(" ")}
+              >
+                <CommentTree
+                  comments={comment.replies}
+                  busyKey={busyKey}
+                  onVote={onVote}
+                  onDelete={onDelete}
+                  onReply={onReply}
+                  onEdit={onEdit}
+                  depth={depth + 1}
+                />
+              </div>
+            ) : null}
           </div>
         );
       })}
@@ -344,6 +507,7 @@ export function ForumSection() {
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [focusedPostId, setFocusedPostId] = useState<number | null>(null);
+  const [commentTargetPostId, setCommentTargetPostId] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
 
@@ -360,6 +524,10 @@ export function ForumSection() {
   }, [forum.posts]);
 
   const uniqueTagCount = useMemo(() => new Set(forum.posts.flatMap((post) => post.tags)).size, [forum.posts]);
+  const availableTags = useMemo(
+    () => Array.from(new Set(forum.posts.flatMap((post) => post.tags))).sort((left, right) => left.localeCompare(right)),
+    [forum.posts]
+  );
   const normalizedSearchTerm = deferredSearchTerm.trim().toLowerCase();
   const compactSearchTerm = normalizeSearchValue(deferredSearchTerm.trim());
   const filteredPosts = useMemo(() => {
@@ -448,7 +616,7 @@ export function ForumSection() {
         body: JSON.stringify({
           title,
           content,
-          tags: tagInput.split(",").map((item) => item.trim()).filter(Boolean),
+          tags: parseTagString(tagInput),
           isAnonymous,
           media: media.filter((item) => item.url.trim()).map(({ kind, url }) => ({ kind, url: url.trim() })),
         }),
@@ -493,7 +661,7 @@ export function ForumSection() {
           <div>
             <p className="font-mono text-lg tracking-[0.22em] text-primary uppercase sm:text-xl">Forum</p>
             <h1 className="mt-2 max-w-lg font-heading text-3xl font-bold leading-[0.95] tracking-tight text-foreground sm:text-[3.15rem]">
-              Community <span className="text-primary italic">discussions</span>
+              Community <span className="text-primary italic">Discussions</span>
             </h1>
             <p className="mt-3 max-w-lg text-xs leading-6 text-muted-foreground sm:text-sm">
               Ask questions, share experiences, and build practical support around women&apos;s health in one calm space.
@@ -573,8 +741,17 @@ export function ForumSection() {
               busyKey={busyKey}
               expanded={false}
               canInteract={forum.viewer.isAuthenticated}
+              isAdminViewer={forum.viewer.role === "admin"}
               activeTag={activeTag}
-              onOpen={(postId) => setFocusedPostId(postId)}
+              availableTags={availableTags}
+              onOpen={(postId) => {
+                setFocusedPostId(postId);
+                setCommentTargetPostId(null);
+              }}
+              onOpenComments={(postId) => {
+                setFocusedPostId(postId);
+                setCommentTargetPostId(postId);
+              }}
               onClose={() => setFocusedPostId(null)}
               onTagClick={(tag) => setActiveTag((current) => (current === tag ? null : tag))}
               onVote={(postId, voteType) =>
@@ -601,8 +778,19 @@ export function ForumSection() {
                   replyTo ? `comment-${replyTo}` : `post-${postId}`
                 )
               }
-              onCommentVote={(commentId) =>
-                submitJson(`/api/forum/comments/${commentId}/vote`, { method: "POST" }, `comment-${commentId}`)
+              onReport={(postId, reason) =>
+                submitJson(
+                  `/api/forum/posts/${postId}/report`,
+                  { method: "POST", body: JSON.stringify({ reason }) },
+                  `post-${postId}`
+                )
+              }
+              onCommentVote={(commentId, voteType) =>
+                submitJson(
+                  `/api/forum/comments/${commentId}/vote`,
+                  { method: "POST", body: JSON.stringify({ voteType }) },
+                  `comment-${commentId}`
+                )
               }
               onCommentDelete={(commentId) =>
                 submitJson(`/api/forum/comments/${commentId}`, { method: "DELETE" }, `comment-${commentId}`)
@@ -621,7 +809,10 @@ export function ForumSection() {
       {focusedPost ? (
         <div
           className="fixed inset-0 z-40 flex items-start justify-center bg-black/40 px-4 py-6 backdrop-blur-sm sm:px-6"
-          onClick={() => setFocusedPostId(null)}
+          onClick={() => {
+            setFocusedPostId(null);
+            setCommentTargetPostId(null);
+          }}
         >
           <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto" onClick={(event) => event.stopPropagation()}>
             <ForumPostCard
@@ -629,9 +820,16 @@ export function ForumSection() {
               busyKey={busyKey}
               expanded
               canInteract={forum.viewer.isAuthenticated}
+              isAdminViewer={forum.viewer.role === "admin"}
               activeTag={activeTag}
+              availableTags={availableTags}
+              autoOpenComments={commentTargetPostId === focusedPost.id}
               onOpen={() => undefined}
-              onClose={() => setFocusedPostId(null)}
+              onOpenComments={() => undefined}
+              onClose={() => {
+                setFocusedPostId(null);
+                setCommentTargetPostId(null);
+              }}
               onTagClick={(tag) => setActiveTag((current) => (current === tag ? null : tag))}
               onVote={(postId, voteType) =>
                 submitJson(
@@ -658,8 +856,19 @@ export function ForumSection() {
                   replyTo ? `comment-${replyTo}` : `post-${postId}`
                 )
               }
-              onCommentVote={(commentId) =>
-                submitJson(`/api/forum/comments/${commentId}/vote`, { method: "POST" }, `comment-${commentId}`)
+              onReport={(postId, reason) =>
+                submitJson(
+                  `/api/forum/posts/${postId}/report`,
+                  { method: "POST", body: JSON.stringify({ reason }) },
+                  `post-${postId}`
+                )
+              }
+              onCommentVote={(commentId, voteType) =>
+                submitJson(
+                  `/api/forum/comments/${commentId}/vote`,
+                  { method: "POST", body: JSON.stringify({ voteType }) },
+                  `comment-${commentId}`
+                )
               }
               onCommentDelete={(commentId) =>
                 submitJson(`/api/forum/comments/${commentId}`, { method: "DELETE" }, `comment-${commentId}`)
@@ -703,11 +912,11 @@ export function ForumSection() {
                 placeholder="What would you like help with?"
                 className="w-full rounded-[1.75rem] border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40"
               />
-              <input
+              <TagSelector
                 value={tagInput}
-                onChange={(event) => setTagInput(event.target.value)}
-                placeholder="Tags, separated by commas"
-                className="w-full rounded-3xl border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40"
+                onChange={setTagInput}
+                availableTags={availableTags}
+                placeholder="Type custom tags, separated by commas"
               />
 
               <div className="rounded-[1.75rem] border border-primary/12 bg-muted/25 p-4">
@@ -798,15 +1007,7 @@ export function ForumSection() {
           <button
             type="button"
             onClick={() => setIsComposerOpen((current) => !current)}
-            className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-3xl leading-none text-primary-foreground shadow-lg transition hover:scale-[1.03] hover:opacity-95"
-            aria-label="Start a discussion"
-          >
-            +
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsComposerOpen((current) => !current)}
-            className="rounded-full border border-primary/15 bg-card px-4 py-3 text-sm font-semibold text-foreground shadow-sm transition hover:border-primary/30"
+            className="rounded-full border border-primary/20 bg-gradient-to-r from-primary via-accent to-secondary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/25"
           >
             Start a discussion
           </button>
@@ -821,14 +1022,19 @@ function ForumPostCard({
   busyKey,
   expanded,
   canInteract,
+  isAdminViewer,
   activeTag,
+  availableTags,
+  autoOpenComments = false,
   onOpen,
+  onOpenComments,
   onClose,
   onTagClick,
   onVote,
   onDelete,
   onEdit,
   onComment,
+  onReport,
   onCommentVote,
   onCommentDelete,
   onCommentEdit,
@@ -837,8 +1043,12 @@ function ForumPostCard({
   busyKey: string | null;
   expanded: boolean;
   canInteract: boolean;
+  isAdminViewer: boolean;
   activeTag: string | null;
+  availableTags: string[];
+  autoOpenComments?: boolean;
   onOpen: (postId: number) => void;
+  onOpenComments: (postId: number) => void;
   onClose: () => void;
   onTagClick: (tag: string) => void;
   onVote: (postId: number, voteType: "upvote" | "downvote") => void;
@@ -848,7 +1058,8 @@ function ForumPostCard({
     payload: { title: string; content: string; tags: string[]; isAnonymous: boolean; media: ForumMediaInput[] }
   ) => void;
   onComment: (postId: number, parentCommentId: number | null, content: string) => void;
-  onCommentVote: (commentId: number) => void;
+  onReport: (postId: number, reason: string) => void;
+  onCommentVote: (commentId: number, voteType: "upvote" | "downvote") => void;
   onCommentDelete: (commentId: number) => void;
   onCommentEdit: (commentId: number, content: string) => void;
 }) {
@@ -859,6 +1070,7 @@ function ForumPostCard({
   const [draftTags, setDraftTags] = useState(post.tags.join(", "));
   const [draftComment, setDraftComment] = useState("");
   const [draftAnonymous, setDraftAnonymous] = useState(post.isAnonymous);
+  const commentTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const busy = busyKey === `post-${post.id}`;
   const commentCount = countReplies(post.comments);
 
@@ -867,6 +1079,18 @@ function ForumPostCard({
       setShowCommentBox(true);
     }
   }, [expanded]);
+
+  useEffect(() => {
+    if (!expanded || !autoOpenComments) return;
+
+    setShowCommentBox(true);
+    const frame = window.requestAnimationFrame(() => {
+      commentTextareaRef.current?.focus();
+      commentTextareaRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [autoOpenComments, expanded]);
 
   function handleOpen() {
     onOpen(post.id);
@@ -896,12 +1120,46 @@ function ForumPostCard({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 font-mono text-sm text-primary">
-                {initialsFromEmail(post.author.email)}
-              </div>
+              {post.isAnonymous ? (
+                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 font-mono text-sm text-primary">
+                  {initialsFromEmail(post.author.email)}
+                </div>
+              ) : (
+                <Link
+                  href={forumProfileHref(post.author.id)}
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 font-mono text-sm text-primary transition hover:bg-primary/16"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  {initialsFromEmail(post.author.email)}
+                </Link>
+              )}
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-semibold text-foreground">{post.author.email}</p>
+                  {post.isAnonymous ? (
+                    <p className="text-sm font-semibold text-foreground">{post.author.email}</p>
+                  ) : (
+                    <Link
+                      href={forumProfileHref(post.author.id)}
+                      className="text-sm font-semibold text-foreground transition hover:text-primary"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      {post.author.email}
+                    </Link>
+                  )}
+                  {post.isAnonymous ? (
+                    <span className="rounded-full border border-primary/20 bg-primary/8 px-2.5 py-1 text-[11px] font-medium text-primary">
+                      Posted anonymously
+                    </span>
+                  ) : null}
+                  {post.isAnonymous && isAdminViewer && post.realAuthor ? (
+                    <Link
+                      href={forumProfileHref(post.realAuthor.id)}
+                      className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700 transition hover:bg-amber-100"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      Real user: {post.realAuthor.email}
+                    </Link>
+                  ) : null}
                   <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${tagStyles(post.author.tag)}`}>
                     {post.author.tag}
                   </span>
@@ -937,6 +1195,14 @@ function ForumPostCard({
                   void onDelete(post.id);
                 }}
               />
+            ) : canInteract ? (
+              <ManagementMenu
+                onReport={() => {
+                  const reason = window.prompt("Why are you reporting this discussion?");
+                  if (!reason?.trim()) return;
+                  void onReport(post.id, reason.trim());
+                }}
+              />
             ) : null}
             {expanded ? (
               <button
@@ -963,10 +1229,11 @@ function ForumPostCard({
               rows={5}
               className="w-full rounded-[1.75rem] border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40"
             />
-            <input
+            <TagSelector
               value={draftTags}
-              onChange={(event) => setDraftTags(event.target.value)}
-              className="w-full rounded-3xl border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40"
+              onChange={setDraftTags}
+              availableTags={availableTags}
+              placeholder="Type custom tags, separated by commas"
             />
             <label className="flex items-center gap-3 text-sm text-foreground">
               <input type="checkbox" checked={draftAnonymous} onChange={(event) => setDraftAnonymous(event.target.checked)} />
@@ -980,7 +1247,7 @@ function ForumPostCard({
                   onEdit(post.id, {
                     title: draftTitle,
                     content: draftContent,
-                    tags: draftTags.split(",").map((item) => item.trim()).filter(Boolean),
+                    tags: parseTagString(draftTags),
                     isAnonymous: draftAnonymous,
                     media: post.media.map(({ kind, url }) => ({ kind, url })),
                   });
@@ -997,7 +1264,14 @@ function ForumPostCard({
             <h2 className={expanded ? "mt-5 font-heading text-4xl font-semibold leading-tight text-foreground" : "mt-5 font-heading text-3xl font-semibold leading-tight text-foreground"}>
               {post.title}
             </h2>
-            <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-foreground/90">{post.content}</p>
+            <p
+              className={[
+                "mt-4 whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-sm leading-7 text-foreground/90",
+                expanded ? "" : "line-clamp-4",
+              ].join(" ")}
+            >
+              {post.content}
+            </p>
             <div className="mt-5">
               <MediaPreview media={post.media} />
             </div>
@@ -1019,7 +1293,16 @@ function ForumPostCard({
                   <ArrowDown className="h-4 w-4" />
                   <span>{post.downvotes > 0 ? post.downvotes : "Downvote"}</span>
                 </InlineActionButton>
-                <InlineActionButton onClick={() => setShowCommentBox((current) => !current)}>
+                <InlineActionButton
+                  onClick={() => {
+                    if (expanded) {
+                      setShowCommentBox((current) => !current);
+                      return;
+                    }
+
+                    onOpenComments(post.id);
+                  }}
+                >
                   <MessageSquare className="h-4 w-4" />
                   <span>{commentCount > 0 ? `${commentCount} comments` : "Comment"}</span>
                 </InlineActionButton>
@@ -1040,6 +1323,7 @@ function ForumPostCard({
         {expanded && showCommentBox ? (
           <div className="mt-6 rounded-[1.75rem] border border-primary/12 bg-primary/5 p-4">
             <textarea
+              ref={commentTextareaRef}
               value={draftComment}
               onChange={(event) => setDraftComment(event.target.value)}
               rows={3}

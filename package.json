@@ -13,7 +13,9 @@
       "db:generate": "drizzle-kit generate",
       "db:migrate": "drizzle-kit push",
       "db:push": "drizzle-kit push",
-      "db:seed-admin": "tsx scripts/seed-admin.ts"
+      "db:seed-admin": "tsx scripts/seed-admin.ts",
+      "forum:apply-anonymous-privacy": "node scripts/apply-anonymous-forum-privacy.mjs",
+      "forum:backfill-anonymous": "node scripts/backfill-anonymous-forum-posts.mjs"
   
     },
     "dependencies": {
