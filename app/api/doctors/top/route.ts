@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { and, eq, gte } from "drizzle-orm";
 import { db } from "@/src/db";
 import { doctorAnswers, doctorProfiles, doctorRatings, users } from "@/src/schema";
 
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
         email: users.email,
       })
       .from(doctorProfiles)
-      .innerJoin(users, doctorProfiles.userId.equals(users.id));
+      .innerJoin(users, eq(doctorProfiles.userId, users.id));
 
     // Load recent answer activity (last 24h)
     const since = new Date();
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
         createdAt: doctorAnswers.createdAt,
       })
       .from(doctorAnswers)
-      .where(doctorAnswers.createdAt.gte(since));
+      .where(gte(doctorAnswers.createdAt, since));
 
     const activityByDoctor = new Map<string, number>();
     answers.forEach((answer) => {

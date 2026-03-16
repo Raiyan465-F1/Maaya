@@ -44,3 +44,25 @@ and a little of content
 # Doctors help:
 There will be a dedicated page for it where users can posts their questions and only doctors can answer their and users can also close the post ig
 There will also be a place in there where people can see all the verified doctors. 
+
+
+
+
+
+
+# Integration help
+
+-- Login --
+User logins by email and password, no need to select what type of user they are it's determined by the backend
+
+
+--Register--
+Only general user registers, Doctors onboarding is done my admin
+
+
+--admin and doctors--
+
+Admins will be added to the database manually, admins will have their own powers of what they can do explain in the srs. Doctors will be onboarded by admins, maybe there will be a page for doctors to onboard them. 
+
+
+seed admin can be created with seem admin script
