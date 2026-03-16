@@ -1,9 +1,22 @@
 import { randomUUID } from "crypto";
 import { inArray } from "drizzle-orm";
-import { db } from "../src/db";
-import { doctorAnswers, doctorProfiles, doctorQuestions, doctorRatings, users } from "../src/schema";
+import { config } from "dotenv";
+import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-http";
+import * as schema from "../src/schema";
+
+config({ path: ".env" });
 
 async function seed() {
+  const DATABASE_URL = process.env.DATABASE_URL;
+  if (!DATABASE_URL) {
+    console.error("Missing DATABASE_URL in .env");
+    process.exit(1);
+  }
+
+  const sql = neon(DATABASE_URL);
+  const db = drizzle({ client: sql, schema });
+
   console.log("Seeding dummy doctor data...");
 
   // Create doctors (insert if missing, otherwise reuse existing IDs)
@@ -14,9 +27,9 @@ async function seed() {
   ];
 
   const existingDoctors = await db
-    .select({ id: users.id, email: users.email })
-    .from(users)
-    .where(inArray(users.email, doctorEmails));
+    .select({ id: schema.users.id, email: schema.users.email })
+    .from(schema.users)
+    .where(inArray(schema.users.email, doctorEmails));
 
   const doctorIdMap = new Map<string, string>();
   existingDoctors.forEach((row) => doctorIdMap.set(row.email, row.id));
@@ -44,15 +57,15 @@ async function seed() {
     .filter((d) => !existingDoctors.find((e) => e.email === d.email));
 
   if (newDoctors.length > 0) {
-    await db.insert(users).values(newDoctors);
+    await db.insert(schema.users).values(newDoctors as any);
   }
 
   // Profiles
   // Ensure profiles exist for each doctor (skip if already exists)
   const existingProfiles = await db
-    .select({ userId: doctorProfiles.userId })
-    .from(doctorProfiles)
-    .where(inArray(doctorProfiles.userId, doctorIds));
+    .select({ userId: schema.doctorProfiles.userId })
+    .from(schema.doctorProfiles)
+    .where(inArray(schema.doctorProfiles.userId, doctorIds));
 
   const existingProfileIds = new Set(existingProfiles.map((p) => p.userId));
 
@@ -73,16 +86,16 @@ async function seed() {
     });
 
   if (profilesToInsert.length > 0) {
-    await db.insert(doctorProfiles).values(profilesToInsert);
+    await db.insert(schema.doctorProfiles).values(profilesToInsert);
   }
 
 
   // Create question posts
   // Ensure there are at least two questions (avoid duplicates)
   const existingQuestions = await db
-    .select({ questionText: doctorQuestions.questionText })
-    .from(doctorQuestions)
-    .where(inArray(doctorQuestions.questionText, [
+    .select({ questionText: schema.doctorQuestions.questionText })
+    .from(schema.doctorQuestions)
+    .where(inArray(schema.doctorQuestions.questionText, [
       "What is the best way to ease cramps during periods?",
       "How often should I check my thyroid levels?",
     ]));
@@ -106,16 +119,16 @@ async function seed() {
   }
 
   if (questionsToInsert.length > 0) {
-    await db.insert(doctorQuestions).values(questionsToInsert);
+    await db.insert(schema.doctorQuestions).values(questionsToInsert);
   }
 
   // Create activity (answers)
   // Map existing questions to their IDs so we can reference them.
   const questionRows = await db
-    .select({ id: doctorQuestions.id, text: doctorQuestions.questionText })
-    .from(doctorQuestions)
+    .select({ id: schema.doctorQuestions.id, text: schema.doctorQuestions.questionText })
+    .from(schema.doctorQuestions)
     .where(
-      inArray(doctorQuestions.questionText, [
+      inArray(schema.doctorQuestions.questionText, [
         "What is the best way to ease cramps during periods?",
         "How often should I check my thyroid levels?",
       ])
@@ -148,11 +161,11 @@ async function seed() {
     .filter((entry) => entry.questionId);
 
   if (answersToInsert.length > 0) {
-    await db.insert(doctorAnswers).values(answersToInsert);
+    await db.insert(schema.doctorAnswers).values(answersToInsert);
   }
 
   // Add ratings
-  await db.insert(doctorRatings).values([
+  await db.insert(schema.doctorRatings).values([
     {
       doctorUserId: doctorIds[0],
       userId: doctorIds[1],
