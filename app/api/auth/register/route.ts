@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { email, password } = body as { email?: string; password?: string };
+    const { name, email, password } = body as { name?: string; email?: string; password?: string };
 
     if (!email || typeof email !== "string") {
       return jsonResponse(
@@ -84,7 +84,10 @@ export async function POST(request: NextRequest) {
 
     const passwordHash = await hash(password, 12);
 
+    const trimmedName = typeof name === "string" ? name.trim().slice(0, 255) : null;
+
     await db.insert(users).values({
+      name: trimmedName || null,
       email: trimmedEmail,
       passwordHash,
       role: "user",

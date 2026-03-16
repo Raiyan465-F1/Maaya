@@ -9,6 +9,7 @@ import type { UserRole } from "@/src/schema/enums";
 declare module "next-auth" {
   interface User {
     id: string;
+    name: string | null;
     email: string;
     role: UserRole;
     accountStatus: string | null;
@@ -17,6 +18,7 @@ declare module "next-auth" {
   interface Session {
     user: User & {
       id: string;
+      name: string | null;
       role: UserRole;
       accountStatus: string | null;
     };
@@ -26,6 +28,7 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     id: string;
+    name: string | null;
     role: UserRole;
     accountStatus: string | null;
   }
@@ -64,6 +67,7 @@ export const authOptions: NextAuthOptions = {
 
         return {
           id: user.id,
+          name: user.name ?? null,
           email: user.email,
           role: user.role,
           accountStatus: user.accountStatus,
@@ -75,6 +79,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.name = user.name ?? null;
         token.email = user.email;
         token.role = user.role;
         token.accountStatus = user.accountStatus;
@@ -84,6 +89,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id;
+        session.user.name = token.name ?? null;
         session.user.email = token.email ?? "";
         session.user.role = token.role;
         session.user.accountStatus = token.accountStatus;

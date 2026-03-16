@@ -21,6 +21,7 @@ function jsonResponse(
 /** Profile fields exposed to the client (no passwordHash) */
 const PROFILE_SELECT = {
   id: users.id,
+  name: users.name,
   email: users.email,
   role: users.role,
   accountStatus: users.accountStatus,
@@ -32,6 +33,22 @@ const PROFILE_SELECT = {
   createdAt: users.createdAt,
   updatedAt: users.updatedAt,
 } as const;
+
+const DOCTOR_PROFILE_SELECT = {
+  specialty: doctorProfiles.specialty,
+  bio: doctorProfiles.bio,
+  qualifications: doctorProfiles.qualifications,
+  institution: doctorProfiles.institution,
+  availabilityInfo: doctorProfiles.availabilityInfo,
+} as const;
+
+const EMPTY_DOCTOR_PROFILE = {
+  specialty: null,
+  bio: null,
+  qualifications: null,
+  institution: null,
+  availabilityInfo: null,
+};
 
 export async function OPTIONS(_request: NextRequest) {
   const origin = _request.headers.get("origin");
@@ -68,14 +85,11 @@ export async function GET(request: NextRequest) {
 
     if (user.role === "doctor") {
       const [doctorProfile] = await db
-        .select({
-          specialty: doctorProfiles.specialty,
-          availabilityInfo: doctorProfiles.availabilityInfo,
-        })
+        .select(DOCTOR_PROFILE_SELECT)
         .from(doctorProfiles)
         .where(eq(doctorProfiles.userId, user.id))
         .limit(1);
-      payload.doctorProfile = doctorProfile ?? { specialty: null, availabilityInfo: null };
+      payload.doctorProfile = doctorProfile ?? EMPTY_DOCTOR_PROFILE;
     }
 
     return jsonResponse(payload, 200, origin);
@@ -110,6 +124,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const updates: {
+      name?: string | null;
       isAnonymous?: boolean;
       likedTags?: string[] | null;
       ageGroup?: string | null;
@@ -118,6 +133,10 @@ export async function PATCH(request: NextRequest) {
       updatedAt: Date;
     } = { updatedAt: new Date() };
 
+    if (typeof body.name === "string") {
+      const v = body.name.trim().slice(0, 255);
+      updates.name = v || null;
+    }
     if (typeof body.isAnonymous === "boolean") {
       updates.isAnonymous = body.isAnonymous;
     }
@@ -141,9 +160,24 @@ export async function PATCH(request: NextRequest) {
 
     const hasUserUpdates = Object.keys(updates).length > 1;
 
-    const doctorUpdates: { specialty?: string | null; availabilityInfo?: string | null } = {};
+    const doctorUpdates: {
+      specialty?: string | null;
+      bio?: string | null;
+      qualifications?: string | null;
+      institution?: string | null;
+      availabilityInfo?: string | null;
+    } = {};
     if (typeof body.specialty === "string") {
       doctorUpdates.specialty = body.specialty.trim().slice(0, 100) || null;
+    }
+    if (typeof body.bio === "string") {
+      doctorUpdates.bio = body.bio.trim() || null;
+    }
+    if (typeof body.qualifications === "string") {
+      doctorUpdates.qualifications = body.qualifications.trim() || null;
+    }
+    if (typeof body.institution === "string") {
+      doctorUpdates.institution = body.institution.trim().slice(0, 200) || null;
     }
     if (typeof body.availabilityInfo === "string") {
       doctorUpdates.availabilityInfo = body.availabilityInfo.trim() || null;
@@ -184,6 +218,9 @@ export async function PATCH(request: NextRequest) {
         await db.insert(doctorProfiles).values({
           userId: session.user.id,
           specialty: doctorUpdates.specialty ?? null,
+          bio: doctorUpdates.bio ?? null,
+          qualifications: doctorUpdates.qualifications ?? null,
+          institution: doctorUpdates.institution ?? null,
           availabilityInfo: doctorUpdates.availabilityInfo ?? null,
         });
       }
@@ -199,14 +236,11 @@ export async function PATCH(request: NextRequest) {
 
     if (updated?.role === "doctor") {
       const [doctorProfile] = await db
-        .select({
-          specialty: doctorProfiles.specialty,
-          availabilityInfo: doctorProfiles.availabilityInfo,
-        })
+        .select(DOCTOR_PROFILE_SELECT)
         .from(doctorProfiles)
         .where(eq(doctorProfiles.userId, session.user.id))
         .limit(1);
-      payload.doctorProfile = doctorProfile ?? { specialty: null, availabilityInfo: null };
+      payload.doctorProfile = doctorProfile ?? EMPTY_DOCTOR_PROFILE;
     }
 
     return jsonResponse(payload, 200, origin);
