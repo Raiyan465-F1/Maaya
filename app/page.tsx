@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
+import Link from "next/link";
+
+import { verifiedDoctors } from "@/lib/verified-doctors";
 
 /* ─── Navbar ─────────────────────────────────────────────── */
 function LandingNavbar() {
@@ -10,18 +13,19 @@ function LandingNavbar() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-card/80 backdrop-blur-md border-b border-primary/15 shadow-sm">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-        <a href="/" className="flex items-center gap-2.5">
+        <Link href="/" className="flex items-center gap-2.5">
           <span className="font-heading text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent tracking-tight">
             MAAYA
           </span>
           <span className="hidden sm:inline text-xs text-muted-foreground font-medium tracking-wide">
             Smart Women&apos;s Health
           </span>
-        </a>
+        </Link>
 
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-foreground">
           <a href="#about" className="hover:text-primary transition-colors">About</a>
           <a href="#features" className="hover:text-primary transition-colors">Features</a>
+          <a href="#verified-doctors" className="hover:text-primary transition-colors">Doctors</a>
           <a href="#how-it-works" className="hover:text-primary transition-colors">How It Works</a>
           <a href="#for-professionals" className="hover:text-primary transition-colors">For Doctors</a>
         </nav>
@@ -54,6 +58,7 @@ function LandingNavbar() {
         <div className="md:hidden bg-card border-t border-primary/15 px-6 py-4 flex flex-col gap-4 text-sm font-medium text-foreground">
           <a href="#about" onClick={() => setMobileOpen(false)} className="hover:text-primary">About</a>
           <a href="#features" onClick={() => setMobileOpen(false)} className="hover:text-primary">Features</a>
+          <a href="#verified-doctors" onClick={() => setMobileOpen(false)} className="hover:text-primary">Doctors</a>
           <a href="#how-it-works" onClick={() => setMobileOpen(false)} className="hover:text-primary">How It Works</a>
           <a href="#for-professionals" onClick={() => setMobileOpen(false)} className="hover:text-primary">For Doctors</a>
           <div className="flex gap-3 pt-2 border-t border-primary/15">
@@ -467,6 +472,67 @@ function HowItHelpsSection() {
 }
 
 /* ─── For Professionals ───────────────────────────────────── */
+function VerifiedDoctorsSection() {
+  const featuredDoctors = verifiedDoctors.slice(0, 3);
+
+  return (
+    <section id="verified-doctors" className="py-24 bg-background">
+      <div className="max-w-6xl mx-auto px-6">
+        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8 mb-12">
+          <div>
+            <p className="font-mono text-xs tracking-widest text-primary uppercase mb-3">
+              Trusted Experts
+            </p>
+            <h2 className="font-heading text-4xl font-bold text-foreground leading-[1.1] tracking-tight">
+              Meet our{" "}
+              <span className="italic bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                verified doctors
+              </span>
+            </h2>
+            <p className="text-muted-foreground text-base mt-4 max-w-2xl">
+              MAAYA works with verified doctors who answer questions and guide users with
+              professional, evidence-based advice.
+            </p>
+          </div>
+
+          <Link
+            href="/verified-doctors"
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-primary-foreground bg-gradient-to-r from-primary to-accent rounded-xl shadow-sm hover:opacity-90 transition-opacity"
+          >
+            View all doctors
+          </Link>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-5">
+          {featuredDoctors.map((doctor) => (
+            <Link
+              key={doctor.id}
+              href="/verified-doctors"
+              className="group bg-card rounded-2xl border border-border p-5 hover:border-primary/35 hover:shadow-md transition-all"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-heading text-xl font-semibold text-foreground leading-tight">
+                  {doctor.name}
+                </p>
+                <span className="text-[10px] px-2 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 font-medium">
+                  Verified
+                </span>
+              </div>
+              <p className="text-sm text-primary font-medium mt-2">{doctor.specialty}</p>
+              <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
+                {doctor.bio}
+              </p>
+              <p className="text-xs font-medium text-primary mt-4 group-hover:underline">
+                Open doctors page
+              </p>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function ForProfessionals() {
   return (
     <section id="for-professionals" className="py-24 bg-background">
@@ -581,6 +647,7 @@ function LandingFooter() {
                 { label: "Educational Hub", href: "#features" },
                 { label: "Community Forum", href: "#features" },
                 { label: "Doctor's Help", href: "#features" },
+                { label: "Verified Doctors", href: "/verified-doctors" },
                 { label: "Dashboard", href: "/login" },
               ].map((link) => (
                 <li key={link.label}>
@@ -628,6 +695,7 @@ export default function LandingPage() {
       <AboutSection />
       <FeaturesSection />
       <HowItHelpsSection />
+      <VerifiedDoctorsSection />
       <ForProfessionals />
       <LandingFooter />
     </div>
