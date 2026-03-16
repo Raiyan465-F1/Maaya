@@ -507,7 +507,7 @@ function VerifiedDoctorsSection() {
           {featuredDoctors.map((doctor) => (
             <Link
               key={doctor.id}
-              href="/verified-doctors"
+              href={`/verified-doctors/${doctor.id}`}
               className="group bg-card rounded-2xl border border-border p-5 hover:border-primary/35 hover:shadow-md transition-all"
             >
               <div className="flex items-center justify-between gap-3">
@@ -523,7 +523,7 @@ function VerifiedDoctorsSection() {
                 {doctor.bio}
               </p>
               <p className="text-xs font-medium text-primary mt-4 group-hover:underline">
-                Open doctors page
+                View doctor profile
               </p>
             </Link>
           ))}

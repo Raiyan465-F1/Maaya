@@ -22,9 +22,10 @@ export default function VerifiedDoctorsPage() {
 
         <div className="grid sm:grid-cols-2 gap-6 lg:gap-8">
           {verifiedDoctors.map((doctor) => (
-            <article
+            <Link
               key={doctor.id}
-              className="bg-card border border-border rounded-2xl p-5 shadow-sm"
+              href={`/verified-doctors/${doctor.id}`}
+              className="group bg-card border border-border rounded-2xl p-5 shadow-sm hover:border-primary/35 hover:shadow-md transition-all"
             >
               <div className="relative mb-5 overflow-hidden rounded-xl border border-primary/15">
                 <Image
@@ -47,7 +48,10 @@ export default function VerifiedDoctorsPage() {
               </div>
 
               <p className="text-sm text-muted-foreground leading-relaxed mt-4">{doctor.bio}</p>
-            </article>
+              <p className="text-xs font-medium text-primary mt-4 group-hover:underline">
+                View profile
+              </p>
+            </Link>
           ))}
         </div>
 

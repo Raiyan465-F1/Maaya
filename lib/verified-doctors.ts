@@ -36,3 +36,7 @@ export const verifiedDoctors: VerifiedDoctor[] = [
     image: "/verified-doctors/dr-farzana-chowdhury.svg",
   },
 ];
+
+export function getVerifiedDoctorById(id: string) {
+  return verifiedDoctors.find((doctor) => doctor.id === id);
+}
