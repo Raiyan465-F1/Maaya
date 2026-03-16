@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans, Fraunces, DM_Mono } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { SessionProvider } from "@/components/session-provider"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils";
 
 const fontSans = Plus_Jakarta_Sans({
@@ -41,7 +42,9 @@ export default function RootLayout({
     >
       <body>
         <SessionProvider>
-          <ThemeProvider>{children}</ThemeProvider>
+          <ThemeProvider>
+            <TooltipProvider>{children}</TooltipProvider>
+          </ThemeProvider>
         </SessionProvider>
       </body>
     </html>
