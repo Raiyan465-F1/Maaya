@@ -56,17 +56,42 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { questionText, isAnonymous = false } = body;
+    const {
+      questionTitle,
+      questionText,
+      isAnonymous = false,
+    }: {
+      questionTitle?: string;
+      questionText?: string;
+      isAnonymous?: boolean;
+    } = body;
 
-    if (!questionText?.trim()) {
-      return jsonResponse({ error: "Question text is required" }, 400, origin);
+    const trimmedTitle = questionTitle?.trim() ?? "";
+    const trimmedText = questionText?.trim() ?? "";
+
+    if (!trimmedTitle) {
+      return jsonResponse({ error: "Question title is required" }, 400, origin);
     }
+
+    if (trimmedTitle.length > 70) {
+      return jsonResponse(
+        { error: "Question title must be 70 characters or fewer" },
+        400,
+        origin
+      );
+    }
+
+    if (!trimmedText) {
+      return jsonResponse({ error: "Question details are required" }, 400, origin);
+    }
+
+    const storedQuestionText = `${trimmedTitle}\n\n${trimmedText}`;
 
     const newQuestion = await db
       .insert(doctorQuestions)
       .values({
         userId: session.user.id,
-        questionText: questionText.trim(),
+        questionText: storedQuestionText,
         isAnonymous,
       })
       .returning();
