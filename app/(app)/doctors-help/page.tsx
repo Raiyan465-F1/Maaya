@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
@@ -60,6 +62,7 @@ const truncateText = (value: string, limit: number) => {
 };
 
 export default function DoctorsHelpPage() {
+  const router = useRouter();
   const [questionTitle, setQuestionTitle] = useState('');
   const [questionText, setQuestionText] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
@@ -631,7 +634,7 @@ export default function DoctorsHelpPage() {
           <SheetHeader className="border-b border-border">
             <SheetTitle>My Questions</SheetTitle>
             <SheetDescription>
-              View every question you asked here, including anonymous posts and doctor replies.
+              Preview your posted questions and open any card to see the full question with all answers.
             </SheetDescription>
           </SheetHeader>
 
@@ -648,10 +651,20 @@ export default function DoctorsHelpPage() {
               ) : (
                 myQuestions.map((question) => {
                   const parsedQuestion = parseQuestionContent(question.questionText);
+                  const previewText = truncateText(parsedQuestion.details || parsedQuestion.title, 120);
+                  const hasAnswers = question.answers.length > 0;
 
                   return (
-                    <div key={question.id} className="rounded-2xl border border-border bg-card p-5">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
+                    <button
+                      key={question.id}
+                      type="button"
+                      onClick={() => {
+                        setShowMyQuestions(false);
+                        router.push(`/doctors-help/my-questions/${question.id}`);
+                      }}
+                      className="w-full rounded-2xl border border-border bg-card p-5 text-left transition hover:border-primary hover:shadow-md"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-4">
                         <div>
                           <p className="text-base font-semibold text-foreground">
                             {parsedQuestion.title || 'Untitled question'}
@@ -659,42 +672,21 @@ export default function DoctorsHelpPage() {
                           <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                             <span>{question.isAnonymous ? 'Posted anonymously' : question.userEmail}</span>
                             <span>{formatDate(question.createdAt)}</span>
-                            <span>{question.answers.length} answer{question.answers.length === 1 ? '' : 's'}</span>
                           </div>
+                          <p className="mt-3 text-sm leading-6 text-foreground/80">
+                            {previewText}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2 rounded-full border border-border px-3 py-2 text-xs font-medium text-muted-foreground">
+                          <MessageSquare className={hasAnswers ? 'h-4 w-4 text-primary' : 'h-4 w-4 text-muted-foreground'} />
+                          <span>
+                            {hasAnswers
+                              ? `${question.answers.length} answer${question.answers.length === 1 ? '' : 's'} received`
+                              : 'No answers yet'}
+                          </span>
                         </div>
                       </div>
-
-                      <div className="mt-4 rounded-xl border border-border bg-background/40 p-4">
-                        <p className="whitespace-pre-line text-sm leading-7 text-foreground/90">
-                          {parsedQuestion.details || parsedQuestion.title}
-                        </p>
-                      </div>
-
-                      <div className="mt-4 space-y-3">
-                        {question.answers.length === 0 ? (
-                          <div className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
-                            No doctor answers yet. Responses will appear here automatically.
-                          </div>
-                        ) : (
-                          question.answers.map((answer) => (
-                            <div key={answer.id} className="rounded-xl border border-primary bg-primary p-4 text-primary-foreground">
-                              <div className="flex flex-wrap items-center justify-between gap-3">
-                                <div>
-                                  <p className="text-sm font-semibold text-primary-foreground">{answer.doctorDisplayName}</p>
-                                  <p className="text-xs text-primary-foreground/80">
-                                    {answer.doctorSpecialty ?? 'Verified doctor'}
-                                  </p>
-                                </div>
-                                <p className="text-xs text-primary-foreground/80">{formatDate(answer.createdAt)}</p>
-                              </div>
-                              <p className="mt-3 whitespace-pre-line text-sm leading-7 text-primary-foreground">
-                                {answer.answerText}
-                              </p>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
+                    </button>
                   );
                 })
               )}
