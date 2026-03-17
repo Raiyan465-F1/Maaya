@@ -6,37 +6,37 @@ import { authOptions } from "@/lib/auth";
 import {
   canAccessModeratedContent,
   canManageContent,
-  ensurePostExists,
+  ensureCommentExists,
   getForumSnapshot,
 } from "@/lib/forum-server";
 
-function parsePostId(value: string) {
+function parseCommentId(value: string) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 }
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ postId: string }> }
+  { params }: { params: Promise<{ commentId: string }> }
 ) {
   const session = await getServerSession(authOptions);
-  const postId = parsePostId((await params).postId);
+  const commentId = parseCommentId((await params).commentId);
 
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "You must be logged in to report a discussion." }, { status: 401 });
+    return NextResponse.json({ error: "You must be logged in to report a comment." }, { status: 401 });
   }
 
-  if (!postId) {
-    return NextResponse.json({ error: "Invalid post id." }, { status: 400 });
+  if (!commentId) {
+    return NextResponse.json({ error: "Invalid comment id." }, { status: 400 });
   }
 
-  const existing = await ensurePostExists(postId);
+  const existing = await ensureCommentExists(commentId);
   if (!existing || !canAccessModeratedContent(session.user.role, existing.status)) {
-    return NextResponse.json({ error: "Discussion not found." }, { status: 404 });
+    return NextResponse.json({ error: "Comment not found." }, { status: 404 });
   }
 
-  if (canManageContent(session.user.id, session.user.role, existing.authorId, existing.anonymousOwnerHash)) {
-    return NextResponse.json({ error: "You cannot report your own discussion." }, { status: 400 });
+  if (canManageContent(session.user.id, session.user.role, existing.authorId)) {
+    return NextResponse.json({ error: "You cannot report your own comment." }, { status: 400 });
   }
 
   try {
@@ -49,7 +49,7 @@ export async function POST(
 
     await db.insert(reports).values({
       reporterId: session.user.id,
-      postId,
+      commentId,
       reason,
     });
 

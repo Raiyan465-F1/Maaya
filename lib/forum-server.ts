@@ -5,7 +5,7 @@ import { comments, commentVotes, forumPostMedia, forumPosts, forumPostVotes } fr
 import { users } from "@/src/schema/users";
 import type { ForumResponse, ForumCommentRecord, ForumMediaInput } from "@/lib/forum-types";
 import { FORUM_MEDIA_LIMIT, FORUM_TAG_LIMIT } from "@/lib/forum-types";
-import type { UserRole, VoteType } from "@/src/schema/enums";
+import type { ContentStatus, UserRole, VoteType } from "@/src/schema/enums";
 
 function toIsoString(value: Date | string | null | undefined) {
   if (value instanceof Date) return value.toISOString();
@@ -86,8 +86,12 @@ export function canManageContent(
   return false;
 }
 
+export function canAccessModeratedContent(viewerRole: string | null, status: ContentStatus | null | undefined) {
+  return viewerRole === "admin" || !status || status === "active";
+}
+
 export async function getForumSnapshot(viewerId: string | null, viewerRole: string | null): Promise<ForumResponse> {
-  const posts = await db
+  const postsQuery = db
     .select({
       id: forumPosts.id,
       title: forumPosts.title,
@@ -95,6 +99,7 @@ export async function getForumSnapshot(viewerId: string | null, viewerRole: stri
       tags: forumPosts.tags,
       isAnonymous: forumPosts.isAnonymous,
       anonymousOwnerHash: forumPosts.anonymousOwnerHash,
+      status: forumPosts.status,
       createdAt: forumPosts.createdAt,
       updatedAt: forumPosts.updatedAt,
       authorId: users.id,
@@ -102,8 +107,12 @@ export async function getForumSnapshot(viewerId: string | null, viewerRole: stri
       authorRole: users.role,
     })
     .from(forumPosts)
-    .leftJoin(users, eq(forumPosts.authorId, users.id))
-    .orderBy(desc(forumPosts.createdAt));
+    .leftJoin(users, eq(forumPosts.authorId, users.id));
+
+  const posts =
+    viewerRole === "admin"
+      ? await postsQuery.orderBy(desc(forumPosts.createdAt))
+      : await postsQuery.where(eq(forumPosts.status, "active")).orderBy(desc(forumPosts.createdAt));
 
   const adminResolvedAuthors =
     viewerRole === "admin"
@@ -120,21 +129,39 @@ export async function getForumSnapshot(viewerId: string | null, viewerRole: stri
     ? await Promise.all([
         db.select().from(forumPostMedia).where(inArray(forumPostMedia.postId, postIds)),
         db.select().from(forumPostVotes).where(inArray(forumPostVotes.postId, postIds)),
-        db
-          .select({
-            id: comments.id,
-            postId: comments.postId,
-            parentCommentId: comments.parentCommentId,
-            content: comments.content,
-            createdAt: comments.createdAt,
-            updatedAt: comments.updatedAt,
-            authorId: users.id,
-            authorEmail: users.email,
-            authorRole: users.role,
-          })
-          .from(comments)
-          .innerJoin(users, eq(comments.authorId, users.id))
-          .where(inArray(comments.postId, postIds)),
+        viewerRole === "admin"
+          ? db
+              .select({
+                id: comments.id,
+                postId: comments.postId,
+                parentCommentId: comments.parentCommentId,
+                content: comments.content,
+                status: comments.status,
+                createdAt: comments.createdAt,
+                updatedAt: comments.updatedAt,
+                authorId: users.id,
+                authorEmail: users.email,
+                authorRole: users.role,
+              })
+              .from(comments)
+              .innerJoin(users, eq(comments.authorId, users.id))
+              .where(inArray(comments.postId, postIds))
+          : db
+              .select({
+                id: comments.id,
+                postId: comments.postId,
+                parentCommentId: comments.parentCommentId,
+                content: comments.content,
+                status: comments.status,
+                createdAt: comments.createdAt,
+                updatedAt: comments.updatedAt,
+                authorId: users.id,
+                authorEmail: users.email,
+                authorRole: users.role,
+              })
+              .from(comments)
+              .innerJoin(users, eq(comments.authorId, users.id))
+              .where(and(inArray(comments.postId, postIds), eq(comments.status, "active"))),
       ])
     : [[], [], []];
 
@@ -290,6 +317,7 @@ export async function ensurePostExists(postId: number) {
       id: forumPosts.id,
       authorId: forumPosts.authorId,
       anonymousOwnerHash: forumPosts.anonymousOwnerHash,
+      status: forumPosts.status,
     })
     .from(forumPosts)
     .where(eq(forumPosts.id, postId))
@@ -305,6 +333,7 @@ export async function ensureCommentExists(commentId: number) {
       postId: comments.postId,
       authorId: comments.authorId,
       parentCommentId: comments.parentCommentId,
+      status: comments.status,
     })
     .from(comments)
     .where(eq(comments.id, commentId))

@@ -334,18 +334,22 @@ function normalizeSearchValue(value: string) {
 function CommentTree({
   comments,
   busyKey,
+  canInteract,
   onVote,
   onDelete,
   onReply,
   onEdit,
+  onReport,
   depth = 0,
 }: {
   comments: ForumCommentRecord[];
   busyKey: string | null;
+  canInteract: boolean;
   onVote: (commentId: number, voteType: "upvote" | "downvote") => void;
   onDelete: (commentId: number) => void;
   onReply: (commentId: number, content: string) => void;
   onEdit: (commentId: number, content: string) => void;
+  onReport: (commentId: number, reason: string) => void;
   depth?: number;
 }) {
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
@@ -444,6 +448,14 @@ function CommentTree({
                       }}
                       onDelete={() => onDelete(comment.id)}
                     />
+                  ) : canInteract ? (
+                    <ManagementMenu
+                      onReport={() => {
+                        const reason = window.prompt("Why are you reporting this comment?");
+                        if (!reason?.trim()) return;
+                        onReport(comment.id, reason.trim());
+                      }}
+                    />
                   ) : null}
                 </div>
 
@@ -485,10 +497,12 @@ function CommentTree({
                 <CommentTree
                   comments={comment.replies}
                   busyKey={busyKey}
+                  canInteract={canInteract}
                   onVote={onVote}
                   onDelete={onDelete}
                   onReply={onReply}
                   onEdit={onEdit}
+                  onReport={onReport}
                   depth={depth + 1}
                 />
               </div>
@@ -802,6 +816,13 @@ export function ForumSection() {
                   `comment-${commentId}`
                 )
               }
+              onCommentReport={(commentId, reason) =>
+                submitJson(
+                  `/api/forum/comments/${commentId}/report`,
+                  { method: "POST", body: JSON.stringify({ reason }) },
+                  `comment-${commentId}`
+                )
+              }
             />
           ))}
       </div>
@@ -877,6 +898,13 @@ export function ForumSection() {
                 submitJson(
                   `/api/forum/comments/${commentId}`,
                   { method: "PATCH", body: JSON.stringify({ content: nextContent }) },
+                  `comment-${commentId}`
+                )
+              }
+              onCommentReport={(commentId, reason) =>
+                submitJson(
+                  `/api/forum/comments/${commentId}/report`,
+                  { method: "POST", body: JSON.stringify({ reason }) },
                   `comment-${commentId}`
                 )
               }
@@ -1038,6 +1066,7 @@ function ForumPostCard({
   onCommentVote,
   onCommentDelete,
   onCommentEdit,
+  onCommentReport,
 }: {
   post: ForumPostRecord;
   busyKey: string | null;
@@ -1062,6 +1091,7 @@ function ForumPostCard({
   onCommentVote: (commentId: number, voteType: "upvote" | "downvote") => void;
   onCommentDelete: (commentId: number) => void;
   onCommentEdit: (commentId: number, content: string) => void;
+  onCommentReport: (commentId: number, reason: string) => void;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [showCommentBox, setShowCommentBox] = useState(expanded);
@@ -1353,10 +1383,12 @@ function ForumPostCard({
             <CommentTree
               comments={post.comments}
               busyKey={busyKey}
+              canInteract={canInteract}
               onVote={onCommentVote}
               onDelete={onCommentDelete}
               onReply={(commentId, nextContent) => onComment(post.id, commentId, nextContent)}
               onEdit={onCommentEdit}
+              onReport={onCommentReport}
             />
           </div>
         ) : null}
