@@ -37,16 +37,13 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-<<<<<<< HEAD
-    const { name, email, password } = body as { name?: string; email?: string; password?: string };
-=======
-    const { email, password, role, doctorAccessCode } = body as {
+    const { name, email, password, role, doctorAccessCode } = body as {
+      name?: string;
       email?: string;
       password?: string;
       role?: string;
       doctorAccessCode?: string;
     };
->>>>>>> umism7
 
     if (!email || typeof email !== "string") {
       return jsonResponse({ error: "Email is required" }, 400, origin);
