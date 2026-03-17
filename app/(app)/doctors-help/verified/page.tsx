@@ -9,7 +9,6 @@ interface Doctor {
   displayName: string;
   email: string;
   specialty: string | null;
-  availabilityInfo: string | null;
   location: string | null;
   replyCount: number;
   avgRating: number;
@@ -20,11 +19,12 @@ interface DoctorApiResponse {
   displayName?: string | null;
   email?: string | null;
   specialty?: string | null;
-  availabilityInfo?: string | null;
   location?: string | null;
   replyCount?: number | null;
   avgRating?: number | null;
 }
+
+type DoctorFilterType = 'all' | 'top-rated' | 'most-replies' | 'with-location';
 
 const buildDisplayName = (email?: string | null) => {
   const emailPrefix = email?.split('@')[0] ?? 'Doctor';
@@ -40,6 +40,8 @@ const buildDisplayName = (email?: string | null) => {
 export default function VerifiedDoctorsPage() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [doctorFilter, setDoctorFilter] = useState<DoctorFilterType>('all');
+  const [showDoctorFilters, setShowDoctorFilters] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -55,7 +57,6 @@ export default function VerifiedDoctorsPage() {
               displayName: doctor.displayName ?? buildDisplayName(email),
               email,
               specialty: doctor.specialty ?? null,
-              availabilityInfo: doctor.availabilityInfo ?? null,
               location: doctor.location ?? null,
               replyCount: doctor.replyCount ?? 0,
               avgRating: doctor.avgRating ?? 0,
@@ -73,29 +74,44 @@ export default function VerifiedDoctorsPage() {
     fetchDoctors();
   }, []);
 
-  const filteredDoctors = doctors.filter((doc) => {
-    if (!searchTerm.trim()) return true;
-    const term = searchTerm.toLowerCase();
-    return (
-      (doc.displayName ?? '').toLowerCase().includes(term) ||
-      (doc.email ?? '').toLowerCase().includes(term) ||
-      (doc.specialty ?? '').toLowerCase().includes(term) ||
-      (doc.availabilityInfo ?? '').toLowerCase().includes(term) ||
-      (doc.location ?? '').toLowerCase().includes(term)
-    );
-  });
+  const filteredDoctors = doctors
+    .filter((doc) => {
+      if (!searchTerm.trim()) return true;
+      const term = searchTerm.toLowerCase();
+      return (
+        doc.displayName.toLowerCase().includes(term) ||
+        doc.email.toLowerCase().includes(term) ||
+        (doc.specialty ?? '').toLowerCase().includes(term) ||
+        (doc.location ?? '').toLowerCase().includes(term)
+      );
+    })
+    .filter((doc) => {
+      if (doctorFilter === 'top-rated') {
+        return doc.avgRating >= 4;
+      }
+
+      if (doctorFilter === 'most-replies') {
+        return doc.replyCount > 0;
+      }
+
+      if (doctorFilter === 'with-location') {
+        return Boolean(doc.location?.trim());
+      }
+
+      return true;
+    });
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="font-mono text-xs tracking-widest text-secondary uppercase mb-3">
+          <p className="mb-3 font-mono text-xs uppercase tracking-widest text-secondary">
             Verified Doctors
           </p>
-          <h1 className="font-heading text-3xl font-bold text-foreground tracking-tight">
+          <h1 className="font-heading text-3xl font-bold tracking-tight text-foreground">
             Meet our medical professionals
           </h1>
-          <p className="text-muted-foreground text-sm leading-relaxed mt-2">
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
             Browse the list of verified doctors available in the app.
           </p>
         </div>
@@ -103,51 +119,82 @@ export default function VerifiedDoctorsPage() {
         <div className="flex items-center gap-2">
           <Link href="/doctors-help" className="w-full sm:w-auto">
             <Button variant="outline" size="sm">
-              Back to Q&A
+              Back to Q&amp;A
             </Button>
           </Link>
         </div>
       </div>
 
       <div className="space-y-4">
-        <div className="relative">
-          <input
-            className="w-full pl-10 pr-10 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            placeholder="Search doctors by name, specialty, or availability..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg className="h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+        <div className="flex flex-col gap-4 sm:flex-row">
+          <div className="relative flex-1">
+            <input
+              className="w-full rounded-lg border border-border bg-background py-2 pr-10 pl-10 text-sm focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none"
+              placeholder="Search doctors by name, specialty, email, or location..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+              <svg className="h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
+          <div className="relative">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDoctorFilters(!showDoctorFilters)}
+              className="w-full sm:w-auto"
+            >
+              Filter: {doctorFilter === 'all' ? 'All Doctors' : doctorFilter === 'top-rated' ? 'Top Rated' : doctorFilter === 'most-replies' ? 'Most Replies' : 'With Location'}
+            </Button>
+            {showDoctorFilters && (
+              <div className="absolute right-0 top-full z-10 mt-2 w-44 rounded-lg border border-border bg-card shadow-lg">
+                <div className="p-2">
+                  {(['all', 'top-rated', 'most-replies', 'with-location'] as DoctorFilterType[]).map((filterType) => (
+                    <button
+                      key={filterType}
+                      onClick={() => {
+                        setDoctorFilter(filterType);
+                        setShowDoctorFilters(false);
+                      }}
+                      className="w-full rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted"
+                    >
+                      {filterType === 'all' ? 'All Doctors' : filterType === 'top-rated' ? 'Top Rated' : filterType === 'most-replies' ? 'Most Replies' : 'With Location'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {loading ? (
-          <div className="text-sm text-muted-foreground">Loading doctors…</div>
+          <div className="text-sm text-muted-foreground">Loading doctors...</div>
         ) : filteredDoctors.length === 0 ? (
           <div className="text-sm text-muted-foreground">No doctors found. Try adjusting your search.</div>
         ) : (
           <div className="grid gap-4">
             {filteredDoctors.map((doctor) => (
-              <div key={doctor.userId} className="rounded-2xl border border-border p-5 bg-card">
+              <Link
+                key={doctor.userId}
+                href={`/doctors-help/verified/${doctor.userId}`}
+                className="rounded-2xl border border-border bg-card p-5 transition hover:border-primary hover:shadow-md"
+              >
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-sm font-semibold text-foreground">{doctor.displayName}</p>
                     <p className="text-xs text-muted-foreground">{doctor.email}</p>
                     <p className="text-xs text-muted-foreground">{doctor.specialty ?? 'Specialty not added yet'}</p>
-                    {doctor.location && (
-                      <p className="text-xs text-muted-foreground">{doctor.location}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground">{doctor.availabilityInfo ?? 'Availability not added yet'}</p>
+                    <p className="text-xs text-muted-foreground">{doctor.location ?? 'Location not added yet'}</p>
                   </div>
                   <div className="shrink-0 text-right">
-                    <p className="text-sm font-semibold text-foreground">{doctor.avgRating.toFixed(1)}★</p>
+                    <p className="text-sm font-semibold text-foreground">{doctor.avgRating.toFixed(1)} star</p>
                     <p className="text-xs text-muted-foreground">{doctor.replyCount} replies</p>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}

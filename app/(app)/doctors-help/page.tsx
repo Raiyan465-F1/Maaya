@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
@@ -13,6 +15,18 @@ interface Question {
   userEmail?: string;
   userAgeGroup?: string;
   userGender?: string;
+}
+
+interface QuestionAnswer {
+  id: number;
+  answerText: string;
+  createdAt: string;
+  doctorDisplayName: string;
+  doctorSpecialty?: string | null;
+}
+
+interface MyQuestion extends Question {
+  answers: QuestionAnswer[];
 }
 
 type FilterType = 'newest' | 'oldest' | 'recent';
@@ -48,6 +62,7 @@ const truncateText = (value: string, limit: number) => {
 };
 
 export default function DoctorsHelpPage() {
+  const router = useRouter();
   const [questionTitle, setQuestionTitle] = useState('');
   const [questionText, setQuestionText] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
@@ -63,6 +78,9 @@ export default function DoctorsHelpPage() {
   const [answerText, setAnswerText] = useState('');
   const [isSubmittingAnswer, setIsSubmittingAnswer] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [showMyQuestions, setShowMyQuestions] = useState(false);
+  const [myQuestions, setMyQuestions] = useState<MyQuestion[]>([]);
+  const [myQuestionsLoading, setMyQuestionsLoading] = useState(false);
   const [topDoctors, setTopDoctors] = useState<Array<{
     userId: string;
     displayName: string;
@@ -125,6 +143,21 @@ export default function DoctorsHelpPage() {
     }
   };
 
+  const fetchMyQuestions = async () => {
+    setMyQuestionsLoading(true);
+    try {
+      const response = await fetch('/api/questions/mine');
+      if (response.ok) {
+        const data = await response.json();
+        setMyQuestions(data);
+      }
+    } catch (error) {
+      console.error('Error fetching your questions:', error);
+    } finally {
+      setMyQuestionsLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!questionTitle.trim() || !questionText.trim()) return;
@@ -149,6 +182,9 @@ export default function DoctorsHelpPage() {
         setIsAnonymous(false);
         alert('Question posted successfully!');
         fetchQuestions();
+        if (userRole) {
+          fetchMyQuestions();
+        }
       } else {
         alert('Failed to post question. Please try again.');
       }
@@ -181,6 +217,9 @@ export default function DoctorsHelpPage() {
         setAnsweringQuestionId(null);
         alert('Answer posted successfully!');
         fetchQuestions();
+        if (showMyQuestions) {
+          fetchMyQuestions();
+        }
       } else {
         alert('Failed to post answer. Please try again.');
       }
@@ -309,6 +348,19 @@ export default function DoctorsHelpPage() {
               </div>
             )}
           </div>
+          {userRole && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setShowMyQuestions(true);
+                fetchMyQuestions();
+              }}
+              className="w-full sm:w-auto"
+            >
+              My Questions
+            </Button>
+          )}
         </div>
 
         <div className="space-y-4">
@@ -574,6 +626,72 @@ export default function DoctorsHelpPage() {
               </>
             );
           })()}
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={showMyQuestions} onOpenChange={setShowMyQuestions}>
+        <SheetContent side="center">
+          <SheetHeader className="border-b border-border">
+            <SheetTitle>My Questions</SheetTitle>
+            <SheetDescription>
+              Preview your posted questions and open any card to see the full question with all answers.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="overflow-y-auto px-4 pb-6">
+            <div className="space-y-4">
+              {myQuestionsLoading ? (
+                <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">
+                  Loading your questions...
+                </div>
+              ) : myQuestions.length === 0 ? (
+                <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">
+                  You have not asked any doctor questions yet.
+                </div>
+              ) : (
+                myQuestions.map((question) => {
+                  const parsedQuestion = parseQuestionContent(question.questionText);
+                  const previewText = truncateText(parsedQuestion.details || parsedQuestion.title, 120);
+                  const hasAnswers = question.answers.length > 0;
+
+                  return (
+                    <button
+                      key={question.id}
+                      type="button"
+                      onClick={() => {
+                        setShowMyQuestions(false);
+                        router.push(`/doctors-help/my-questions/${question.id}`);
+                      }}
+                      className="w-full rounded-2xl border border-border bg-card p-5 text-left transition hover:border-primary hover:shadow-md"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                          <p className="text-base font-semibold text-foreground">
+                            {parsedQuestion.title || 'Untitled question'}
+                          </p>
+                          <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                            <span>{question.isAnonymous ? 'Posted anonymously' : question.userEmail}</span>
+                            <span>{formatDate(question.createdAt)}</span>
+                          </div>
+                          <p className="mt-3 text-sm leading-6 text-foreground/80">
+                            {previewText}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2 rounded-full border border-border px-3 py-2 text-xs font-medium text-muted-foreground">
+                          <MessageSquare className={hasAnswers ? 'h-4 w-4 text-primary' : 'h-4 w-4 text-muted-foreground'} />
+                          <span>
+                            {hasAnswers
+                              ? `${question.answers.length} answer${question.answers.length === 1 ? '' : 's'} received`
+                              : 'No answers yet'}
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
         </SheetContent>
       </Sheet>
     </>
