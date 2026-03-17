@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { ensureCommentExists, getForumSnapshot, toggleVoteForComment } from "@/lib/forum-server";
+import {
+  canAccessModeratedContent,
+  ensureCommentExists,
+  getForumSnapshot,
+  toggleVoteForComment,
+} from "@/lib/forum-server";
 import type { VoteType } from "@/src/schema/enums";
 
 function parseCommentId(value: string) {
@@ -27,7 +32,7 @@ export async function POST(
   }
 
   const existing = await ensureCommentExists(commentId);
-  if (!existing) {
+  if (!existing || !canAccessModeratedContent(session.user.role, existing.status)) {
     return NextResponse.json({ error: "Comment not found." }, { status: 404 });
   }
 

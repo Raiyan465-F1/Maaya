@@ -4,7 +4,12 @@ import { getServerSession } from "next-auth";
 import { db } from "@/src/db";
 import { comments } from "@/src/schema/forum";
 import { authOptions } from "@/lib/auth";
-import { canManageContent, ensureCommentExists, getForumSnapshot } from "@/lib/forum-server";
+import {
+  canAccessModeratedContent,
+  canManageContent,
+  ensureCommentExists,
+  getForumSnapshot,
+} from "@/lib/forum-server";
 
 function parseCommentId(value: string) {
   const parsed = Number(value);
@@ -27,7 +32,7 @@ export async function PATCH(
   }
 
   const existing = await ensureCommentExists(commentId);
-  if (!existing) {
+  if (!existing || !canAccessModeratedContent(session.user.role, existing.status)) {
     return NextResponse.json({ error: "Comment not found." }, { status: 404 });
   }
 
@@ -74,7 +79,7 @@ export async function DELETE(
   }
 
   const existing = await ensureCommentExists(commentId);
-  if (!existing) {
+  if (!existing || !canAccessModeratedContent(session.user.role, existing.status)) {
     return NextResponse.json({ error: "Comment not found." }, { status: 404 });
   }
 

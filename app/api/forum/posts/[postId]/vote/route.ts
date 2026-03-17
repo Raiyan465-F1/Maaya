@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { ensurePostExists, getForumSnapshot, toggleVoteForPost } from "@/lib/forum-server";
+import {
+  canAccessModeratedContent,
+  ensurePostExists,
+  getForumSnapshot,
+  toggleVoteForPost,
+} from "@/lib/forum-server";
 import type { VoteType } from "@/src/schema/enums";
 
 function parsePostId(value: string) {
@@ -27,7 +32,7 @@ export async function POST(
   }
 
   const existing = await ensurePostExists(postId);
-  if (!existing) {
+  if (!existing || !canAccessModeratedContent(session.user.role, existing.status)) {
     return NextResponse.json({ error: "Discussion not found." }, { status: 404 });
   }
 
