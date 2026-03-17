@@ -65,9 +65,10 @@ export default function DoctorsHelpPage() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [topDoctors, setTopDoctors] = useState<Array<{
     userId: string;
+    displayName: string;
     email: string;
-    specialty: string;
-    availabilityInfo: string;
+    specialty: string | null;
+    availabilityInfo: string | null;
     activityCount: number;
     avgRating: number;
   }>>([]);
@@ -519,13 +520,12 @@ export default function DoctorsHelpPage() {
                       <div key={doctor.userId} className="rounded-xl border border-border p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="text-sm font-medium text-foreground">{doctor.email}</p>
-                            <p className="text-xs text-muted-foreground">{doctor.specialty}</p>
-                            <p className="text-xs text-muted-foreground">{doctor.availabilityInfo}</p>
+                            <p className="text-sm font-medium text-foreground">{doctor.displayName}</p>
+                            <p className="text-xs text-muted-foreground">{doctor.specialty ?? 'Specialty not added yet'}</p>
                           </div>
                           <div className="text-right">
                             <p className="text-sm font-semibold text-foreground">{doctor.avgRating.toFixed(1)} star</p>
-                            <p className="text-xs text-muted-foreground">{doctor.activityCount} answers</p>
+                            <p className="text-xs text-muted-foreground">{doctor.activityCount} total answers</p>
                           </div>
                         </div>
                       </div>

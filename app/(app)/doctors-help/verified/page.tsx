@@ -6,11 +6,36 @@ import { Button } from '@/components/ui/button';
 
 interface Doctor {
   userId: string;
+  displayName: string;
   email: string;
   specialty: string | null;
   availabilityInfo: string | null;
   location: string | null;
+  replyCount: number;
+  avgRating: number;
 }
+
+interface DoctorApiResponse {
+  userId?: string;
+  displayName?: string | null;
+  email?: string | null;
+  specialty?: string | null;
+  availabilityInfo?: string | null;
+  location?: string | null;
+  replyCount?: number | null;
+  avgRating?: number | null;
+}
+
+const buildDisplayName = (email?: string | null) => {
+  const emailPrefix = email?.split('@')[0] ?? 'Doctor';
+  const formatted = emailPrefix
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+
+  return formatted || 'Doctor';
+};
 
 export default function VerifiedDoctorsPage() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -22,8 +47,21 @@ export default function VerifiedDoctorsPage() {
       try {
         const res = await fetch('/api/doctors');
         if (res.ok) {
-          const data = await res.json();
-          setDoctors(data);
+          const data: DoctorApiResponse[] = await res.json();
+          const normalizedDoctors = data.map((doctor, index) => {
+            const email = doctor.email ?? 'doctor@example.com';
+            return {
+              userId: doctor.userId ?? `doctor-${index}`,
+              displayName: doctor.displayName ?? buildDisplayName(email),
+              email,
+              specialty: doctor.specialty ?? null,
+              availabilityInfo: doctor.availabilityInfo ?? null,
+              location: doctor.location ?? null,
+              replyCount: doctor.replyCount ?? 0,
+              avgRating: doctor.avgRating ?? 0,
+            };
+          });
+          setDoctors(normalizedDoctors);
         }
       } catch (error) {
         console.error('Failed to load doctors', error);
@@ -39,7 +77,8 @@ export default function VerifiedDoctorsPage() {
     if (!searchTerm.trim()) return true;
     const term = searchTerm.toLowerCase();
     return (
-      doc.email.toLowerCase().includes(term) ||
+      (doc.displayName ?? '').toLowerCase().includes(term) ||
+      (doc.email ?? '').toLowerCase().includes(term) ||
       (doc.specialty ?? '').toLowerCase().includes(term) ||
       (doc.availabilityInfo ?? '').toLowerCase().includes(term) ||
       (doc.location ?? '').toLowerCase().includes(term)
@@ -95,12 +134,17 @@ export default function VerifiedDoctorsPage() {
               <div key={doctor.userId} className="rounded-2xl border border-border p-5 bg-card">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-sm font-semibold text-foreground">{doctor.email}</p>
+                    <p className="text-sm font-semibold text-foreground">{doctor.displayName}</p>
+                    <p className="text-xs text-muted-foreground">{doctor.email}</p>
                     <p className="text-xs text-muted-foreground">{doctor.specialty ?? 'Specialty not added yet'}</p>
                     {doctor.location && (
                       <p className="text-xs text-muted-foreground">{doctor.location}</p>
                     )}
                     <p className="text-xs text-muted-foreground">{doctor.availabilityInfo ?? 'Availability not added yet'}</p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-sm font-semibold text-foreground">{doctor.avgRating.toFixed(1)}★</p>
+                    <p className="text-xs text-muted-foreground">{doctor.replyCount} replies</p>
                   </div>
                 </div>
               </div>
