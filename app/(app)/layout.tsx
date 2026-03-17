@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,8 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
+  const isForumRoute = pathname === "/forum" || pathname.startsWith("/forum/");
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -71,7 +74,12 @@ export default function AppLayout({
           "pt-14 lg:pt-0"
         )}
       >
-        <div className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-8 lg:py-12">
+        <div
+          className={cn(
+            "flex-1 w-full mx-auto px-4 sm:px-6 py-8 lg:py-12",
+            isForumRoute ? "max-w-[108rem] lg:px-6" : "max-w-4xl"
+          )}
+        >
           {children}
         </div>
       </main>
