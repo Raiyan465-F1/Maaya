@@ -15,6 +15,18 @@ interface Question {
   userGender?: string;
 }
 
+interface QuestionAnswer {
+  id: number;
+  answerText: string;
+  createdAt: string;
+  doctorDisplayName: string;
+  doctorSpecialty?: string | null;
+}
+
+interface MyQuestion extends Question {
+  answers: QuestionAnswer[];
+}
+
 type FilterType = 'newest' | 'oldest' | 'recent';
 
 const QUESTION_TITLE_LIMIT = 70;
@@ -63,6 +75,9 @@ export default function DoctorsHelpPage() {
   const [answerText, setAnswerText] = useState('');
   const [isSubmittingAnswer, setIsSubmittingAnswer] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [showMyQuestions, setShowMyQuestions] = useState(false);
+  const [myQuestions, setMyQuestions] = useState<MyQuestion[]>([]);
+  const [myQuestionsLoading, setMyQuestionsLoading] = useState(false);
   const [topDoctors, setTopDoctors] = useState<Array<{
     userId: string;
     displayName: string;
@@ -125,6 +140,21 @@ export default function DoctorsHelpPage() {
     }
   };
 
+  const fetchMyQuestions = async () => {
+    setMyQuestionsLoading(true);
+    try {
+      const response = await fetch('/api/questions/mine');
+      if (response.ok) {
+        const data = await response.json();
+        setMyQuestions(data);
+      }
+    } catch (error) {
+      console.error('Error fetching your questions:', error);
+    } finally {
+      setMyQuestionsLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!questionTitle.trim() || !questionText.trim()) return;
@@ -149,6 +179,9 @@ export default function DoctorsHelpPage() {
         setIsAnonymous(false);
         alert('Question posted successfully!');
         fetchQuestions();
+        if (userRole) {
+          fetchMyQuestions();
+        }
       } else {
         alert('Failed to post question. Please try again.');
       }
@@ -181,6 +214,9 @@ export default function DoctorsHelpPage() {
         setAnsweringQuestionId(null);
         alert('Answer posted successfully!');
         fetchQuestions();
+        if (showMyQuestions) {
+          fetchMyQuestions();
+        }
       } else {
         alert('Failed to post answer. Please try again.');
       }
@@ -309,6 +345,19 @@ export default function DoctorsHelpPage() {
               </div>
             )}
           </div>
+          {userRole && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setShowMyQuestions(true);
+                fetchMyQuestions();
+              }}
+              className="w-full sm:w-auto"
+            >
+              My Questions
+            </Button>
+          )}
         </div>
 
         <div className="space-y-4">
@@ -574,6 +623,83 @@ export default function DoctorsHelpPage() {
               </>
             );
           })()}
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={showMyQuestions} onOpenChange={setShowMyQuestions}>
+        <SheetContent side="center">
+          <SheetHeader className="border-b border-border">
+            <SheetTitle>My Questions</SheetTitle>
+            <SheetDescription>
+              View every question you asked here, including anonymous posts and doctor replies.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="overflow-y-auto px-4 pb-6">
+            <div className="space-y-4">
+              {myQuestionsLoading ? (
+                <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">
+                  Loading your questions...
+                </div>
+              ) : myQuestions.length === 0 ? (
+                <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">
+                  You have not asked any doctor questions yet.
+                </div>
+              ) : (
+                myQuestions.map((question) => {
+                  const parsedQuestion = parseQuestionContent(question.questionText);
+
+                  return (
+                    <div key={question.id} className="rounded-2xl border border-border bg-card p-5">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="text-base font-semibold text-foreground">
+                            {parsedQuestion.title || 'Untitled question'}
+                          </p>
+                          <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                            <span>{question.isAnonymous ? 'Posted anonymously' : question.userEmail}</span>
+                            <span>{formatDate(question.createdAt)}</span>
+                            <span>{question.answers.length} answer{question.answers.length === 1 ? '' : 's'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 rounded-xl border border-border bg-background/40 p-4">
+                        <p className="whitespace-pre-line text-sm leading-7 text-foreground/90">
+                          {parsedQuestion.details || parsedQuestion.title}
+                        </p>
+                      </div>
+
+                      <div className="mt-4 space-y-3">
+                        {question.answers.length === 0 ? (
+                          <div className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
+                            No doctor answers yet. Responses will appear here automatically.
+                          </div>
+                        ) : (
+                          question.answers.map((answer) => (
+                            <div key={answer.id} className="rounded-xl border border-primary bg-primary p-4 text-primary-foreground">
+                              <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                  <p className="text-sm font-semibold text-primary-foreground">{answer.doctorDisplayName}</p>
+                                  <p className="text-xs text-primary-foreground/80">
+                                    {answer.doctorSpecialty ?? 'Verified doctor'}
+                                  </p>
+                                </div>
+                                <p className="text-xs text-primary-foreground/80">{formatDate(answer.createdAt)}</p>
+                              </div>
+                              <p className="mt-3 whitespace-pre-line text-sm leading-7 text-primary-foreground">
+                                {answer.answerText}
+                              </p>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
         </SheetContent>
       </Sheet>
     </>
