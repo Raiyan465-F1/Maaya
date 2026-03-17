@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, eq, gte } from "drizzle-orm";
+import { eq, gte } from "drizzle-orm";
 import { db } from "@/src/db";
 import { doctorAnswers, doctorProfiles, doctorRatings, users } from "@/src/schema";
 
@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
     const doctors = await db
       .select({
         userId: doctorProfiles.userId,
+        name: users.name,
         specialty: doctorProfiles.specialty,
         availabilityInfo: doctorProfiles.availabilityInfo,
         email: users.email,
@@ -69,11 +70,19 @@ export async function GET(request: NextRequest) {
         const activity = activityByDoctor.get(doc.userId) ?? 0;
         const ratingMeta = ratingByDoctor.get(doc.userId);
         const avgRating = ratingMeta ? ratingMeta.total / ratingMeta.count : 0;
+        const emailPrefix = doc.email.split("@")[0] ?? "doctor";
+        const fallbackDisplayName = emailPrefix
+          .split(/[._-]+/)
+          .filter(Boolean)
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(" ");
+        const displayName = doc.name?.trim() || fallbackDisplayName || "Doctor";
 
         const score = avgRating * 3 + activity * 0.8; // mix of rating + activity
 
         return {
           userId: doc.userId,
+          displayName: displayName || "Doctor",
           email: doc.email,
           specialty: doc.specialty,
           availabilityInfo: doc.availabilityInfo,
