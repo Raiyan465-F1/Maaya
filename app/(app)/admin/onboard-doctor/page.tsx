@@ -159,16 +159,19 @@ export default function OnboardDoctorPage() {
                 htmlFor="doc-password"
                 className="mb-1.5 block text-sm font-medium text-foreground"
               >
-                One-time password <span className="text-destructive">*</span>
+                Temporary password <span className="text-destructive">*</span>
               </label>
               <div className="flex gap-2">
                 <input
                   id="doc-password"
                   type="text"
                   required
-                  readOnly
                   value={password}
-                  className="h-11 flex-1 rounded-xl border border-input bg-muted px-3.5 font-mono text-sm text-foreground"
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setCopied(false);
+                  }}
+                  className="h-11 flex-1 rounded-xl border border-input bg-background px-3.5 font-mono text-sm text-foreground transition-colors placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-ring/50"
                 />
                 <Button
                   type="button"
@@ -191,14 +194,14 @@ export default function OnboardDoctorPage() {
                 </Button>
               </div>
               <p className="mt-1.5 text-xs text-muted-foreground">
-                The doctor should change this after their first login.
+                Enter a custom password or click Generate. The doctor should change it after first login.
               </p>
             </div>
 
             <div className="pt-2">
               <Button
                 type="submit"
-                disabled={submitting || !email.trim()}
+                disabled={submitting || !email.trim() || !password.trim()}
                 className="h-11 w-full rounded-xl bg-gradient-to-r from-primary to-accent px-8 text-sm font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90 disabled:opacity-60 sm:w-auto"
               >
                 {submitting ? "Creating account…" : "Create doctor account"}
@@ -229,7 +232,7 @@ export default function OnboardDoctorPage() {
             </h3>
             <ol className="mt-4 flex flex-col gap-3">
               {[
-                "Fill in the doctor's email and generate a password.",
+                "Fill in the doctor's email and set a temporary password (or generate one).",
                 "Share the credentials with the doctor privately.",
                 "The doctor logs in and completes their profile.",
                 "They can now answer questions in Doctor's Help.",
