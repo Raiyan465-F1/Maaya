@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 
@@ -8,6 +9,8 @@ export default function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  const isForumRoute = pathname === "/forum" || pathname.startsWith("/forum/");
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -18,7 +21,12 @@ export default function AppLayout({
             MAAYA
           </span>
         </header>
-        <div className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 lg:py-12">
+        <div
+          className={[
+            "mx-auto w-full flex-1 px-4 py-8 sm:px-6 lg:py-12",
+            isForumRoute ? "max-w-[108rem] lg:px-6" : "max-w-4xl",
+          ].join(" ")}
+        >
           {children}
         </div>
       </SidebarInset>

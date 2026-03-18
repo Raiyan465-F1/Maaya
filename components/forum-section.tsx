@@ -12,6 +12,7 @@ import type {
 import { FORUM_MEDIA_LIMIT, FORUM_TAG_LIMIT } from "@/lib/forum-types";
 
 type MediaDraft = ForumMediaInput & { key: number };
+type ForumSortOption = "latest" | "oldest" | "popular";
 
 const EMPTY_FORUM: ForumResponse = {
   viewer: {
@@ -62,12 +63,16 @@ function tagStyles(tag: "Admin" | "User") {
     : "bg-primary/10 text-primary border-primary/20";
 }
 
+function normalizeTagValue(tag: string) {
+  return tag.trim().replace(/^#+/, "").toLowerCase();
+}
+
 function parseTagString(value: string) {
   return Array.from(
     new Set(
       value
         .split(",")
-        .map((item) => item.trim())
+        .map((item) => normalizeTagValue(item))
         .filter(Boolean)
     )
   );
@@ -78,7 +83,8 @@ function stringifyTags(tags: string[]) {
 }
 
 function toggleTag(tags: string[], tag: string) {
-  return tags.includes(tag) ? tags.filter((item) => item !== tag) : [...tags, tag];
+  const normalizedTag = normalizeTagValue(tag);
+  return tags.includes(normalizedTag) ? tags.filter((item) => item !== normalizedTag) : [...tags, normalizedTag];
 }
 
 function forumProfileHref(userId: string) {
@@ -88,10 +94,10 @@ function forumProfileHref(userId: string) {
 function StatChip({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex min-w-0 flex-col items-center justify-end">
-      <p className="mb-3 min-h-[1.75rem] text-center text-[10px] leading-tight font-bold uppercase tracking-[0.04em] text-foreground sm:text-[11px]">
+      <p className="mb-2 min-h-[1.55rem] text-center text-[10px] leading-tight font-bold uppercase tracking-[0.04em] text-foreground sm:text-[11px]">
         {label}
       </p>
-      <p className="font-mono text-[2.8rem] leading-none font-medium tracking-[-0.05em] text-foreground tabular-nums sm:text-[3.4rem]">
+      <p className="font-mono text-[2.5rem] leading-none font-medium tracking-[-0.05em] text-foreground tabular-nums sm:text-[3rem]">
         {value}
       </p>
     </div>
@@ -331,10 +337,14 @@ function normalizeSearchValue(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
+function postPopularityScore(post: ForumPostRecord) {
+  return post.upvotes - post.downvotes + countReplies(post.comments) * 2;
+}
+
 function CommentTree({
   comments,
-  busyKey,
   canInteract,
+  busyKey,
   onVote,
   onDelete,
   onReply,
@@ -343,8 +353,8 @@ function CommentTree({
   depth = 0,
 }: {
   comments: ForumCommentRecord[];
-  busyKey: string | null;
   canInteract: boolean;
+  busyKey: string | null;
   onVote: (commentId: number, voteType: "upvote" | "downvote") => void;
   onDelete: (commentId: number) => void;
   onReply: (commentId: number, content: string) => void;
@@ -378,18 +388,20 @@ function CommentTree({
                 {initialsFromEmail(comment.author.email)}
               </Link>
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-2">
                   <Link
                     href={forumProfileHref(comment.author.id)}
-                    className="text-sm font-semibold text-foreground transition hover:text-primary"
+                    className="truncate text-sm font-semibold text-foreground transition hover:text-primary"
                     onClick={(event) => event.stopPropagation()}
                   >
                     {comment.author.email}
                   </Link>
-                  <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${tagStyles(comment.author.tag)}`}>
+                  <span className="shrink-0 text-xs text-muted-foreground">{formatTimeLabel(comment.updatedAt)}</span>
+                </div>
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                  <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${tagStyles(comment.author.tag)}`}>
                     {comment.author.tag}
                   </span>
-                  <span className="text-xs text-muted-foreground">{formatTimeLabel(comment.updatedAt)}</span>
                 </div>
 
                 {editingId === comment.id ? (
@@ -496,8 +508,8 @@ function CommentTree({
               >
                 <CommentTree
                   comments={comment.replies}
-                  busyKey={busyKey}
                   canInteract={canInteract}
+                  busyKey={busyKey}
                   onVote={onVote}
                   onDelete={onDelete}
                   onReply={onReply}
@@ -524,6 +536,7 @@ export function ForumSection() {
   const [commentTargetPostId, setCommentTargetPostId] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<ForumSortOption>("latest");
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -531,6 +544,7 @@ export function ForumSection() {
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [media, setMedia] = useState<MediaDraft[]>([{ key: 1, kind: "image", url: "" }]);
   const deferredSearchTerm = useDeferredValue(searchTerm);
+  const filterPanelRef = useRef<HTMLDivElement | null>(null);
 
   const discussionCount = forum.posts.length;
   const replyCount = useMemo(() => {
@@ -542,14 +556,38 @@ export function ForumSection() {
     () => Array.from(new Set(forum.posts.flatMap((post) => post.tags))).sort((left, right) => left.localeCompare(right)),
     [forum.posts]
   );
+  const trendingTopics = useMemo(() => {
+    return [...forum.posts]
+      .sort((left, right) => {
+        const scoreDiff = postPopularityScore(right) - postPopularityScore(left);
+        if (scoreDiff !== 0) return scoreDiff;
+        return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+      })
+      .slice(0, 5);
+  }, [forum.posts]);
+  const trendingTags = useMemo(() => {
+    const tagCountMap = new Map<string, number>();
+
+    for (const post of forum.posts) {
+      for (const tag of post.tags) {
+        const normalizedTag = normalizeTagValue(tag);
+        tagCountMap.set(normalizedTag, (tagCountMap.get(normalizedTag) ?? 0) + 1);
+      }
+    }
+
+    return [...tagCountMap.entries()]
+      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+      .slice(0, 10);
+  }, [forum.posts]);
   const normalizedSearchTerm = deferredSearchTerm.trim().toLowerCase();
   const compactSearchTerm = normalizeSearchValue(deferredSearchTerm.trim());
   const filteredPosts = useMemo(() => {
-    return forum.posts.filter((post) => {
-      const matchesTag = activeTag ? post.tags.includes(activeTag) : true;
+    const matchingPosts = forum.posts.filter((post) => {
+      const normalizedPostTags = post.tags.map((tag) => normalizeTagValue(tag));
+      const matchesTag = activeTag ? normalizedPostTags.includes(activeTag) : true;
       const searchableValues = [
         post.title,
-        ...post.tags,
+        ...normalizedPostTags,
         post.author.id,
         post.author.email,
         String(post.id),
@@ -561,7 +599,26 @@ export function ForumSection() {
 
       return matchesTag && matchesSearch;
     });
-  }, [activeTag, compactSearchTerm, forum.posts, normalizedSearchTerm]);
+
+    return [...matchingPosts].sort((left, right) => {
+      if (sortBy === "oldest") {
+        return new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime();
+      }
+
+      if (sortBy === "popular") {
+        const leftScore = postPopularityScore(left);
+        const rightScore = postPopularityScore(right);
+
+        if (rightScore !== leftScore) {
+          return rightScore - leftScore;
+        }
+
+        return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+      }
+
+      return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+    });
+  }, [activeTag, compactSearchTerm, forum.posts, normalizedSearchTerm, sortBy]);
 
   async function refreshForum() {
     setIsLoading(true);
@@ -653,6 +710,18 @@ export function ForumSection() {
     setMedia((current) => [...current, { key: Date.now() + current.length, kind: "image", url: "" }]);
   }
 
+  function applyTagFilter(tag: string) {
+    const normalizedTag = normalizeTagValue(tag);
+    setSearchTerm("");
+    setActiveTag((current) => (current === normalizedTag ? null : normalizedTag));
+    setFocusedPostId(null);
+    setCommentTargetPostId(null);
+
+    window.requestAnimationFrame(() => {
+      filterPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
   if (isLoading) {
     return (
       <section className="mx-auto max-w-[96rem] space-y-8 px-4 py-10 sm:px-6 lg:px-8">
@@ -669,20 +738,20 @@ export function ForumSection() {
   }
 
   return (
-    <section className="mx-auto max-w-[96rem] space-y-8 px-4 py-10 pb-28 sm:px-6 lg:px-8">
-      <div className="overflow-hidden rounded-[2rem] border border-primary/15 bg-gradient-to-br from-card via-card to-primary/5 shadow-sm">
-        <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(17rem,0.8fr)] lg:p-6">
+    <section className="mx-auto max-w-[90rem] space-y-7 px-3 py-8 pb-24 sm:px-4 lg:px-5">
+      <div className="max-w-[84rem] overflow-hidden rounded-[2rem] border border-primary/15 bg-gradient-to-br from-card via-card to-primary/5 shadow-sm">
+        <div className="grid gap-5 p-5 lg:grid-cols-[48rem_minmax(14rem,1fr)] lg:p-6">
           <div>
             <p className="font-mono text-lg tracking-[0.22em] text-primary uppercase sm:text-xl">Forum</p>
-            <h1 className="mt-2 max-w-lg font-heading text-3xl font-bold leading-[0.95] tracking-tight text-foreground sm:text-[3.15rem]">
+            <h1 className="mt-2 max-w-lg font-heading text-3xl font-bold leading-[0.95] tracking-tight text-foreground sm:text-[3.05rem]">
               Community <span className="text-primary italic">Discussions</span>
             </h1>
-            <p className="mt-3 max-w-lg text-xs leading-6 text-muted-foreground sm:text-sm">
+            <p className="mt-3 max-w-lg text-sm leading-6 text-muted-foreground">
               Ask questions, share experiences, and build practical support around women&apos;s health in one calm space.
             </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:ml-auto lg:w-full lg:max-w-[24rem]">
             <StatChip label="Discussions" value={String(discussionCount)} />
             <StatChip label="Replies" value={String(replyCount)} />
             <StatChip label="Active Tags" value={String(uniqueTagCount)} />
@@ -690,11 +759,12 @@ export function ForumSection() {
         </div>
       </div>
 
-      <div className="space-y-6">
-          <div className="rounded-[2rem] border border-primary/15 bg-card p-5 shadow-sm">
+      <div className="grid gap-3 lg:ml-32 lg:grid-cols-[48rem_18rem]">
+        <div className="space-y-6 lg:max-w-[48rem]">
+          <div ref={filterPanelRef} className="rounded-[1.8rem] border border-primary/15 bg-card p-5 shadow-sm">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <p className="font-heading text-2xl font-semibold text-foreground">Find a discussion</p>
+                <p className="font-heading text-[1.85rem] font-semibold text-foreground">Find a discussion</p>
                 <p className="mt-1 text-sm text-muted-foreground">Search by title or tag, or click a tag chip to narrow the list.</p>
               </div>
               {(searchTerm || activeTag) ? (
@@ -703,6 +773,7 @@ export function ForumSection() {
                   onClick={() => {
                     setSearchTerm("");
                     setActiveTag(null);
+                    setSortBy("latest");
                   }}
                   className="rounded-full border border-primary/15 px-4 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
                 >
@@ -712,12 +783,29 @@ export function ForumSection() {
             </div>
 
             <div className="mt-4 space-y-3">
-              <input
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search by title, tag, user ID, email, or discussion ID"
-                className="w-full rounded-3xl border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40"
-              />
+              <div className="flex flex-col gap-3 lg:flex-row">
+                <input
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Search by title, tag, user ID, email, or discussion ID"
+                  className="w-full rounded-3xl border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40"
+                />
+                <div className="flex items-center gap-3 rounded-3xl border border-primary/15 bg-background px-4 py-3 lg:min-w-56">
+                  <label htmlFor="forum-sort" className="shrink-0 text-sm font-medium text-muted-foreground">
+                    Sort by
+                  </label>
+                  <select
+                    id="forum-sort"
+                    value={sortBy}
+                    onChange={(event) => setSortBy(event.target.value as ForumSortOption)}
+                    className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none"
+                  >
+                    <option value="latest">Latest</option>
+                    <option value="oldest">Oldest</option>
+                    <option value="popular">Popular</option>
+                  </select>
+                </div>
+              </div>
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 <span className="text-muted-foreground">
                   Showing {filteredPosts.length} of {forum.posts.length} discussions
@@ -767,7 +855,7 @@ export function ForumSection() {
                 setCommentTargetPostId(postId);
               }}
               onClose={() => setFocusedPostId(null)}
-              onTagClick={(tag) => setActiveTag((current) => (current === tag ? null : tag))}
+              onTagClick={applyTagFilter}
               onVote={(postId, voteType) =>
                 submitJson(
                   `/api/forum/posts/${postId}/vote`,
@@ -825,6 +913,91 @@ export function ForumSection() {
               }
             />
           ))}
+        </div>
+
+        <aside className="space-y-6 lg:sticky lg:top-5 lg:self-start">
+          <div className="overflow-hidden rounded-[2rem] border border-primary/15 bg-gradient-to-br from-white via-card to-primary/5 shadow-sm">
+            <div className="border-b border-primary/10 px-5 py-4">
+              <p className="font-mono text-xs tracking-[0.22em] text-primary uppercase">Trending now</p>
+              <h2 className="mt-2 font-heading text-2xl font-semibold text-foreground">Topics and tags</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Jump into the conversations people are engaging with the most.
+              </p>
+            </div>
+
+            <div className="grid gap-5 p-5">
+              <div>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-foreground">Trending topics</p>
+                  <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                    Top {trendingTopics.length}
+                  </span>
+                </div>
+                <div className="mt-4 space-y-3">
+                  {trendingTopics.length ? (
+                    trendingTopics.map((post, index) => (
+                      <button
+                        key={post.id}
+                        type="button"
+                        onClick={() => {
+                          setFocusedPostId(post.id);
+                          setCommentTargetPostId(null);
+                        }}
+                        className="w-full rounded-[1.4rem] border border-primary/12 bg-white/80 px-4 py-3 text-left transition hover:border-primary/30 hover:bg-primary/5"
+                      >
+                        <div className="flex items-start gap-3">
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                            {index + 1}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="line-clamp-2 text-sm font-semibold text-foreground">{post.title}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {postPopularityScore(post)} activity points
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="rounded-[1.4rem] border border-dashed border-primary/15 px-4 py-5 text-sm text-muted-foreground">
+                      Trending topics will appear here once discussions start picking up.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-foreground">Trending tags</p>
+                  <span className="text-xs text-muted-foreground">Click to filter</span>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {trendingTags.length ? (
+                    trendingTags.map(([tag, count]) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => applyTagFilter(tag)}
+                        className={[
+                          "rounded-full border px-3.5 py-2 text-sm font-medium transition",
+                          activeTag === tag
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-primary/15 bg-white text-foreground hover:border-primary/30 hover:text-primary",
+                        ].join(" ")}
+                      >
+                        #{tag} <span className="text-xs opacity-75">({count})</span>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="rounded-[1.4rem] border border-dashed border-primary/15 px-4 py-5 text-sm text-muted-foreground">
+                      Tags will show here as people begin categorizing discussions.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
       </div>
 
       {focusedPost ? (
@@ -851,7 +1024,7 @@ export function ForumSection() {
                 setFocusedPostId(null);
                 setCommentTargetPostId(null);
               }}
-              onTagClick={(tag) => setActiveTag((current) => (current === tag ? null : tag))}
+              onTagClick={applyTagFilter}
               onVote={(postId, voteType) =>
                 submitJson(
                   `/api/forum/posts/${postId}/vote`,
@@ -913,7 +1086,7 @@ export function ForumSection() {
         </div>
       ) : null}
 
-      <div className="fixed right-4 bottom-4 z-30 sm:right-6 sm:bottom-6">
+      <div className="fixed right-2 bottom-4 z-30 sm:right-4 sm:bottom-6 lg:right-5">
         {isComposerOpen ? (
           <div className="mb-4 w-[min(92vw,30rem)] rounded-[2rem] border border-primary/15 bg-card p-5 shadow-2xl">
             <div className="flex items-start justify-between gap-4">
@@ -1146,59 +1319,61 @@ function ForumPostCard({
       onClick={handleCardClick}
     >
       <div className="h-2 w-full bg-gradient-to-r from-primary via-accent to-secondary" />
-      <div className={expanded ? "p-6 sm:p-7" : "p-6"}>
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className={expanded ? "p-6 sm:p-7" : "p-3.5 sm:p-4"}>
+        <div className={expanded ? "flex flex-wrap items-start justify-between gap-4" : "flex items-start justify-between gap-3"}>
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className={expanded ? "flex items-start gap-3 min-w-0" : "flex items-start gap-3 min-w-0"}>
               {post.isAnonymous ? (
-                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 font-mono text-sm text-primary">
+                <div className={expanded ? "flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 font-mono text-xs text-primary" : "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 font-mono text-xs text-primary"}>
                   {initialsFromEmail(post.author.email)}
                 </div>
               ) : (
                 <Link
                   href={forumProfileHref(post.author.id)}
-                  className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 font-mono text-sm text-primary transition hover:bg-primary/16"
+                  className={expanded ? "flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 font-mono text-xs text-primary transition hover:bg-primary/16" : "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 font-mono text-xs text-primary transition hover:bg-primary/16"}
                   onClick={(event) => event.stopPropagation()}
                 >
                   {initialsFromEmail(post.author.email)}
                 </Link>
               )}
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <div className={expanded ? "flex items-center gap-2 min-w-0" : "flex items-center gap-2 min-w-0"}>
                   {post.isAnonymous ? (
-                    <p className="text-sm font-semibold text-foreground">{post.author.email}</p>
+                    <p className={expanded ? "truncate text-sm font-semibold text-foreground" : "truncate text-sm font-semibold text-foreground"}>{post.author.email}</p>
                   ) : (
                     <Link
                       href={forumProfileHref(post.author.id)}
-                      className="text-sm font-semibold text-foreground transition hover:text-primary"
+                      className={expanded ? "truncate text-sm font-semibold text-foreground transition hover:text-primary" : "truncate text-sm font-semibold text-foreground transition hover:text-primary"}
                       onClick={(event) => event.stopPropagation()}
                     >
                       {post.author.email}
                     </Link>
                   )}
+                  <p className={expanded ? "shrink-0 text-xs text-muted-foreground" : "shrink-0 text-xs text-muted-foreground"}>{formatTimeLabel(post.updatedAt)}</p>
+                </div>
+                <div className={expanded ? "mt-0.5 flex flex-wrap items-center gap-1.5" : "mt-1 flex flex-wrap items-center gap-1.5"}>
+                  <span className={`rounded-full border ${expanded ? "px-2 py-0.5 text-[10px]" : "px-2 py-0.5 text-[10px]"} font-medium ${tagStyles(post.author.tag)}`}>
+                    {post.author.tag}
+                  </span>
                   {post.isAnonymous ? (
-                    <span className="rounded-full border border-primary/20 bg-primary/8 px-2.5 py-1 text-[11px] font-medium text-primary">
+                    <span className={expanded ? "rounded-full border border-primary/20 bg-primary/8 px-2 py-0.5 text-[10px] font-medium text-primary" : "rounded-full border border-primary/20 bg-primary/8 px-2 py-0.5 text-[10px] font-medium text-primary"}>
                       Posted anonymously
                     </span>
                   ) : null}
                   {post.isAnonymous && isAdminViewer && post.realAuthor ? (
                     <Link
                       href={forumProfileHref(post.realAuthor.id)}
-                      className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700 transition hover:bg-amber-100"
+                      className={expanded ? "rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 transition hover:bg-amber-100" : "rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 transition hover:bg-amber-100"}
                       onClick={(event) => event.stopPropagation()}
                     >
                       Real user: {post.realAuthor.email}
                     </Link>
                   ) : null}
-                  <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${tagStyles(post.author.tag)}`}>
-                    {post.author.tag}
-                  </span>
                 </div>
-                <p className="text-xs text-muted-foreground">{formatTimeLabel(post.updatedAt)}</p>
               </div>
             </div>
           </div>
-          <div className="flex max-w-full flex-1 flex-wrap items-start justify-end gap-2 sm:max-w-[45%]">
+          <div className={expanded ? "flex max-w-full shrink-0 flex-wrap items-start justify-end gap-1.5 sm:max-w-[35%]" : "flex shrink-0 items-center gap-1.5 self-start"}>
             {post.tags.map((tag) => (
               <button
                 key={tag}
@@ -1208,11 +1383,12 @@ function ForumPostCard({
                   onTagClick(tag);
                 }}
                 className={[
-                  "rounded-full px-3.5 py-1.5 text-sm font-medium transition",
+                  expanded ? "max-w-full truncate rounded-full px-3 py-1 text-xs font-medium transition" : "max-w-[4.25rem] truncate rounded-full px-2.5 py-0.5 text-[11px] font-medium transition",
                   activeTag === tag
                     ? "bg-primary text-primary-foreground"
                     : "bg-primary/8 text-primary hover:bg-primary/14",
                 ].join(" ")}
+                title={`#${tag}`}
               >
                 #{tag}
               </button>
@@ -1291,22 +1467,24 @@ function ForumPostCard({
           </div>
         ) : (
           <>
-            <h2 className={expanded ? "mt-5 font-heading text-4xl font-semibold leading-tight text-foreground" : "mt-5 font-heading text-3xl font-semibold leading-tight text-foreground"}>
+            <h2 className={expanded ? "mt-5 font-heading text-[2.35rem] font-semibold leading-tight text-foreground" : "mt-3 font-heading text-[1.15rem] font-semibold leading-snug text-foreground"}>
               {post.title}
             </h2>
             <p
               className={[
-                "mt-4 whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-sm leading-7 text-foreground/90",
-                expanded ? "" : "line-clamp-4",
+                expanded
+                  ? "mt-3 whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-sm leading-6 text-foreground/90"
+                  : "mt-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-[13px] leading-5 text-foreground/90 line-clamp-2",
+                expanded ? "" : "",
               ].join(" ")}
             >
               {post.content}
             </p>
-            <div className="mt-5">
+            <div className={expanded ? "mt-5" : "mt-3"}>
               <MediaPreview media={post.media} />
             </div>
-            <div className="mt-5 flex items-center justify-between gap-3 border-t border-primary/10 pt-4">
-              <div className="flex flex-wrap items-center gap-5">
+            <div className={expanded ? "mt-4 flex items-center justify-between gap-3 border-t border-primary/10 pt-3" : "mt-3 flex items-center justify-between gap-2 border-t border-primary/10 pt-2.5"}>
+              <div className={expanded ? "flex flex-wrap items-center gap-3" : "flex flex-wrap items-center gap-2.5"}>
                 <InlineActionButton
                   active={post.viewerHasUpvoted}
                   disabled={!canInteract || busy}
@@ -1382,8 +1560,8 @@ function ForumPostCard({
           <div className="mt-6">
             <CommentTree
               comments={post.comments}
-              busyKey={busyKey}
               canInteract={canInteract}
+              busyKey={busyKey}
               onVote={onCommentVote}
               onDelete={onCommentDelete}
               onReply={(commentId, nextContent) => onComment(post.id, commentId, nextContent)}
