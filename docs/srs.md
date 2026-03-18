@@ -76,8 +76,8 @@ Users can:
 
 - Create, edit, and delete their own forum posts and comments
 - Upvote/downvote posts and comments
-- Report posts (for later moderation review)
-- Post anonymously (identity hidden to other users; admins may still see the real author in tooling)
+- Report posts and comments (for moderation review)
+- Post anonymously (identity hidden to other users; admins can resolve the real author **only for reported content** during moderation)
 
 ### Verified Doctors / Contributors
 
@@ -189,7 +189,7 @@ However, the **core application logic and data management remain internal** to t
 | 16 | Voting System | Upvote helpful responses (posts + comments). | **Implemented** |
 | 17 | Media Attachments (Forum) | Allow adding image/video links to posts. | **Implemented** |
 | 18 | Reporting | Users can report forum posts. | **Implemented** (review workflow **planned**) |
-| 19 | Content Moderation | Admin review and removal tools. | **Partially implemented** (admin page stub; report review planned) |
+| 19 | Content Moderation | Admin review and removal tools. | **Implemented** (reports queue + actions); advanced tooling **planned** |
 | 20 | Doctor Directory | Verified medical professionals. | **Partially implemented** (static verified doctors pages + DB-backed doctor profiles) |
 | 21 | Doctor Q&A | Submit medical questions and receive doctor replies. | **Implemented** |
 | 22 | Notification System | Reminders and alerts. | **Partially implemented** (alerts generated + shown on dashboard; reminders center planned) |
@@ -201,13 +201,16 @@ However, the **core application logic and data management remain internal** to t
 
 ## 2.2.1 Extras (implemented beyond the original SRS baseline)
 
-The following items are **already implemented in the current codebase** and were not clearly captured in the original high-level SRS feature list (or were underspecified):
+The following items are **already implemented in the current codebase** and were not clearly captured in the original high-level SRS feature list (or were underspecified). Each item is tagged with **[EXTRA]**.
 
-- **Forum media attachments**: Forum posts can include image/video links.
-- **Forum reporting flow**: Users can report posts (admin review UI/workflows are still planned).
-- **Doctor onboarding (admin tooling)**: Admins can create verified doctor accounts from an admin page + API.
-- **Doctor access-code registration path**: A dedicated doctor registration page exists that validates a shared doctor access code (env-configured).
-- **Dashboard feedback alerts**: When a doctor replies to a user’s question, an in-app alert is created and shown on the dashboard.
+- **[EXTRA] Forum media attachments**: Forum posts can include image/video links.
+- **[EXTRA] Forum reporting flow (posts + comments)**: Users can report posts and comments, with a dedicated admin review queue.
+- **[EXTRA] Admin moderation dashboard**: Admins can review reports, mark them reviewed/pending, and change content status (active/hidden/removed).
+- **[EXTRA] Admin user management**: Admins can update user account status (ex: active/suspended/banned) from admin tooling.
+- **[EXTRA] Admin-only anonymous author resolution**: Anonymous forum authors are only resolved for admins when the content is reported.
+- **[EXTRA] Doctor onboarding (admin tooling)**: Admins can create verified doctor accounts from an admin page + API.
+- **[EXTRA] Doctor access-code registration path**: A dedicated doctor registration page exists that validates a shared doctor access code (env-configured).
+- **[EXTRA] Dashboard feedback alerts**: When a doctor replies to a user’s question, an in-app alert is created and shown on the dashboard.
 
 ---
 
@@ -294,8 +297,8 @@ Users with elevated privileges responsible for:
 | FR-15 | Forum posting | **Implemented** |
 | FR-16 | Threaded comments | **Implemented** |
 | FR-17 | Voting system | **Implemented** |
-| FR-18 | Reporting system (forum) | **Implemented** (submission); admin review **planned** |
-| FR-19 | Content moderation | **Partially implemented** (admin page stub; workflows planned) |
+| FR-18 | Reporting system (forum) | **Implemented** (posts + comments, submission + moderation queue) |
+| FR-19 | Content moderation | **Implemented** (report queue + status actions); extended tooling **planned** |
 | FR-20 | Doctor directory | **Partially implemented** |
 | FR-21 | Doctor Q&A | **Implemented** |
 | FR-22 | Notifications and reminders | **Partially implemented** (alerts implemented; reminders center planned) |
@@ -303,6 +306,7 @@ Users with elevated privileges responsible for:
 | FR-24 | Knowledge quizzes | **Planned** |
 | FR-25 | RBAC | **Implemented** |
 | FR-26 | Doctor onboarding (admin creates doctor accounts) | **Implemented** |
+| FR-27 | Admin user management | **Implemented** (update account status) |
 
 ---
 
