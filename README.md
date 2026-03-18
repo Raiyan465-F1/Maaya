@@ -73,6 +73,8 @@ Developers, designers, and contributors interested in improving reproductive hea
 
 More contribution guidelines will be added as the project develops.
 
+**srs :** https://docs.google.com/document/d/1nK6V33R4gKhP-OBHIWly9k2qFYXSdm7zOr07OiGIqX8/edit?usp=sharing
+
 ---
 
 Creating a supportive space where people can **learn, share, and take control of their reproductive health.**
