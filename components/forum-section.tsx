@@ -345,7 +345,6 @@ function CommentTree({
   comments,
   canInteract,
   busyKey,
-  canInteract,
   onVote,
   onDelete,
   onReply,
@@ -356,7 +355,6 @@ function CommentTree({
   comments: ForumCommentRecord[];
   canInteract: boolean;
   busyKey: string | null;
-  canInteract: boolean;
   onVote: (commentId: number, voteType: "upvote" | "downvote") => void;
   onDelete: (commentId: number) => void;
   onReply: (commentId: number, content: string) => void;
@@ -1564,7 +1562,6 @@ function ForumPostCard({
               comments={post.comments}
               canInteract={canInteract}
               busyKey={busyKey}
-              canInteract={canInteract}
               onVote={onCommentVote}
               onDelete={onCommentDelete}
               onReply={(commentId, nextContent) => onComment(post.id, commentId, nextContent)}
