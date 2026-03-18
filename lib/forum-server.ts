@@ -1,7 +1,8 @@
 import { createHmac } from "node:crypto";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import { db } from "@/src/db";
 import { comments, commentVotes, forumPostMedia, forumPosts, forumPostVotes } from "@/src/schema/forum";
+import { reports } from "@/src/schema/reports";
 import { users } from "@/src/schema/users";
 import type { ForumResponse, ForumCommentRecord, ForumMediaInput } from "@/lib/forum-types";
 import { FORUM_MEDIA_LIMIT, FORUM_TAG_LIMIT } from "@/lib/forum-types";
@@ -171,6 +172,18 @@ export async function getForumSnapshot(viewerId: string | null, viewerRole: stri
     ? await db.select().from(commentVotes).where(inArray(commentVotes.commentId, commentIds))
     : [];
 
+  const reportedPostIds =
+    viewerRole === "admin" && postIds.length
+      ? new Set(
+          (
+            await db
+              .select({ postId: reports.postId })
+              .from(reports)
+              .where(and(inArray(reports.postId, postIds), isNotNull(reports.postId)))
+          ).map((row) => row.postId as number)
+        )
+      : new Set<number>();
+
   const postMediaMap = new Map<number, ForumResponse["posts"][number]["media"]>();
   for (const media of mediaRows) {
     const current = postMediaMap.get(media.postId) ?? [];
@@ -273,7 +286,10 @@ export async function getForumSnapshot(viewerId: string | null, viewerRole: stri
     },
     posts: posts.map((post) => {
       const resolvedAnonymousAuthor =
-        post.isAnonymous && post.anonymousOwnerHash && adminResolvedAuthors
+        post.isAnonymous &&
+        reportedPostIds.has(post.id) &&
+        post.anonymousOwnerHash &&
+        adminResolvedAuthors
           ? adminResolvedAuthors.get(post.anonymousOwnerHash) ?? null
           : null;
 
