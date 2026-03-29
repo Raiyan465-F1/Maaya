@@ -1,6 +1,7 @@
 "use server";
 
 import Parser from "rss-parser";
+import { REAL_ARTICLES } from "./real";
 
 export interface NewsArticle {
   title: string;
@@ -146,7 +147,7 @@ export async function fetchNewsByCategory(category: string): Promise<NewsArticle
     console.error('Master RSS feed failure:', error);
     return [];
   }
-import { REAL_ARTICLES } from "./real";
+}
 
 export interface Source {
   name: string;
