@@ -12,6 +12,7 @@ import {
   BookOpen,
   UserPlus,
   Shield,
+  Newspaper,
 } from "lucide-react";
 import {
   Sidebar,
@@ -39,6 +40,7 @@ const SHARED_NAV: NavItem[] = [
   { label: "Forum", href: "/forum", icon: MessageSquare },
   { label: "Educational Hub", href: "/education", icon: BookOpen },
   { label: "Notifications", href: "/notifications", icon: Bell },
+  { label: "STI Awareness Hub", href: "/sti-awareness", icon: Newspaper },
 ];
 
 const USER_NAV: NavItem[] = [
@@ -48,6 +50,7 @@ const USER_NAV: NavItem[] = [
   { label: "Doctor's Help", href: "/doctors-help", icon: Stethoscope },
   { label: "Notifications", href: "/notifications", icon: Bell },
   { label: "Educational Hub", href: "/education", icon: BookOpen },
+  { label: "STI Awareness Hub", href: "/sti-awareness", icon: Newspaper },
 ];
 
 const DOCTOR_NAV: NavItem[] = [
@@ -56,6 +59,7 @@ const DOCTOR_NAV: NavItem[] = [
   { label: "Forum", href: "/forum", icon: MessageSquare },
   { label: "Notifications", href: "/notifications", icon: Bell },
   { label: "Educational Hub", href: "/education", icon: BookOpen },
+  { label: "STI Awareness Hub", href: "/sti-awareness", icon: Newspaper },
 ];
 
 const ADMIN_NAV: NavItem[] = [
@@ -64,6 +68,7 @@ const ADMIN_NAV: NavItem[] = [
   { label: "Doctor's Help", href: "/doctors-help", icon: Stethoscope },
   { label: "Notifications", href: "/notifications", icon: Bell },
   { label: "Educational Hub", href: "/education", icon: BookOpen },
+  { label: "STI Awareness Hub", href: "/sti-awareness", icon: Newspaper },
 ];
 
 const ADMIN_TOOLS: NavItem[] = [

@@ -3,6 +3,16 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
 interface DoctorProfileFragment {
@@ -28,6 +38,12 @@ interface UserProfile {
   updatedAt: string;
   doctorProfile?: DoctorProfileFragment | null;
 }
+
+type ForumTagSummary = {
+  tag: string;
+  usageCount: number;
+  interactionCount: number;
+};
 
 function ProfileAvatar({
   name,
@@ -157,6 +173,7 @@ export default function ProfilePage() {
 
   const [displayName, setDisplayName] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [likedTagsDraft, setLikedTagsDraft] = useState<string[]>([]);
   const [ageGroup, setAgeGroup] = useState("");
   const [gender, setGender] = useState("");
   const [location, setLocation] = useState("");
@@ -169,6 +186,14 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [togglingAnon, setTogglingAnon] = useState(false);
+
+  const [tagSheetOpen, setTagSheetOpen] = useState(false);
+  const [tagSort, setTagSort] = useState<"usage" | "popular">("usage");
+  const [tagSearch, setTagSearch] = useState("");
+  const [availableTags, setAvailableTags] = useState<ForumTagSummary[]>([]);
+  const [tagsLoading, setTagsLoading] = useState(false);
+  const [tagsError, setTagsError] = useState<string | null>(null);
+  const [tagsSaving, setTagsSaving] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -183,6 +208,7 @@ export default function ProfilePage() {
       setProfile(data);
       setDisplayName(data.name ?? "");
       setIsAnonymous(data.isAnonymous ?? false);
+      setLikedTagsDraft((data.likedTags ?? []).filter((t): t is string => typeof t === "string" && Boolean(t)));
       setAgeGroup(data.ageGroup ?? "");
       setGender(data.gender ?? "");
       setLocation(data.location ?? "");
@@ -198,6 +224,36 @@ export default function ProfilePage() {
     }
   }, []);
 
+  const fetchAvailableTags = useCallback(
+    async (mode: "usage" | "popular") => {
+      try {
+        setTagsLoading(true);
+        setTagsError(null);
+        const res = await fetch(`/api/forum/tags?sort=${mode}&limit=200`);
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || `Failed to load tags (${res.status})`);
+        }
+        const data = await res.json();
+        const tags = Array.isArray(data.tags) ? data.tags : [];
+        setAvailableTags(
+          tags
+            .map((t: any) => ({
+              tag: typeof t?.tag === "string" ? t.tag : "",
+              usageCount: Number(t?.usageCount ?? 0),
+              interactionCount: Number(t?.interactionCount ?? 0),
+            }))
+            .filter((t: ForumTagSummary) => Boolean(t.tag))
+        );
+      } catch (err) {
+        setTagsError(err instanceof Error ? err.message : "Failed to load tags");
+      } finally {
+        setTagsLoading(false);
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     if (sessionStatus === "authenticated") {
       fetchProfile();
@@ -206,6 +262,11 @@ export default function ProfilePage() {
       setError("You must be logged in to view your profile.");
     }
   }, [sessionStatus, fetchProfile]);
+
+  useEffect(() => {
+    if (!tagSheetOpen) return;
+    fetchAvailableTags(tagSort);
+  }, [tagSheetOpen, tagSort, fetchAvailableTags]);
 
   async function patchProfile(body: Record<string, unknown>) {
     const res = await fetch("/api/profile", {
@@ -263,6 +324,23 @@ export default function ProfilePage() {
       setIsAnonymous(!newValue);
     } finally {
       setTogglingAnon(false);
+    }
+  }
+
+  async function handleSaveLikedTags(nextTags: string[]) {
+    const normalized = [...new Set(nextTags.map((t) => t.trim().toLowerCase()).filter(Boolean))].slice(0, 50);
+    setTagsSaving(true);
+    try {
+      const updated = await patchProfile({ likedTags: normalized });
+      setProfile(updated);
+      setLikedTagsDraft((updated.likedTags ?? []).filter((t): t is string => typeof t === "string" && Boolean(t)));
+      setTagSheetOpen(false);
+      setSaveMsg({ type: "success", text: "Liked tags updated." });
+      setTimeout(() => setSaveMsg(null), 2500);
+    } catch (err) {
+      setSaveMsg({ type: "error", text: err instanceof Error ? err.message : "Failed to update liked tags" });
+    } finally {
+      setTagsSaving(false);
     }
   }
 
@@ -535,22 +613,38 @@ export default function ProfilePage() {
 
           {/* Interests */}
           <section className="rounded-2xl border border-border bg-card p-6">
-            <h2 className="mb-2 font-heading text-base font-semibold tracking-tight text-foreground">Interests</h2>
-            <p className="mb-4 text-xs text-muted-foreground">Tags you follow for personalized content recommendations.</p>
-            {profile.likedTags && profile.likedTags.length > 0 ? (
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="mb-1 font-heading text-base font-semibold tracking-tight text-foreground">Interests</h2>
+                <p className="text-xs text-muted-foreground">Liked tags for personalized content recommendations.</p>
+              </div>
+              <Button type="button" variant="outline" size="sm" className="h-9 rounded-xl" onClick={() => setTagSheetOpen(true)}>
+                Add tags
+              </Button>
+            </div>
+
+            {likedTagsDraft.length > 0 ? (
               <div className="flex flex-wrap gap-2">
-                {profile.likedTags.map((tag) => (
-                  <span
+                {likedTagsDraft.map((tag) => (
+                  <button
                     key={tag}
-                    className="rounded-full border border-primary/15 bg-primary/8 px-3 py-1.5 text-xs font-medium text-primary"
+                    type="button"
+                    onClick={() => {
+                      const next = likedTagsDraft.filter((t) => t !== tag);
+                      setLikedTagsDraft(next);
+                      void handleSaveLikedTags(next);
+                    }}
+                    className="group inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/8 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/12"
+                    title="Click to remove"
                   >
-                    #{tag}
-                  </span>
+                    <span>#{tag}</span>
+                    <span className="text-primary/60 group-hover:text-primary">×</span>
+                  </button>
                 ))}
               </div>
             ) : (
               <p className="text-xs italic text-muted-foreground">
-                No tags followed yet. These will appear as you interact with the forum and articles.
+                No liked tags yet. Add a few to personalize your forum feed.
               </p>
             )}
           </section>
@@ -783,6 +877,149 @@ export default function ProfilePage() {
           Sign out
         </Button>
       </section>
+
+      <Sheet open={tagSheetOpen} onOpenChange={setTagSheetOpen}>
+        <SheetContent side="right" className="p-0">
+          <SheetHeader className="pb-3">
+            <SheetTitle>Pick your liked tags</SheetTitle>
+            <SheetDescription>
+              Tags are fetched from the forum. Sort by usage (default) or by popular interactions.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="px-4">
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant={tagSort === "usage" ? "default" : "outline"}
+                size="sm"
+                className="rounded-lg"
+                onClick={() => setTagSort("usage")}
+                disabled={tagsLoading}
+              >
+                Default
+              </Button>
+              <Button
+                type="button"
+                variant={tagSort === "popular" ? "default" : "outline"}
+                size="sm"
+                className="rounded-lg"
+                onClick={() => setTagSort("popular")}
+                disabled={tagsLoading}
+              >
+                Popular
+              </Button>
+              <div className="flex-1" />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="rounded-lg"
+                onClick={() => fetchAvailableTags(tagSort)}
+                disabled={tagsLoading}
+              >
+                Refresh
+              </Button>
+            </div>
+
+            <div className="mt-3">
+              <Input
+                value={tagSearch}
+                onChange={(e) => setTagSearch(e.target.value)}
+                placeholder="Search tags…"
+                className="h-10 rounded-xl"
+              />
+            </div>
+          </div>
+
+          <Separator className="mt-4" />
+
+          <div className="flex-1 overflow-auto px-4 py-3">
+            {tagsError && (
+              <p className="mb-3 text-xs font-medium text-destructive">{tagsError}</p>
+            )}
+
+            {tagsLoading ? (
+              <p className="text-sm text-muted-foreground">Loading tags…</p>
+            ) : availableTags.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No tags found yet.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {availableTags
+                  .filter((t) => (tagSearch.trim() ? t.tag.includes(tagSearch.trim().toLowerCase()) : true))
+                  .map((t) => {
+                    const selected = likedTagsDraft.includes(t.tag);
+                    const metricLabel =
+                      tagSort === "popular"
+                        ? `${t.interactionCount} interactions`
+                        : `${t.usageCount} uses`;
+
+                    return (
+                      <button
+                        key={t.tag}
+                        type="button"
+                        onClick={() => {
+                          setLikedTagsDraft((current) =>
+                            current.includes(t.tag) ? current.filter((x) => x !== t.tag) : [...current, t.tag]
+                          );
+                        }}
+                        className={cn(
+                          "flex items-center justify-between rounded-xl border px-3 py-2 text-left transition-colors",
+                          selected
+                            ? "border-primary/30 bg-primary/10"
+                            : "border-border bg-card hover:bg-muted/40"
+                        )}
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-foreground">#{t.tag}</p>
+                          <p className="text-xs text-muted-foreground">{metricLabel}</p>
+                        </div>
+                        <div
+                          className={cn(
+                            "rounded-full px-2 py-1 text-xs font-medium",
+                            selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                          )}
+                        >
+                          {selected ? "Added" : "Add"}
+                        </div>
+                      </button>
+                    );
+                  })}
+              </div>
+            )}
+          </div>
+
+          <Separator />
+
+          <SheetFooter>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground">{likedTagsDraft.length} selected</p>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-xl"
+                  onClick={() => {
+                    setLikedTagsDraft((profile?.likedTags ?? []).filter((t): t is string => typeof t === "string" && Boolean(t)));
+                    setTagSheetOpen(false);
+                  }}
+                  disabled={tagsSaving}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  className="rounded-xl"
+                  onClick={() => void handleSaveLikedTags(likedTagsDraft)}
+                  disabled={tagsSaving}
+                >
+                  {tagsSaving ? "Saving…" : "Save"}
+                </Button>
+              </div>
+            </div>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
       {/* Danger zone */}
       <section className="mt-4 rounded-2xl border border-destructive/15 bg-card p-6">

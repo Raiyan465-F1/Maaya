@@ -3,7 +3,12 @@ import { getServerSession } from "next-auth";
 import { db } from "@/src/db";
 import { comments } from "@/src/schema/forum";
 import { authOptions } from "@/lib/auth";
-import { ensureCommentExists, ensurePostExists, getForumSnapshot } from "@/lib/forum-server";
+import {
+  canAccessModeratedContent,
+  ensureCommentExists,
+  ensurePostExists,
+  getForumSnapshot,
+} from "@/lib/forum-server";
 
 function parseId(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -35,13 +40,13 @@ export async function POST(request: NextRequest) {
     }
 
     const post = await ensurePostExists(postId);
-    if (!post) {
+    if (!post || !canAccessModeratedContent(session.user.role, post.status)) {
       return NextResponse.json({ error: "Discussion not found." }, { status: 404 });
     }
 
     if (parentCommentId) {
       const parent = await ensureCommentExists(parentCommentId);
-      if (!parent || parent.postId !== postId) {
+      if (!parent || parent.postId !== postId || !canAccessModeratedContent(session.user.role, parent.status)) {
         return NextResponse.json({ error: "Reply target not found." }, { status: 404 });
       }
     }
