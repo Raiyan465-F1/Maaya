@@ -543,6 +543,7 @@ export function ForumSection() {
   const [tagInput, setTagInput] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [media, setMedia] = useState<MediaDraft[]>([{ key: 1, kind: "image", url: "" }]);
+  const [userLikedTags, setUserLikedTags] = useState<string[]>([]);
   const deferredSearchTerm = useDeferredValue(searchTerm);
   const filterPanelRef = useRef<HTMLDivElement | null>(null);
 
@@ -642,6 +643,25 @@ export function ForumSection() {
 
   useEffect(() => {
     void refreshForum();
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadLikedTags() {
+      try {
+        const res = await fetch("/api/profile");
+        if (!res.ok) return;
+        const data = (await res.json()) as { likedTags?: unknown };
+        const tags = Array.isArray(data.likedTags)
+          ? data.likedTags.filter((t): t is string => typeof t === "string" && Boolean(t.trim())).map((t) => t.trim().toLowerCase())
+          : [];
+        if (isMounted) setUserLikedTags(tags);
+      } catch {
+        // best-effort
+      }
+    }
+    loadLikedTags();
+    return () => { isMounted = false; };
   }, []);
 
   async function submitJson(url: string, init: RequestInit, nextBusyKey: string) {
@@ -916,6 +936,35 @@ export function ForumSection() {
         </div>
 
         <aside className="space-y-6 lg:sticky lg:top-5 lg:self-start">
+          {userLikedTags.length > 0 && (
+            <div className="overflow-hidden rounded-[2rem] border border-secondary/15 bg-gradient-to-br from-white via-card to-secondary/5 shadow-sm">
+              <div className="border-b border-secondary/10 px-5 py-4">
+                <p className="font-mono text-xs tracking-[0.22em] text-secondary uppercase">Your interests</p>
+                <h2 className="mt-2 font-heading text-xl font-semibold text-foreground">Liked tags</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Click a tag to filter discussions matching your interests.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2 p-5">
+                {userLikedTags.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => applyTagFilter(tag)}
+                    className={[
+                      "rounded-full border px-3.5 py-2 text-sm font-medium transition",
+                      activeTag === tag
+                        ? "border-secondary bg-secondary text-primary-foreground"
+                        : "border-secondary/15 bg-white text-foreground hover:border-secondary/30 hover:text-secondary",
+                    ].join(" ")}
+                  >
+                    #{tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="overflow-hidden rounded-[2rem] border border-primary/15 bg-gradient-to-br from-white via-card to-primary/5 shadow-sm">
             <div className="border-b border-primary/10 px-5 py-4">
               <p className="font-mono text-xs tracking-[0.22em] text-primary uppercase">Trending now</p>
