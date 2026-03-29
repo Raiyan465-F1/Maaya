@@ -1,6 +1,6 @@
 
-> Maaya@0.0.1 dev E:\work\Maaya
-> next dev --turbopack "--port" "3001"
+> Maaya@0.0.1 dev
+> next dev --turbopack --port 3001
 
 ▲ Next.js 16.1.6 (Turbopack)
 - Local:         http://localhost:3001
@@ -9,15 +9,13 @@
 
 ✓ Starting...
 Creating turbopack project { dir: 'E:\\work\\Maaya', testMode: true }
-✓ Ready in 632ms
- GET /verified-doctors 200 in 857ms (compile: 621ms, render: 236ms)
- GET /verified-doctors/sabrina-rahman 200 in 1198ms (compile: 1147ms, generate-params: 431ms, render: 50ms)
- GET /verified-doctors/maisha-haque 200 in 66ms (compile: 15ms, generate-params: 7ms, render: 52ms)
-[dotenv@17.3.1] injecting env (0) from .env -- tip: 🤖 agentic secret storage: https://dotenvx.com/as2
+✓ Ready in 1120ms
+ GET / 200 in 1012ms (compile: 830ms, render: 182ms)
+ GET / 200 in 192ms (compile: 13ms, render: 179ms)
+ GET / 200 in 112ms (compile: 7ms, render: 105ms)
+[dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  override existing env vars with { override: true }
 [dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  enable debug logging with { debug: true }
- GET /api/auth/session 200 in 771ms (compile: 748ms, render: 24ms)
- GET /verified-doctors 200 in 36ms (compile: 4ms, render: 32ms)
- GET / 200 in 41ms (compile: 20ms, render: 21ms)
- GET /verified-doctors 200 in 42ms (compile: 4ms, render: 37ms)
- GET /verified-doctors/sabrina-rahman 200 in 36ms (compile: 9ms, generate-params: 5ms, render: 27ms)
- GET /verified-doctors 200 in 27ms (compile: 3ms, render: 23ms)
+ GET /api/auth/session 200 in 926ms (compile: 898ms, render: 27ms)
+ GET /api/auth/session 200 in 34ms (compile: 8ms, render: 26ms)
+ GET /api/auth/session 200 in 14ms (compile: 2ms, render: 11ms)
+[dotenv@17.3.1] injecting env (0) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
