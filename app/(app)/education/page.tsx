@@ -1,21 +1,26 @@
-export default function EducationPage() {
+import { fetchNewsByCategory } from "@/lib/news";
+import { EducationDashboard } from "@/components/education-dashboard";
+
+export default async function EducationPage() {
+  // Fetch initial data for the first category on the server
+  const initialArticles = await fetchNewsByCategory("All");
+
   return (
     <>
-      <p className="font-mono text-xs tracking-widest text-primary uppercase mb-3">
+      <p className="mb-3 font-mono text-xs uppercase tracking-widest text-pink-600 dark:text-pink-400">
         Educational Hub
       </p>
-      <h1 className="font-heading text-3xl font-bold text-foreground tracking-tight mb-2">
+      <h1 className="mb-2 font-heading text-3xl font-bold tracking-tight text-foreground">
         Learn{" "}
-        <span className="italic bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-          & explore
+        <span className="bg-gradient-to-r from-pink-500 to-rose-400 bg-clip-text text-transparent italic">
+          & discuss
         </span>
       </h1>
-      <p className="text-muted-foreground text-sm leading-relaxed mb-8">
-        Articles, categories, and quizzes will appear here.
+      <p className="mb-8 text-sm leading-relaxed text-muted-foreground">
+        Explore curated, trusted medical content covering puberty, contraception, reproductive health, and more.
       </p>
-      <div className="bg-card rounded-2xl border border-border p-8 text-center text-muted-foreground text-sm">
-        Coming soon.
-      </div>
+      
+      <EducationDashboard initialArticles={initialArticles} />
     </>
   );
 }
