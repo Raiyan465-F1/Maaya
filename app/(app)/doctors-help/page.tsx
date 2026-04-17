@@ -107,6 +107,7 @@ export default function DoctorsHelpPage() {
   const [isClosing, setIsClosing] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isGloballyAnonymous, setIsGloballyAnonymous] = useState(false);
   const [ratingDoctors, setRatingDoctors] = useState<RateableDoctor[]>([]);
   const [ratingPromptOpen, setRatingPromptOpen] = useState(false);
   const [pendingCloseId, setPendingCloseId] = useState<number | null>(null);
@@ -170,6 +171,7 @@ export default function DoctorsHelpPage() {
         const userData = await response.json();
         setUserRole(userData.role ?? null);
         setUserId(userData.id ?? userData.userId ?? null);
+        setIsGloballyAnonymous(Boolean(userData.isAnonymous));
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -190,7 +192,7 @@ export default function DoctorsHelpPage() {
         body: JSON.stringify({
           questionTitle: questionTitle.trim(),
           questionText: questionText.trim(),
-          isAnonymous,
+          isAnonymous: isGloballyAnonymous || isAnonymous,
         }),
       });
 
@@ -641,17 +643,36 @@ export default function DoctorsHelpPage() {
                   />
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="anonymous"
-                    checked={isAnonymous}
-                    onChange={(e) => setIsAnonymous(e.target.checked)}
-                    className="w-4 h-4 text-primary border-border rounded focus:ring-primary focus:ring-2"
-                  />
-                  <label htmlFor="anonymous" className="text-sm text-muted-foreground">
-                    Post anonymously
-                  </label>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="anonymous"
+                      checked={isGloballyAnonymous || isAnonymous}
+                      disabled={isGloballyAnonymous}
+                      onChange={(e) => setIsAnonymous(e.target.checked)}
+                      onClick={(e) => {
+                        if (isGloballyAnonymous) {
+                          e.preventDefault();
+                          toast.info(
+                            'Anonymous posting is turned on in your profile settings. Turn it off from Profile → Privacy to post with your identity.'
+                          );
+                        }
+                      }}
+                      className="w-4 h-4 text-primary border-border rounded focus:ring-primary focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60"
+                    />
+                    <label
+                      htmlFor="anonymous"
+                      className={`text-sm ${isGloballyAnonymous ? 'text-muted-foreground/70' : 'text-muted-foreground'}`}
+                    >
+                      Post anonymously
+                    </label>
+                  </div>
+                  {isGloballyAnonymous && (
+                    <p className="mt-1.5 text-xs text-primary">
+                      Anonymous mode is on from your profile. All questions are posted anonymously.
+                    </p>
+                  )}
                 </div>
 
                 <Button
@@ -682,7 +703,11 @@ export default function DoctorsHelpPage() {
                 ) : (
                   <div className="space-y-4">
                     {topDoctors.map((doctor) => (
-                      <div key={doctor.userId} className="rounded-xl border border-border p-4">
+                      <Link
+                        key={doctor.userId}
+                        href={`/doctors-help/verified/${doctor.userId}`}
+                        className="block rounded-xl border border-border p-4 transition hover:border-primary hover:shadow-sm"
+                      >
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <p className="text-sm font-medium text-foreground">{doctor.displayName}</p>
@@ -693,7 +718,7 @@ export default function DoctorsHelpPage() {
                             <p className="text-xs text-muted-foreground">{doctor.activityCount} total answers</p>
                           </div>
                         </div>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 )}
@@ -769,9 +794,12 @@ export default function DoctorsHelpPage() {
                         >
                           <div className="flex flex-wrap items-center justify-between gap-3">
                             <div>
-                              <p className="text-sm font-semibold text-primary-foreground">
+                              <Link
+                                href={`/doctors-help/verified/${answer.doctorUserId}`}
+                                className="text-sm font-semibold text-primary-foreground hover:underline"
+                              >
                                 {answer.doctorDisplayName}
-                              </p>
+                              </Link>
                               <p className="text-xs text-primary-foreground/80">
                                 {answer.doctorSpecialty ?? 'Verified doctor'}
                               </p>

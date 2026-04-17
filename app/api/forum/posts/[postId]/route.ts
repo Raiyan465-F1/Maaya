@@ -3,7 +3,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { db } from "@/src/db";
 import { forumPosts } from "@/src/schema/forum";
+import { users } from "@/src/schema/users";
 import { authOptions } from "@/lib/auth";
+
+async function isViewerGloballyAnonymous(userId: string) {
+  const [row] = await db
+    .select({ isAnonymous: users.isAnonymous })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return Boolean(row?.isAnonymous);
+}
 import {
   buildAnonymousOwnerHash,
   canManageContent,
@@ -57,7 +67,8 @@ export async function PATCH(
     const body = await request.json();
     const title = typeof body.title === "string" ? body.title.trim() : "";
     const content = typeof body.content === "string" ? body.content.trim() : "";
-    const isAnonymous = Boolean(body.isAnonymous);
+    const globallyAnonymous = await isViewerGloballyAnonymous(session.user.id);
+    const isAnonymous = globallyAnonymous || Boolean(body.isAnonymous);
     const tags = parseTags(body.tags);
     const media = sanitizeMedia(body.media);
 

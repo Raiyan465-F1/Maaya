@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, MessageSquare, MoreHorizontal } from "lucide-react";
+import { toast } from "sonner";
 import type {
   ForumCommentRecord,
   ForumMediaInput,
@@ -544,6 +545,7 @@ export function ForumSection() {
   const [content, setContent] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [isGloballyAnonymous, setIsGloballyAnonymous] = useState(false);
   const [media, setMedia] = useState<MediaDraft[]>([{ key: 1, kind: "image", url: "" }]);
   const [userLikedTags, setUserLikedTags] = useState<string[]>([]);
   const deferredSearchTerm = useDeferredValue(searchTerm);
@@ -653,11 +655,14 @@ export function ForumSection() {
       try {
         const res = await fetch("/api/profile");
         if (!res.ok) return;
-        const data = (await res.json()) as { likedTags?: unknown };
+        const data = (await res.json()) as { likedTags?: unknown; isAnonymous?: unknown };
         const tags = Array.isArray(data.likedTags)
           ? data.likedTags.filter((t): t is string => typeof t === "string" && Boolean(t.trim())).map((t) => t.trim().toLowerCase())
           : [];
-        if (isMounted) setUserLikedTags(tags);
+        if (isMounted) {
+          setUserLikedTags(tags);
+          setIsGloballyAnonymous(Boolean(data.isAnonymous));
+        }
       } catch {
         // best-effort
       }
@@ -710,7 +715,7 @@ export function ForumSection() {
           title,
           content,
           tags: parseTagString(tagInput),
-          isAnonymous,
+          isAnonymous: isGloballyAnonymous || isAnonymous,
           media: media.filter((item) => item.url.trim()).map(({ kind, url }) => ({ kind, url: url.trim() })),
         }),
       },
@@ -866,6 +871,7 @@ export function ForumSection() {
               expanded={false}
               canInteract={forum.viewer.isAuthenticated}
               isAdminViewer={forum.viewer.role === "admin"}
+              isGloballyAnonymous={isGloballyAnonymous}
               activeTag={activeTag}
               availableTags={availableTags}
               onOpen={(postId) => {
@@ -1070,6 +1076,7 @@ export function ForumSection() {
               expanded
               canInteract={forum.viewer.isAuthenticated}
               isAdminViewer={forum.viewer.role === "admin"}
+              isGloballyAnonymous={isGloballyAnonymous}
               activeTag={activeTag}
               availableTags={availableTags}
               autoOpenComments={commentTargetPostId === focusedPost.id}
@@ -1234,10 +1241,36 @@ export function ForumSection() {
                 </div>
               </div>
 
-              <label className="flex items-center gap-3 text-sm text-foreground">
-                <input type="checkbox" checked={isAnonymous} onChange={(event) => setIsAnonymous(event.target.checked)} />
-                Post as anonymous user
-              </label>
+              <div>
+                <label
+                  className={[
+                    "flex items-center gap-3 text-sm",
+                    isGloballyAnonymous ? "text-muted-foreground/70" : "text-foreground",
+                  ].join(" ")}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isGloballyAnonymous || isAnonymous}
+                    disabled={isGloballyAnonymous}
+                    onChange={(event) => setIsAnonymous(event.target.checked)}
+                    onClick={(event) => {
+                      if (isGloballyAnonymous) {
+                        event.preventDefault();
+                        toast.info(
+                          "Anonymous posting is turned on in your profile settings. Turn it off from Profile → Privacy to post with your identity."
+                        );
+                      }
+                    }}
+                    className="disabled:cursor-not-allowed disabled:opacity-60"
+                  />
+                  Post as anonymous user
+                </label>
+                {isGloballyAnonymous ? (
+                  <p className="mt-1.5 text-xs text-primary">
+                    Anonymous mode is on from your profile. All posts are published anonymously.
+                  </p>
+                ) : null}
+              </div>
 
               <div className="flex flex-wrap gap-2">
                 <button
@@ -1284,6 +1317,7 @@ function ForumPostCard({
   expanded,
   canInteract,
   isAdminViewer,
+  isGloballyAnonymous,
   activeTag,
   availableTags,
   autoOpenComments = false,
@@ -1306,6 +1340,7 @@ function ForumPostCard({
   expanded: boolean;
   canInteract: boolean;
   isAdminViewer: boolean;
+  isGloballyAnonymous: boolean;
   activeTag: string | null;
   availableTags: string[];
   autoOpenComments?: boolean;
@@ -1501,10 +1536,36 @@ function ForumPostCard({
               availableTags={availableTags}
               placeholder="Type custom tags, separated by commas"
             />
-            <label className="flex items-center gap-3 text-sm text-foreground">
-              <input type="checkbox" checked={draftAnonymous} onChange={(event) => setDraftAnonymous(event.target.checked)} />
-              Post as anonymous user
-            </label>
+            <div>
+              <label
+                className={[
+                  "flex items-center gap-3 text-sm",
+                  isGloballyAnonymous ? "text-muted-foreground/70" : "text-foreground",
+                ].join(" ")}
+              >
+                <input
+                  type="checkbox"
+                  checked={isGloballyAnonymous || draftAnonymous}
+                  disabled={isGloballyAnonymous}
+                  onChange={(event) => setDraftAnonymous(event.target.checked)}
+                  onClick={(event) => {
+                    if (isGloballyAnonymous) {
+                      event.preventDefault();
+                      toast.info(
+                        "Anonymous posting is turned on in your profile settings. Turn it off from Profile → Privacy to post with your identity."
+                      );
+                    }
+                  }}
+                  className="disabled:cursor-not-allowed disabled:opacity-60"
+                />
+                Post as anonymous user
+              </label>
+              {isGloballyAnonymous ? (
+                <p className="mt-1.5 text-xs text-primary">
+                  Anonymous mode is on from your profile.
+                </p>
+              ) : null}
+            </div>
             <div className="flex flex-wrap gap-2">
               <ActionButton
                 active
@@ -1514,7 +1575,7 @@ function ForumPostCard({
                     title: draftTitle,
                     content: draftContent,
                     tags: parseTagString(draftTags),
-                    isAnonymous: draftAnonymous,
+                    isAnonymous: isGloballyAnonymous || draftAnonymous,
                     media: post.media.map(({ kind, url }) => ({ kind, url })),
                   });
                   setIsEditing(false);

@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { sql } from "@/src/db";
+import { eq } from "drizzle-orm";
+import { db, sql } from "@/src/db";
+import { users } from "@/src/schema/users";
 import { authOptions } from "@/lib/auth";
 import { buildAnonymousOwnerHash, getForumSnapshot, replacePostMedia, sanitizeMedia } from "@/lib/forum-server";
 import { FORUM_TAG_LIMIT } from "@/lib/forum-types";
+
+async function isViewerGloballyAnonymous(userId: string) {
+  const [row] = await db
+    .select({ isAnonymous: users.isAnonymous })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return Boolean(row?.isAnonymous);
+}
 
 function parseTags(input: unknown) {
   if (!Array.isArray(input)) return [];
@@ -32,7 +43,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const title = typeof body.title === "string" ? body.title.trim() : "";
     const content = typeof body.content === "string" ? body.content.trim() : "";
-    const isAnonymous = Boolean(body.isAnonymous);
+    const globallyAnonymous = await isViewerGloballyAnonymous(session.user.id);
+    const isAnonymous = globallyAnonymous || Boolean(body.isAnonymous);
     const tags = parseTags(body.tags);
     const media = sanitizeMedia(body.media);
 

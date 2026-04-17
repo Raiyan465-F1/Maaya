@@ -320,6 +320,13 @@ export default function ProfilePage() {
     try {
       const updated = await patchProfile({ isAnonymous: newValue });
       setProfile(updated);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("profile:anonymous-changed", {
+            detail: { isAnonymous: Boolean(updated.isAnonymous) },
+          }),
+        );
+      }
     } catch {
       setIsAnonymous(!newValue);
     } finally {
@@ -598,7 +605,9 @@ export default function ProfilePage() {
               <div>
                 <p className="text-sm font-medium text-foreground">Anonymous posting</p>
                 <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                  When enabled, your forum posts and doctor questions appear as anonymous to other users.
+                  When enabled, all of your forum posts and doctor questions are
+                  published anonymously. The per-post anonymous toggles are
+                  locked on while this is active.
                 </p>
               </div>
             </div>
@@ -606,6 +615,8 @@ export default function ProfilePage() {
               <div className="mt-4 rounded-xl border border-primary/10 bg-primary/5 px-4 py-3">
                 <p className="text-xs font-medium text-primary">
                   Anonymous mode is on — your identity is hidden in the community.
+                  Forum and Doctor&apos;s Help anonymous toggles are disabled and
+                  all new posts go out anonymously.
                 </p>
               </div>
             )}

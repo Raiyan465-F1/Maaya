@@ -148,6 +148,14 @@ export async function POST(request: NextRequest) {
       isAnonymous?: boolean;
     } = body;
 
+    const [currentUserRow] = await db
+      .select({ isAnonymous: users.isAnonymous })
+      .from(users)
+      .where(eq(users.id, session.user.id))
+      .limit(1);
+    const globallyAnonymous = Boolean(currentUserRow?.isAnonymous);
+    const effectiveAnonymous = globallyAnonymous || Boolean(isAnonymous);
+
     const trimmedTitle = questionTitle?.trim() ?? "";
     const trimmedText = questionText?.trim() ?? "";
 
@@ -174,7 +182,7 @@ export async function POST(request: NextRequest) {
       .values({
         userId: session.user.id,
         questionText: storedQuestionText,
-        isAnonymous,
+        isAnonymous: effectiveAnonymous,
       })
       .returning();
 

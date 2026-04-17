@@ -9,6 +9,7 @@ interface QuestionAnswer {
   id: number;
   answerText: string;
   createdAt: string;
+  doctorUserId: string;
   doctorDisplayName: string;
   doctorSpecialty?: string | null;
 }
@@ -148,9 +149,12 @@ export default function MyQuestionDetailsPage() {
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-primary-foreground">
+                  <Link
+                    href={`/doctors-help/verified/${answer.doctorUserId}`}
+                    className="text-sm font-semibold text-primary-foreground hover:underline"
+                  >
                     {answer.doctorDisplayName}
-                  </p>
+                  </Link>
                   <p className="text-xs text-primary-foreground/80">
                     {answer.doctorSpecialty ?? 'Verified doctor'}
                   </p>
