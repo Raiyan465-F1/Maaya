@@ -20,6 +20,7 @@ const MOOD_MESSAGES: Record<string, string> = {
 export default function CycleTrackingPage() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [isLogging, setIsLogging] = useState(false);
+  const [analytics, setAnalytics] = useState<any>(null);
   const [dailyMessage, setDailyMessage] = useState({ title: "Loading...", body: "" });
   const [flyingHearts, setFlyingHearts] = useState<{ id: number; tx: number; ty: number }[]>([]);
   
@@ -96,6 +97,12 @@ export default function CycleTrackingPage() {
         setLockedMood(fetchedMood);
       }
     });
+
+    // Fetch cycle analytics
+    fetch("/api/cycle-tracking/analytics")
+      .then(res => res.json())
+      .then(data => setAnalytics(data))
+      .catch(err => console.error(err));
   }, []);
 
   return (
@@ -165,14 +172,42 @@ export default function CycleTrackingPage() {
         </div>
         {/* Right Column: Insights & Mood */}
         <div className="hidden lg:flex flex-col gap-6 w-full">
-          {/* Insights Card Placeholder */}
+          {/* Insights Card */}
           <Card className="w-full shadow-md border-primary/10 bg-card/50">
             <CardHeader>
               <CardTitle className="text-lg">Cycle Insights</CardTitle>
               <CardDescription>Analytics based on your tracking</CardDescription>
             </CardHeader>
-            <CardContent className="h-[200px] flex items-center justify-center rounded-xl border border-dashed border-primary/20 bg-muted/10 mx-6 mb-6">
-              <p className="text-muted-foreground text-sm font-medium">More data needed for insights</p>
+            <CardContent className="px-6 pb-6">
+              {!analytics ? (
+                <div className="h-[100px] flex items-center justify-center rounded-xl border border-dashed border-primary/20 bg-muted/10">
+                  <p className="text-muted-foreground text-sm font-medium animate-pulse">Loading insights...</p>
+                </div>
+              ) : !analytics.hasData ? (
+                <div className="h-[100px] flex items-center justify-center rounded-xl border border-dashed border-primary/20 bg-muted/10">
+                  <p className="text-muted-foreground text-sm font-medium">{analytics.message}</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  <div className="bg-primary/5 p-4 rounded-xl border border-primary/10">
+                     <p className="text-xs uppercase text-primary font-bold mb-1">Current Phase</p>
+                     <p className="text-lg font-semibold">{analytics.currentPhase} (Day {analytics.dayOfCycle})</p>
+                  </div>
+                  <div>
+                     <p className="text-sm font-semibold mb-1">Expected Mood</p>
+                     <p className="text-sm text-muted-foreground leading-snug">{analytics.expectedMood}</p>
+                  </div>
+                  <div>
+                     <p className="text-sm font-semibold mb-2">Recommendations</p>
+                     {analytics.recommendations?.map((tip: any, i: number) => (
+                       <div key={i} className="mb-2 bg-muted/30 p-2 rounded-lg">
+                         <p className="text-sm font-medium text-foreground">{tip.tipTitle || "Tip"}</p>
+                         <p className="text-xs text-muted-foreground mt-1">{tip.tipDescription}</p>
+                       </div>
+                     ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
