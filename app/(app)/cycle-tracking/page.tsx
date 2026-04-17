@@ -3,6 +3,7 @@
 import { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
 import { Heart, Sparkles, Stethoscope } from "lucide-react";
+import { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,8 @@ const MOOD_MESSAGES: Record<string, string> = {
 };
 
 export default function CycleTrackingPage() {
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [isLogging, setIsLogging] = useState(false);
   const [dailyMessage, setDailyMessage] = useState({ title: "Loading...", body: "" });
   const [flyingHearts, setFlyingHearts] = useState<{ id: number; tx: number; ty: number }[]>([]);
   
@@ -55,6 +57,30 @@ export default function CycleTrackingPage() {
         setFeedbackMsg({ type: "success", text: MOOD_MESSAGES[moodId] || `Locked in! You're feeling ${moodLabel} today. 🌸` });
       }
     });
+  };
+
+  const handleLogPeriod = async () => {
+    if (!dateRange?.from) return;
+    setIsLogging(true);
+    try {
+      const resp = await fetch("/api/cycle-tracking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          startDate: dateRange.from,
+          endDate: dateRange.to
+        })
+      });
+      if (resp.ok) {
+        setFeedbackMsg({ type: "success", text: "Period logged! Cycle predictions updated." });
+        setDateRange(undefined);
+      } else {
+        setFeedbackMsg({ type: "error", text: "Failed to log cycle." });
+      }
+    } catch(err) {
+      setFeedbackMsg({ type: "error", text: "Error logging cycle." });
+    }
+    setIsLogging(false);
   };
 
   useEffect(() => {
@@ -98,13 +124,22 @@ export default function CycleTrackingPage() {
                 Track your cycle to predict upcoming phases
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex justify-center pt-6 pb-8">
+            <CardContent className="flex flex-col items-center justify-center pt-6 pb-8 gap-4">
               <Calendar
-                mode="single"
-                selected={date}
-                onSelect={setDate}
+                mode="range"
+                selected={dateRange}
+                onSelect={setDateRange}
                 className="rounded-xl border border-primary/10 shadow-sm p-4 sm:p-6 bg-background w-full"
               />
+              {dateRange?.from && (
+                <Button 
+                  onClick={handleLogPeriod} 
+                  disabled={isLogging} 
+                  className="w-full max-w-[200px]"
+                >
+                  {isLogging ? "Saving..." : "Log Period"}
+                </Button>
+              )}
             </CardContent>
           </Card>
 

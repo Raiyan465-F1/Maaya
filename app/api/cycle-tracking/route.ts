@@ -65,9 +65,11 @@ export async function POST(request: NextRequest) {
         userId: session.user.id,
         startDate: start.toISOString(),
         endDate: end ? end.toISOString() : null,
+        cyclePhase: "Menstrual",
         predictedCycleLength: pLength,
         actualCycleLength: actualCycleLength,
         predictedDifference: predictedDifference,
+        predictedStartDate: start.toISOString(),
         predictedEndDate: predictedEndDate.toISOString(),
       })
       .returning();
