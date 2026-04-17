@@ -1,0 +1,18 @@
+<svg width="480" height="480" viewBox="0 0 480 480" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="40" y1="40" x2="440" y2="440" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E9FFF4"/>
+      <stop offset="1" stop-color="#FFF0F5"/>
+    </linearGradient>
+  </defs>
+  <rect width="480" height="480" rx="44" fill="url(#bg)"/>
+  <ellipse cx="240" cy="186" rx="70" ry="76" fill="#F8CEB8"/>
+  <path d="M167 186C171 136 202 97 240 97C278 97 309 136 313 186C298 151 282 132 240 132C198 132 182 151 167 186Z" fill="#35294A"/>
+  <path d="M142 425C152 329 204 286 240 286C276 286 328 329 338 425H142Z" fill="#FFFFFF"/>
+  <rect x="180" y="324" width="120" height="101" rx="31" fill="#ECFFF7"/>
+  <circle cx="212" cy="202" r="6" fill="#2A1D3B"/>
+  <circle cx="268" cy="202" r="6" fill="#2A1D3B"/>
+  <path d="M221 234C230 241 250 241 259 234" stroke="#E586A2" stroke-width="6" stroke-linecap="round"/>
+  <path d="M191 178C204 167 276 167 289 178" stroke="#35294A" stroke-width="6" stroke-linecap="round"/>
+  <text x="240" y="70" text-anchor="middle" fill="#4CA176" font-family="Arial, sans-serif" font-size="26" font-weight="700">Verified</text>
+</svg>

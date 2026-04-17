@@ -1,0 +1,18 @@
+<svg width="480" height="480" viewBox="0 0 480 480" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="40" y1="40" x2="440" y2="440" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F5E9FF"/>
+      <stop offset="1" stop-color="#FFE7F3"/>
+    </linearGradient>
+  </defs>
+  <rect width="480" height="480" rx="44" fill="url(#bg)"/>
+  <circle cx="240" cy="175" r="90" fill="#2A1D3B"/>
+  <ellipse cx="240" cy="190" rx="68" ry="74" fill="#F8D1C0"/>
+  <path d="M145 425C155 327 206 286 240 286C274 286 325 327 335 425H145Z" fill="#FFFFFF"/>
+  <rect x="175" y="325" width="130" height="100" rx="32" fill="#EFEAFE"/>
+  <path d="M190 182C214 170 266 170 290 182" stroke="#2A1D3B" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="213" cy="201" r="6" fill="#2A1D3B"/>
+  <circle cx="267" cy="201" r="6" fill="#2A1D3B"/>
+  <path d="M220 232C230 241 250 241 260 232" stroke="#E28AA4" stroke-width="6" stroke-linecap="round"/>
+  <text x="240" y="70" text-anchor="middle" fill="#8D6ACE" font-family="Arial, sans-serif" font-size="26" font-weight="700">Verified</text>
+</svg>

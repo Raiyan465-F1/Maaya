@@ -1,0 +1,21 @@
+
+> Maaya@0.0.1 dev
+> next dev --turbopack --port 3001
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3001
+- Network:       http://192.168.0.110:3001
+- Environments: .env
+
+✓ Starting...
+Creating turbopack project { dir: 'E:\\work\\Maaya', testMode: true }
+✓ Ready in 1120ms
+ GET / 200 in 1012ms (compile: 830ms, render: 182ms)
+ GET / 200 in 192ms (compile: 13ms, render: 179ms)
+ GET / 200 in 112ms (compile: 7ms, render: 105ms)
+[dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  override existing env vars with { override: true }
+[dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  enable debug logging with { debug: true }
+ GET /api/auth/session 200 in 926ms (compile: 898ms, render: 27ms)
+ GET /api/auth/session 200 in 34ms (compile: 8ms, render: 26ms)
+ GET /api/auth/session 200 in 14ms (compile: 2ms, render: 11ms)
+[dotenv@17.3.1] injecting env (0) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`

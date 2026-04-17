@@ -8,7 +8,8 @@ export const forumMediaKindEnum = pgEnum("forum_media_kind", forumMediaKind);
 
 export const forumPosts = pgTable("forum_posts", {
   id: bigint("post_id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-  authorId: uuid("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  authorId: uuid("author_id").references(() => users.id, { onDelete: "set null" }),
+  anonymousOwnerHash: text("anonymous_owner_hash"),
   title: varchar("title", { length: 255 }).notNull(),
   content: text("content").notNull(),
   tags: text("tags").array(),

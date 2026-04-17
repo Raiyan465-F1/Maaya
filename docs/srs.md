@@ -64,39 +64,42 @@ The MAAYA web application supports several types of stakeholders:
 ### General Users
 Users can:
 
-- Register (optionally anonymously)
-- Track menstrual cycles and symptoms
-- Access a personalized health dashboard
-- Receive predictive cycle insights
-- Read educational content
+- Register and log in with email + password
+- Manage a personal profile (privacy preferences and optional demographic fields)
+- Participate in community discussions (forum) with optional anonymous posting
+- Submit questions to verified doctors and receive responses
+- View a personalized dashboard (their questions + replies + feedback alerts)
 
 ### Community Members
 
 Users can:
 
-- Participate in moderated forums
-- Post questions anonymously
-- Upvote helpful responses
-- Engage in peer-to-peer discussions
+- Create, edit, and delete their own forum posts and comments
+- Upvote/downvote posts and comments
+- Report posts and comments (for moderation review)
+- Post anonymously (identity hidden to other users; admins can resolve the real author **only for reported content** during moderation)
 
 ### Verified Doctors / Contributors
 
 Health professionals can:
 
-- Maintain a professional profile
-- Answer user questions
-- Provide expert guidance
+- Maintain a professional profile (specialty, bio, availability, etc.)
+- Review and answer user questions
+- Appear in “verified doctors” listings (directory)
 
 ### Administrators / Moderators
 
 Admins manage:
 
-- System operations
-- User roles
-- Content moderation
-- Educational resources
+- System operations and access control (RBAC)
+- Doctor onboarding
+- Moderation workflows (report review UI is present but “coming soon”)
 
-This SRS defines the **system structure, features, requirements, interfaces, and technology stack** up to **Sprint 2 development goals**.
+This SRS reflects the **current codebase** (MVP) and explicitly tags each feature/requirement as one of:
+
+- **Implemented**
+- **Partially implemented (UI stub / API only / limited scope)**
+- **Planned (not implemented yet)**
 
 ---
 
@@ -105,8 +108,8 @@ This SRS defines the **system structure, features, requirements, interfaces, and
 | Term | Meaning |
 |-----|------|
 | STI | Sexually Transmitted Infection |
-| OTP | One-Time Password used for authentication |
-| JWT | JSON Web Token used for secure sessions |
+| OTP | One-Time Password used for authentication (planned) |
+| JWT | JSON Web Token used for secure sessions (planned if token-based auth is added) |
 | NextAuth | Authentication framework for Next.js |
 | RBAC | Role-Based Access Control |
 | GDPR | Data protection and privacy regulation |
@@ -158,7 +161,6 @@ The platform integrates:
 Third-party services may be used for:
 
 - Email notifications
-- OTP verification
 - Messaging services
 
 However, the **core application logic and data management remain internal** to the platform.
@@ -167,30 +169,48 @@ However, the **core application logic and data management remain internal** to t
 
 ## 2.2 Product Features
 
-| # | Feature | Description |
-|--|--|--|
-| 1 | User Registration & Authentication | Secure account creation using OTP or NextAuth |
-| 2 | User Profile Management | Profile customization with privacy preferences |
-| 3 | Personal Health Dashboard | Displays reminders, saved content, and cycle insights |
-| 4 | Cycle Tracking Calendar | Record and visualize menstrual cycle information |
-| 5 | Cycle Pattern Analysis | Predict next cycle and identify irregularities |
-| 6 | Symptom Logging | Track cramps, fatigue, headaches, mood changes |
-| 7 | Pregnancy Likelihood Estimator | Statistical estimate based on cycle phase |
-| 8 | STI Awareness Guidance | Educational symptom checklists |
-| 9 | Educational Articles Hub | Curated reproductive health articles |
-| 10 | Categorized Learning Sections | Topic-based educational organization |
-| 11 | Search & Recommendations | Discover relevant learning content |
-| 12 | Community Discussion Forum | Moderated community discussions |
-| 13 | Anonymous Posting | Hide user identity in forum |
-| 14 | Comment & Reply System | Threaded discussions |
-| 15 | Voting System | Upvote helpful responses |
-| 16 | Content Moderation | Admin review and removal tools |
-| 17 | Doctor Directory | Verified medical professionals |
-| 18 | Doctor Q&A | Submit medical questions |
-| 19 | Notification System | Reminders and alerts |
-| 20 | Privacy Controls | Secure storage and privacy options |
-| 21 | Educational Quiz | Knowledge check after reading content |
-| 22 | RBAC | Role-based permissions |
+| # | Feature | Description | Status (current codebase) |
+|--|--|--|--|
+| 1 | User Registration & Authentication | Secure account creation and login. | **Implemented (email + password via NextAuth credentials)**; **OTP planned** |
+| 2 | OTP Verification | Verify users via one-time passwords. | **Planned** |
+| 3 | User Profile Management | Profile customization with privacy preferences (plus doctor profile fields). | **Implemented** |
+| 4 | Personal Health Dashboard | Displays user activity and insights. | **Partially implemented** (doctor Q&A + alerts implemented; tracking/insights planned) |
+| 5 | Cycle Tracking Calendar | Record and visualize menstrual cycle information. | **Planned / stub UI** |
+| 6 | Cycle Pattern Analysis | Predict next cycle and identify irregularities. | **Planned** |
+| 7 | Symptom Logging | Track cramps, fatigue, headaches, mood changes. | **Planned** |
+| 8 | Pregnancy Likelihood Estimator | Statistical estimate based on cycle phase. | **Planned** |
+| 9 | STI Awareness Guidance | Educational symptom checklists. | **Planned** |
+| 10 | Educational Articles Hub | Curated reproductive health articles. | **Planned / stub UI** |
+| 11 | Categorized Learning Sections | Topic-based educational organization. | **Planned** |
+| 12 | Search & Recommendations | Discover relevant learning content. | **Planned** |
+| 13 | Community Discussion Forum | Moderated community discussions. | **Implemented** |
+| 14 | Anonymous Posting | Hide user identity in forum / doctor questions. | **Implemented** |
+| 15 | Comment & Reply System | Threaded discussions. | **Implemented** |
+| 16 | Voting System | Upvote helpful responses (posts + comments). | **Implemented** |
+| 17 | Media Attachments (Forum) | Allow adding image/video links to posts. | **Implemented** |
+| 18 | Reporting | Users can report forum posts. | **Implemented** (review workflow **planned**) |
+| 19 | Content Moderation | Admin review and removal tools. | **Implemented** (reports queue + actions); advanced tooling **planned** |
+| 20 | Doctor Directory | Verified medical professionals. | **Partially implemented** (static verified doctors pages + DB-backed doctor profiles) |
+| 21 | Doctor Q&A | Submit medical questions and receive doctor replies. | **Implemented** |
+| 22 | Notification System | Reminders and alerts. | **Partially implemented** (alerts generated + shown on dashboard; reminders center planned) |
+| 23 | Educational Quiz | Knowledge check after reading content. | **Planned** |
+| 24 | RBAC | Role-based permissions. | **Implemented** |
+| 25 | Doctor Onboarding | Admin creates verified doctor accounts. | **Implemented** |
+
+---
+
+## 2.2.1 Extras (implemented beyond the original SRS baseline)
+
+The following items are **already implemented in the current codebase** and were not clearly captured in the original high-level SRS feature list (or were underspecified). Each item is tagged with **[EXTRA]**.
+
+- **[EXTRA] Forum media attachments**: Forum posts can include image/video links.
+- **[EXTRA] Forum reporting flow (posts + comments)**: Users can report posts and comments, with a dedicated admin review queue.
+- **[EXTRA] Admin moderation dashboard**: Admins can review reports, mark them reviewed/pending, and change content status (active/hidden/removed).
+- **[EXTRA] Admin user management**: Admins can update user account status (ex: active/suspended/banned) from admin tooling.
+- **[EXTRA] Admin-only anonymous author resolution**: Anonymous forum authors are only resolved for admins when the content is reported.
+- **[EXTRA] Doctor onboarding (admin tooling)**: Admins can create verified doctor accounts from an admin page + API.
+- **[EXTRA] Doctor access-code registration path**: A dedicated doctor registration page exists that validates a shared doctor access code (env-configured).
+- **[EXTRA] Dashboard feedback alerts**: When a doctor replies to a user’s question, an in-app alert is created and shown on the dashboard.
 
 ---
 
@@ -246,7 +266,8 @@ Users with elevated privileges responsible for:
 ## 2.6 Assumptions and Dependencies
 
 - Users have stable internet access
-- Third-party email/OTP services are available
+- NextAuth session configuration is available in the deployment environment
+- OTP/email providers may be integrated later (not required for the current MVP)
 - Educational content can be curated appropriately
 - Users provide accurate tracking data
 - Doctors must be verified before participation
@@ -257,31 +278,35 @@ Users with elevated privileges responsible for:
 
 ## 3.1 Functional Requirements
 
-| ID | Requirement |
-|----|-------------|
-| FR-1 | User registration |
-| FR-2 | OTP verification |
-| FR-3 | Secure login |
-| FR-4 | Profile management |
-| FR-5 | Anonymous mode |
-| FR-6 | Health dashboard |
-| FR-7 | Cycle log entry |
-| FR-8 | Symptom logging |
-| FR-9 | Cycle prediction |
-| FR-10 | Pregnancy likelihood estimation |
-| FR-11 | Educational content repository |
-| FR-12 | Content categorization |
-| FR-13 | Search and recommendations |
-| FR-14 | STI awareness guidance |
-| FR-15 | Forum posting |
-| FR-16 | Threaded comments |
-| FR-17 | Voting system |
-| FR-18 | Content moderation |
-| FR-19 | Doctor directory |
-| FR-20 | Doctor Q&A |
-| FR-21 | Notifications and reminders |
-| FR-22 | Privacy and data protection |
-| FR-23 | Knowledge quizzes |
+| ID | Requirement | Status |
+|----|-------------|--------|
+| FR-1 | User registration | **Implemented** (email + password); OTP-based registration **planned** |
+| FR-2 | OTP verification | **Planned** |
+| FR-3 | Secure login | **Implemented** (NextAuth credentials sessions); JWT token auth **planned if needed** |
+| FR-4 | Profile management | **Implemented** (user + doctor profile fields) |
+| FR-5 | Anonymous mode | **Implemented** (forum + doctor questions) |
+| FR-6 | Health dashboard | **Partially implemented** (doctor Q&A history + alerts implemented; cycle insights planned) |
+| FR-7 | Cycle log entry | **Planned** |
+| FR-8 | Symptom logging | **Planned** |
+| FR-9 | Cycle prediction | **Planned** |
+| FR-10 | Pregnancy likelihood estimation | **Planned** |
+| FR-11 | Educational content repository | **Planned / stub UI** |
+| FR-12 | Content categorization | **Planned** |
+| FR-13 | Search and recommendations | **Planned** |
+| FR-14 | STI awareness guidance | **Planned** |
+| FR-15 | Forum posting | **Implemented** |
+| FR-16 | Threaded comments | **Implemented** |
+| FR-17 | Voting system | **Implemented** |
+| FR-18 | Reporting system (forum) | **Implemented** (posts + comments, submission + moderation queue) |
+| FR-19 | Content moderation | **Implemented** (report queue + status actions); extended tooling **planned** |
+| FR-20 | Doctor directory | **Partially implemented** |
+| FR-21 | Doctor Q&A | **Implemented** |
+| FR-22 | Notifications and reminders | **Partially implemented** (alerts implemented; reminders center planned) |
+| FR-23 | Privacy and data protection | **Implemented (baseline)**; ongoing hardening **planned** |
+| FR-24 | Knowledge quizzes | **Planned** |
+| FR-25 | RBAC | **Implemented** |
+| FR-26 | Doctor onboarding (admin creates doctor accounts) | **Implemented** |
+| FR-27 | Admin user management | **Implemented** (update account status) |
 
 ---
 
@@ -297,6 +322,8 @@ Users with elevated privileges responsible for:
 - HTTPS required
 - Sensitive health data must be protected
 - Proper privacy compliance
+- Passwords must be hashed at rest (no plaintext storage)
+- Role-gated actions must be enforced server-side (not only in UI)
 
 ### Reliability
 
@@ -315,28 +342,28 @@ System should support future scaling with minimal reconfiguration.
 
 ---
 
-# 3.3 External Interface Requirements
+## 3.3 External Interface Requirements
 
 ## User Interface
 
 - Responsive web interface
 - Clear navigation
-- Easy access to learning, tracking, and community sections
+- Easy access to dashboard, forum, doctor help, and profile sections
 
 ## Software Interfaces
 
-- Integration with email / OTP services
+- Integration with NextAuth for sessions
 - PostgreSQL database
 - REST APIs between frontend and backend
 
 ## Communication Interfaces
 
 - Secure HTTP client-server communication
-- Notifications via email or other channels
+- In-app alerts (email/SMS integrations are future work)
 
 ---
 
-# 4. Technology Stack & Architecture
+## 4. Technology Stack & Architecture
 
 ### Frontend
 - Next.js
@@ -370,9 +397,9 @@ System should support future scaling with minimal reconfiguration.
 
 ---
 
-# 5. Conclusion
+## 5. Conclusion
 
-MAAYA addresses a significant gap in reproductive health awareness and education. The platform integrates health tracking, educational content, community discussions, and expert guidance within a privacy-focused environment.
+MAAYA addresses a significant gap in reproductive health awareness and education. The current MVP integrates community discussions, verified doctor Q&A, and role-based access in a privacy-focused environment, with health tracking and educational modules planned for future iterations.
 
 While the project has a broad scope and certain challenges, it remains a feasible and valuable initiative aimed at improving access to reliable reproductive health information.
 

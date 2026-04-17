@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { sql } from "@/src/db";
 import { authOptions } from "@/lib/auth";
-import { getForumSnapshot, replacePostMedia, sanitizeMedia } from "@/lib/forum-server";
+import { buildAnonymousOwnerHash, getForumSnapshot, replacePostMedia, sanitizeMedia } from "@/lib/forum-server";
 import { FORUM_TAG_LIMIT } from "@/lib/forum-types";
 
 function parseTags(input: unknown) {
@@ -44,9 +44,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Post content must be at least 10 characters long." }, { status: 400 });
     }
 
+    const anonymousOwnerHash = isAnonymous ? buildAnonymousOwnerHash(session.user.id) : null;
+    const authorId = isAnonymous ? null : session.user.id;
     const createdRows = await sql`
-      insert into forum_posts (author_id, title, content, tags, is_anonymous)
-      values (${session.user.id}, ${title}, ${content}, ${tags}, ${isAnonymous})
+      insert into forum_posts (author_id, anonymous_owner_hash, title, content, tags, is_anonymous)
+      values (${authorId}, ${anonymousOwnerHash}, ${title}, ${content}, ${tags}, ${isAnonymous})
       returning post_id
     `;
 

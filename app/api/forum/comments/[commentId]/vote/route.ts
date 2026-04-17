@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { ensureCommentExists, getForumSnapshot, toggleUpvoteForComment } from "@/lib/forum-server";
+import {
+  canAccessModeratedContent,
+  ensureCommentExists,
+  getForumSnapshot,
+  toggleVoteForComment,
+} from "@/lib/forum-server";
+import type { VoteType } from "@/src/schema/enums";
 
 function parseCommentId(value: string) {
   const parsed = Number(value);
@@ -9,11 +15,13 @@ function parseCommentId(value: string) {
 }
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ commentId: string }> }
 ) {
   const session = await getServerSession(authOptions);
   const commentId = parseCommentId((await params).commentId);
+  const body = await request.json().catch(() => null);
+  const voteType: VoteType = body?.voteType === "downvote" ? "downvote" : "upvote";
 
   if (!session?.user?.id) {
     return NextResponse.json({ error: "You must be logged in to vote." }, { status: 401 });
@@ -24,11 +32,11 @@ export async function POST(
   }
 
   const existing = await ensureCommentExists(commentId);
-  if (!existing) {
+  if (!existing || !canAccessModeratedContent(session.user.role, existing.status)) {
     return NextResponse.json({ error: "Comment not found." }, { status: 404 });
   }
 
-  await toggleUpvoteForComment(commentId, session.user.id);
+  await toggleVoteForComment(commentId, session.user.id, voteType);
 
   const data = await getForumSnapshot(session.user.id, session.user.role);
   return NextResponse.json(data);
