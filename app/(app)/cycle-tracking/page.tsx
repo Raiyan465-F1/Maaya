@@ -1,14 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Droplets, Sparkles, Stethoscope } from "lucide-react";
+import { Heart, Sparkles, Stethoscope } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 export default function CycleTrackingPage() {
   const [date, setDate] = useState<Date | undefined>(new Date());
+  const [dailyMessage, setDailyMessage] = useState({ title: "Loading...", body: "" });
+
+  useEffect(() => {
+    // Mount algorithm hook to prevent SSR hydration mismatch
+    import("@/lib/daily-messages").then((mod) => {
+      setDailyMessage(mod.getDailyMessage());
+    });
+  }, []);
 
   return (
     <div className="flex flex-col h-full items-center pt-10">
@@ -113,19 +121,19 @@ export default function CycleTrackingPage() {
           {/* Daily Check-up Card */}
           <Card className="w-full shadow-sm border-secondary/30 bg-secondary/5 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity duration-500 pointer-events-none">
-              <Droplets className="w-24 h-24 text-secondary rotate-12" />
+              <Heart className="w-24 h-24 text-secondary rotate-12 fill-secondary/20" />
             </div>
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2 text-secondary font-semibold">
-                <Sparkles className="w-4 h-4" />
-                <span className="text-xs uppercase tracking-wider">Daily Check-up</span>
+                <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+                <span className="text-xs uppercase tracking-wider text-primary">Daily Check-up</span>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col gap-1">
-                <h3 className="text-lg font-bold text-foreground">Don't forget to drink water today!</h3>
+              <div className="flex flex-col gap-1 transition-opacity duration-500">
+                <h3 className="text-lg font-bold text-foreground">{dailyMessage.title}</h3>
                 <p className="text-muted-foreground text-sm">
-                  Staying hydrated helps regulate hormone levels and can reduce cycle symptoms. Aim for 8 glasses.
+                  {dailyMessage.body}
                 </p>
               </div>
             </CardContent>
