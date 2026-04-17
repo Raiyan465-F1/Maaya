@@ -28,22 +28,44 @@ export default function CycleTrackingPage() {
       </div>
 
       <div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-8 items-start px-4 sm:px-8">
-        <Card className="w-full max-w-[500px] shadow-xl border-primary/15 bg-card">
-          <CardHeader className="text-center pb-2">
-            <CardTitle className="text-2xl">Menstrual Calendar</CardTitle>
-            <CardDescription className="text-[0.95rem]">
-              Track your cycle to predict upcoming phases
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex justify-center pt-6 pb-8">
-            <Calendar
-              mode="single"
-              selected={date}
-              onSelect={setDate}
-              className="rounded-xl border border-primary/10 shadow-sm p-4 sm:p-6 bg-background w-full max-w-[420px]"
-            />
-          </CardContent>
-        </Card>
+        <div className="flex flex-col gap-6 w-full max-w-[500px]">
+          <Card className="w-full shadow-xl border-primary/15 bg-card">
+            <CardHeader className="text-center pb-2">
+              <CardTitle className="text-2xl">Menstrual Calendar</CardTitle>
+              <CardDescription className="text-[0.95rem]">
+                Track your cycle to predict upcoming phases
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-center pt-6 pb-8">
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={setDate}
+                className="rounded-xl border border-primary/10 shadow-sm p-4 sm:p-6 bg-background w-full max-w-[420px]"
+              />
+            </CardContent>
+          </Card>
+
+          {/* Doctor's Help Card */}
+          <Card className="w-full shadow-md border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors">
+            <CardHeader className="pb-3 text-center">
+              <div className="mx-auto bg-primary/10 p-3 rounded-full mb-2 w-fit">
+                <Stethoscope className="w-8 h-8 text-primary" />
+              </div>
+              <CardTitle className="text-xl">Facing a problem?</CardTitle>
+              <CardDescription className="text-sm">
+                Consult our verified doctors here.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-center pb-6">
+              <Link href="/doctors-help" className="w-full sm:w-auto">
+                <Button className="w-full sm:min-w-[200px] rounded-xl text-md font-semibold transition-all hover:scale-105 shadow-md">
+                  Get Help
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
         {/* Right Column: Insights & Mood */}
         <div className="hidden lg:flex flex-col gap-6 w-full">
           {/* Insights Card Placeholder */}
@@ -109,25 +131,6 @@ export default function CycleTrackingPage() {
             </CardContent>
           </Card>
 
-          {/* Doctor's Help Card */}
-          <Card className="w-full shadow-md border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors">
-            <CardHeader className="pb-3 text-center">
-              <div className="mx-auto bg-primary/10 p-3 rounded-full mb-2 w-fit">
-                <Stethoscope className="w-8 h-8 text-primary" />
-              </div>
-              <CardTitle className="text-xl">Facing a problem?</CardTitle>
-              <CardDescription className="text-sm">
-                Consult our verified doctors here.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex justify-center pb-6">
-              <Link href="/doctors-help" className="w-full sm:w-auto">
-                <Button className="w-full sm:min-w-[200px] rounded-xl text-md font-semibold transition-all hover:scale-105 shadow-md">
-                  Get Help
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
