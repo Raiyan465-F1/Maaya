@@ -1,0 +1,80 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { db } from "@/src/db";
+import { cycleLogs } from "@/src/schema";
+import { authOptions } from "@/lib/auth";
+import { eq, desc } from "drizzle-orm";
+
+export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const logs = await db
+      .select()
+      .from(cycleLogs)
+      .where(eq(cycleLogs.userId, session.user.id))
+      .orderBy(desc(cycleLogs.startDate))
+      .limit(6);
+
+    return NextResponse.json({ cycleLogs: logs }, { status: 200 });
+  } catch (error) {
+    console.error("GET cycle-tracking error:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const { startDate, endDate, predictedCycleLength } = body;
+
+    if (!startDate) {
+      return NextResponse.json({ error: "Start date is required." }, { status: 400 });
+    }
+
+    const start = new Date(startDate);
+    const end = endDate ? new Date(endDate) : null;
+    const pLength = predictedCycleLength ? parseInt(predictedCycleLength) : 28;
+
+    // Calculate actual difference if we have both start and end dates
+    let actualCycleLength = null;
+    let predictedDifference = null;
+    
+    if (end) {
+      const diffTime = Math.abs(end.getTime() - start.getTime());
+      actualCycleLength = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      predictedDifference = actualCycleLength - pLength;
+    }
+
+    // Theoretical end date based on predicted cycle length (assuming bleeding length + full cycle length)
+    // Actually predictedEndDate is when the NEXT cycle is supposed to start minus 1 day.
+    const predictedEndDate = new Date(start);
+    predictedEndDate.setDate(predictedEndDate.getDate() + pLength);
+
+    const [inserted] = await db
+      .insert(cycleLogs)
+      .values({
+        userId: session.user.id,
+        startDate: start.toISOString(),
+        endDate: end ? end.toISOString() : null,
+        predictedCycleLength: pLength,
+        actualCycleLength: actualCycleLength,
+        predictedDifference: predictedDifference,
+        predictedEndDate: predictedEndDate.toISOString(),
+      })
+      .returning();
+
+    return NextResponse.json({ cycleLog: inserted }, { status: 200 });
+  } catch (error) {
+    console.error("POST cycle-tracking error:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
