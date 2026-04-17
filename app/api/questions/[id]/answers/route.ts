@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { eq, and } from "drizzle-orm";
+import { eq, and, ne } from "drizzle-orm";
 import { db } from "@/src/db";
 import { doctorAnswers, doctorQuestions, users, doctorProfiles } from "@/src/schema";
 import { authOptions } from "@/lib/auth";
@@ -90,6 +90,24 @@ export async function POST(
       return jsonResponse({ error: "Answer text is required" }, 400, origin);
     }
 
+    const [existingQuestion] = await db
+      .select({ id: doctorQuestions.id, status: doctorQuestions.status })
+      .from(doctorQuestions)
+      .where(eq(doctorQuestions.id, questionId))
+      .limit(1);
+
+    if (!existingQuestion) {
+      return jsonResponse({ error: "Question not found" }, 404, origin);
+    }
+
+    if (existingQuestion.status === "closed") {
+      return jsonResponse(
+        { error: "This question has been closed and no longer accepts answers" },
+        403,
+        origin
+      );
+    }
+
     const newAnswer = await db
       .insert(doctorAnswers)
       .values({
@@ -98,6 +116,16 @@ export async function POST(
         answerText: answerText.trim(),
       })
       .returning();
+
+    await db
+      .update(doctorQuestions)
+      .set({ status: "answered" })
+      .where(
+        and(
+          eq(doctorQuestions.id, questionId),
+          ne(doctorQuestions.status, "closed")
+        )
+      );
 
     return jsonResponse(newAnswer[0], 201, origin);
   } catch (error) {
