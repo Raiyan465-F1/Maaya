@@ -1,16 +1,29 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
 import { Heart, Sparkles, Stethoscope } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { getTodayMood, saveDailyMood } from "@/lib/health-actions";
+
+const MOOD_MESSAGES: Record<string, string> = {
+  terrible: "Sending you a gentle hug. Be extra kind to yourself today. 🤍",
+  bad: "It's completely okay to have off days. Take it easy and rest up. ☁️",
+  okay: "Steady and balanced! Make sure to keep taking care of yourself. 🌱",
+  good: "Glad you're having a good day! Let's keep that positive energy flowing. ☀️",
+  great: "Love to see it! Harness that amazing energy today! ✨"
+};
 
 export default function CycleTrackingPage() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [dailyMessage, setDailyMessage] = useState({ title: "Loading...", body: "" });
   const [flyingHearts, setFlyingHearts] = useState<{ id: number; tx: number; ty: number }[]>([]);
+  
+  const [isPending, startTransition] = useTransition();
+  const [lockedMood, setLockedMood] = useState<string | null>(null);
+  const [feedbackMsg, setFeedbackMsg] = useState<{ type: "error" | "success"; text: string } | null>(null);
 
   const handleHeartClick = () => {
     const newHearts = Array.from({ length: 3 }).map(() => ({
@@ -27,10 +40,35 @@ export default function CycleTrackingPage() {
     }, 1000);
   };
 
+  const handleMoodSelect = (moodId: string, moodLabel: string) => {
+    if (lockedMood) return; // Locked 24 hrs natively natively prevents client firing
+
+    setFeedbackMsg(null);
+    startTransition(async () => {
+      const localToday = new Date().toLocaleDateString("en-CA");
+      const result = await saveDailyMood(moodId, localToday);
+      
+      if (result.error) {
+        setFeedbackMsg({ type: "error", text: result.error });
+      } else {
+        setLockedMood(moodId);
+        setFeedbackMsg({ type: "success", text: MOOD_MESSAGES[moodId] || `Locked in! You're feeling ${moodLabel} today. 🌸` });
+      }
+    });
+  };
+
   useEffect(() => {
     // Mount algorithm hook to prevent SSR hydration mismatch
     import("@/lib/daily-messages").then((mod) => {
       setDailyMessage(mod.getDailyMessage());
+    });
+
+    // Cross-verify with Neon database if the user already logged in today
+    const localToday = new Date().toLocaleDateString("en-CA");
+    getTodayMood(localToday).then((fetchedMood) => {
+      if (fetchedMood) {
+        setLockedMood(fetchedMood);
+      }
     });
   }, []);
 
@@ -104,7 +142,7 @@ export default function CycleTrackingPage() {
           </Card>
 
           {/* Mood Tracker Card */}
-          <Card className="w-full shadow-lg border-primary/20 bg-gradient-to-br from-card to-card/90">
+          <Card className={`w-full shadow-lg border-primary/20 bg-gradient-to-br from-card to-card/90 transition-opacity duration-300 ${isPending ? "opacity-60 pointer-events-none" : ""}`}>
             <CardHeader className="pb-4">
               <CardTitle className="text-xl">How are you feeling today?</CardTitle>
               <CardDescription>Track your daily mood to see cycle trends</CardDescription>
@@ -117,19 +155,45 @@ export default function CycleTrackingPage() {
                   { id: "okay", emoji: "😐", label: "Okay" },
                   { id: "good", emoji: "🙂", label: "Good" },
                   { id: "great", emoji: "😄", label: "Great" },
-                ].map((m) => (
-                  <button
-                    key={m.id}
-                    className="flex flex-col items-center justify-center gap-2 p-3 rounded-xl transition-all hover:bg-background hover:shadow-sm hover:scale-105 group w-full"
-                  >
-                    <span className="text-3xl grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-300">
-                      {m.emoji}
-                    </span>
-                    <span className="text-[0.7rem] font-medium text-muted-foreground group-hover:text-foreground">
-                      {m.label}
-                    </span>
-                  </button>
-                ))}
+                ].map((m) => {
+                  const isSelected = lockedMood === m.id;
+                  const isBlurred = lockedMood && lockedMood !== m.id;
+                  
+                  return (
+                    <button
+                      key={m.id}
+                      onClick={() => handleMoodSelect(m.id, m.label)}
+                      disabled={!!lockedMood || isPending}
+                      className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl transition-all duration-500 group w-full 
+                        ${isSelected ? 'bg-primary/20 ring-2 ring-primary scale-105 shadow-sm my-2' : ''} 
+                        ${isBlurred ? 'opacity-30 grayscale blur-[1px] hover:scale-100 hover:bg-transparent' : 'hover:bg-background hover:shadow-sm hover:scale-105'}
+                      `}
+                    >
+                      <span className={`text-3xl transition-all duration-300 ${isSelected ? 'grayscale-0 drop-shadow-md' : 'grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100'}`}>
+                        {m.emoji}
+                      </span>
+                      <span className={`text-[0.7rem] font-medium transition-colors ${isSelected ? 'text-primary drop-shadow-md' : 'text-muted-foreground group-hover:text-foreground'}`}>
+                        {m.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Secure 24-hr Lock Feedback Display */}
+              <div className="mt-3 flex flex-col sm:flex-row items-center justify-between min-h-[3rem] gap-2">
+                <div className="flex-1 text-center sm:text-left">
+                  {feedbackMsg && (
+                    <p className={`text-sm font-semibold animate-in slide-in-from-top-2 fade-in duration-500 ${feedbackMsg.type === 'error' ? "text-destructive" : "text-primary"}`}>
+                      {feedbackMsg.text}
+                    </p>
+                  )}
+                  {lockedMood && !feedbackMsg && (
+                    <p className="text-sm font-medium text-muted-foreground delay-500 animate-in fade-in">
+                      {MOOD_MESSAGES[lockedMood] || "Your mood is safely tracked for today."}
+                    </p>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
