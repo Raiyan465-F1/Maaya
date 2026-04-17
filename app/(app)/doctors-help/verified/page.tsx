@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { DoctorRatingDialog, type RateableDoctor } from '@/components/doctor-rating-dialog';
 
 interface Doctor {
   userId: string;
@@ -43,34 +45,35 @@ export default function VerifiedDoctorsPage() {
   const [doctorFilter, setDoctorFilter] = useState<DoctorFilterType>('all');
   const [showDoctorFilters, setShowDoctorFilters] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [ratingDoctor, setRatingDoctor] = useState<RateableDoctor | null>(null);
+
+  const fetchDoctors = async () => {
+    try {
+      const res = await fetch('/api/doctors');
+      if (res.ok) {
+        const data: DoctorApiResponse[] = await res.json();
+        const normalizedDoctors = data.map((doctor, index) => {
+          const email = doctor.email ?? 'doctor@example.com';
+          return {
+            userId: doctor.userId ?? `doctor-${index}`,
+            displayName: doctor.displayName ?? buildDisplayName(email),
+            email,
+            specialty: doctor.specialty ?? null,
+            location: doctor.location ?? null,
+            replyCount: doctor.replyCount ?? 0,
+            avgRating: doctor.avgRating ?? 0,
+          };
+        });
+        setDoctors(normalizedDoctors);
+      }
+    } catch (error) {
+      console.error('Failed to load doctors', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchDoctors = async () => {
-      try {
-        const res = await fetch('/api/doctors');
-        if (res.ok) {
-          const data: DoctorApiResponse[] = await res.json();
-          const normalizedDoctors = data.map((doctor, index) => {
-            const email = doctor.email ?? 'doctor@example.com';
-            return {
-              userId: doctor.userId ?? `doctor-${index}`,
-              displayName: doctor.displayName ?? buildDisplayName(email),
-              email,
-              specialty: doctor.specialty ?? null,
-              location: doctor.location ?? null,
-              replyCount: doctor.replyCount ?? 0,
-              avgRating: doctor.avgRating ?? 0,
-            };
-          });
-          setDoctors(normalizedDoctors);
-        }
-      } catch (error) {
-        console.error('Failed to load doctors', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchDoctors();
   }, []);
 
@@ -177,28 +180,59 @@ export default function VerifiedDoctorsPage() {
         ) : (
           <div className="grid gap-4">
             {filteredDoctors.map((doctor) => (
-              <Link
+              <div
                 key={doctor.userId}
-                href={`/doctors-help/verified/${doctor.userId}`}
                 className="rounded-2xl border border-border bg-card p-5 transition hover:border-primary hover:shadow-md"
               >
                 <div className="flex items-start justify-between gap-4">
-                  <div>
+                  <Link
+                    href={`/doctors-help/verified/${doctor.userId}`}
+                    className="flex-1 min-w-0"
+                  >
                     <p className="text-sm font-semibold text-foreground">{doctor.displayName}</p>
                     <p className="text-xs text-muted-foreground">{doctor.email}</p>
                     <p className="text-xs text-muted-foreground">{doctor.specialty ?? 'Specialty not added yet'}</p>
                     <p className="text-xs text-muted-foreground">{doctor.location ?? 'Location not added yet'}</p>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <p className="text-sm font-semibold text-foreground">{doctor.avgRating.toFixed(1)} star</p>
-                    <p className="text-xs text-muted-foreground">{doctor.replyCount} replies</p>
+                  </Link>
+                  <div className="flex shrink-0 flex-col items-end gap-2">
+                    <div className="text-right">
+                      <p className="inline-flex items-center gap-1 text-sm font-semibold text-foreground">
+                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-500" />
+                        {doctor.avgRating.toFixed(1)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{doctor.replyCount} replies</p>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() =>
+                        setRatingDoctor({
+                          userId: doctor.userId,
+                          displayName: doctor.displayName,
+                          specialty: doctor.specialty,
+                        })
+                      }
+                    >
+                      Rate
+                    </Button>
                   </div>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         )}
       </div>
+
+      <DoctorRatingDialog
+        open={!!ratingDoctor}
+        doctors={ratingDoctor ? [ratingDoctor] : []}
+        title="Rate this doctor"
+        description="Share your experience with other patients."
+        submitLabel="Submit rating"
+        skipLabel="Cancel"
+        onSubmitted={fetchDoctors}
+        onClose={() => setRatingDoctor(null)}
+      />
     </div>
   );
 }

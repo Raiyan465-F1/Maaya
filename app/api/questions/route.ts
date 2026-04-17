@@ -83,6 +83,7 @@ export async function GET(request: NextRequest) {
         questionId: doctorAnswers.questionId,
         answerText: doctorAnswers.answerText,
         createdAt: doctorAnswers.createdAt,
+        doctorUserId: doctorAnswers.doctorUserId,
         doctorEmail: users.email,
         doctorName: users.name,
         doctorSpecialty: doctorProfiles.specialty,
@@ -97,6 +98,7 @@ export async function GET(request: NextRequest) {
       id: number;
       answerText: string;
       createdAt: Date;
+      doctorUserId: string;
       doctorDisplayName: string;
       doctorSpecialty: string | null;
     }>>();
@@ -107,6 +109,7 @@ export async function GET(request: NextRequest) {
         id: answer.id,
         answerText: answer.answerText,
         createdAt: answer.createdAt,
+        doctorUserId: answer.doctorUserId,
         doctorDisplayName: buildDisplayName(answer.doctorName, answer.doctorEmail),
         doctorSpecialty: answer.doctorSpecialty,
       });

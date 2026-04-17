@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { DoctorRatingDialog, type RateableDoctor } from '@/components/doctor-rating-dialog';
 
 type QuestionStatus = 'pending' | 'answered' | 'closed';
 
@@ -12,6 +13,7 @@ interface QuestionAnswer {
   id: number;
   answerText: string;
   createdAt: string;
+  doctorUserId: string;
   doctorDisplayName: string;
   doctorSpecialty?: string | null;
 }
@@ -93,6 +95,8 @@ export default function DoctorsHelpPage() {
   const [isClosing, setIsClosing] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [ratingDoctors, setRatingDoctors] = useState<RateableDoctor[]>([]);
+  const [ratingPromptOpen, setRatingPromptOpen] = useState(false);
   const [topDoctors, setTopDoctors] = useState<Array<{
     userId: string;
     displayName: string;
@@ -229,6 +233,8 @@ export default function DoctorsHelpPage() {
     );
     if (!confirmClose) return;
 
+    const questionToClose = questions.find((q) => q.id === questionId);
+
     setIsClosing(true);
     try {
       const response = await fetch(`/api/questions/${questionId}`, {
@@ -239,6 +245,28 @@ export default function DoctorsHelpPage() {
 
       if (response.ok) {
         await fetchQuestions();
+
+        const uniqueDoctors = new Map<string, RateableDoctor>();
+        (questionToClose?.answers ?? []).forEach((answer) => {
+          if (!uniqueDoctors.has(answer.doctorUserId)) {
+            uniqueDoctors.set(answer.doctorUserId, {
+              userId: answer.doctorUserId,
+              displayName: answer.doctorDisplayName,
+              specialty: answer.doctorSpecialty ?? null,
+            });
+          }
+        });
+
+        if (uniqueDoctors.size > 0) {
+          const shouldRate = window.confirm(
+            'Question closed. Would you like to rate the doctor(s) who answered?'
+          );
+          if (shouldRate) {
+            setOpenQuestionId(null);
+            setRatingDoctors(Array.from(uniqueDoctors.values()));
+            setRatingPromptOpen(true);
+          }
+        }
       } else {
         const data = await response.json().catch(() => null);
         alert(data?.error ?? 'Failed to close question. Please try again.');
@@ -735,6 +763,19 @@ export default function DoctorsHelpPage() {
           )}
         </SheetContent>
       </Sheet>
+
+      <DoctorRatingDialog
+        open={ratingPromptOpen}
+        doctors={ratingDoctors}
+        title="Rate your doctor(s)"
+        description="Your question is closed. Help others by rating the doctor(s) who answered."
+        submitLabel="Submit rating"
+        skipLabel="Skip"
+        onClose={() => {
+          setRatingPromptOpen(false);
+          setRatingDoctors([]);
+        }}
+      />
     </>
   );
 }

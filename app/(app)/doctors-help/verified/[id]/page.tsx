@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { DoctorRatingDialog } from '@/components/doctor-rating-dialog';
 
 interface DoctorDetails {
   userId: string;
@@ -31,29 +33,44 @@ export default function VerifiedDoctorDetailsPage() {
   const [doctor, setDoctor] = useState<DoctorDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [ratingOpen, setRatingOpen] = useState(false);
+  const [myRating, setMyRating] = useState<number | null>(null);
+
+  const fetchDoctor = async () => {
+    try {
+      const response = await fetch(`/api/doctors/${params.id}`);
+
+      if (!response.ok) {
+        setError(response.status === 404 ? 'Doctor not found.' : 'Failed to load doctor details.');
+        return;
+      }
+
+      const data = await response.json();
+      setDoctor(data);
+    } catch (fetchError) {
+      console.error('Error loading doctor details:', fetchError);
+      setError('Failed to load doctor details.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchMyRating = async () => {
+    try {
+      const response = await fetch(`/api/doctors/${params.id}/rate`);
+      if (response.ok) {
+        const data = await response.json();
+        setMyRating(data?.rating?.rating ?? null);
+      }
+    } catch (fetchError) {
+      console.error('Error loading my rating:', fetchError);
+    }
+  };
 
   useEffect(() => {
-    const fetchDoctor = async () => {
-      try {
-        const response = await fetch(`/api/doctors/${params.id}`);
-
-        if (!response.ok) {
-          setError(response.status === 404 ? 'Doctor not found.' : 'Failed to load doctor details.');
-          return;
-        }
-
-        const data = await response.json();
-        setDoctor(data);
-      } catch (fetchError) {
-        console.error('Error loading doctor details:', fetchError);
-        setError('Failed to load doctor details.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (params.id) {
       fetchDoctor();
+      fetchMyRating();
     }
   }, [params.id]);
 
@@ -93,11 +110,21 @@ export default function VerifiedDoctorDetailsPage() {
             <span>{doctor.replyCount} replies</span>
           </div>
         </div>
-        <Link href="/doctors-help/verified">
-          <Button variant="outline" size="sm">
-            Back to Verified Doctors
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setRatingOpen(true)}
+          >
+            <Star className="mr-1 h-4 w-4 fill-yellow-400 text-yellow-500" />
+            {myRating ? `Update rating (${myRating}/5)` : 'Rate this doctor'}
           </Button>
-        </Link>
+          <Link href="/doctors-help/verified">
+            <Button variant="outline" size="sm">
+              Back to Verified Doctors
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-6">
@@ -119,6 +146,26 @@ export default function VerifiedDoctorDetailsPage() {
         <DetailRow label="Institution" value={doctor.institution} />
         <DetailRow label="Bio" value={doctor.bio} />
       </div>
+
+      <DoctorRatingDialog
+        open={ratingOpen}
+        doctors={[
+          {
+            userId: doctor.userId,
+            displayName: doctor.displayName,
+            specialty: doctor.specialty,
+          },
+        ]}
+        title="Rate this doctor"
+        description="Share your experience to help others find the right care."
+        submitLabel="Submit rating"
+        skipLabel="Cancel"
+        onSubmitted={() => {
+          fetchDoctor();
+          fetchMyRating();
+        }}
+        onClose={() => setRatingOpen(false)}
+      />
     </div>
   );
 }
