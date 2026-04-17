@@ -10,6 +10,22 @@ import { Button } from "@/components/ui/button";
 export default function CycleTrackingPage() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [dailyMessage, setDailyMessage] = useState({ title: "Loading...", body: "" });
+  const [flyingHearts, setFlyingHearts] = useState<{ id: number; tx: number; ty: number }[]>([]);
+
+  const handleHeartClick = () => {
+    const newHearts = Array.from({ length: 3 }).map(() => ({
+      id: Math.random(),
+      tx: (Math.random() - 0.5) * 120, // Spread X 
+      ty: (Math.random() - 0.8) * 120, // Mostly spread Upwards Y
+    }));
+    
+    setFlyingHearts((prev) => [...prev, ...newHearts]);
+
+    // Remove from DOM precisely after 1 second per requirement
+    setTimeout(() => {
+      setFlyingHearts((prev) => prev.filter((h) => !newHearts.some((nh) => nh.id === h.id)));
+    }, 1000);
+  };
 
   useEffect(() => {
     // Mount algorithm hook to prevent SSR hydration mismatch
@@ -120,8 +136,30 @@ export default function CycleTrackingPage() {
 
           {/* Daily Check-up Card */}
           <Card className="w-full shadow-sm border-secondary/30 bg-secondary/5 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity duration-500 pointer-events-none">
-              <Heart className="w-24 h-24 text-secondary rotate-12 fill-secondary/20" />
+            <style>{`
+              @keyframes pop-heart {
+                0% { transform: translate(-50%, -50%) scale(0.2) rotate(0deg); opacity: 0.8; }
+                40% { opacity: 1; }
+                100% { transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(1.5) rotate(15deg); opacity: 0; }
+              }
+            `}</style>
+            <div 
+              className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-30 transition-all duration-500 cursor-pointer z-10 active:scale-95"
+              onClick={handleHeartClick}
+            >
+              <Heart className="w-24 h-24 text-secondary rotate-12 fill-secondary/20 transition-transform active:rotate-0" />
+              
+              {flyingHearts.map((h) => (
+                <Heart 
+                  key={h.id}
+                  className="absolute top-1/2 left-1/2 w-10 h-10 text-pink-500 fill-pink-500 pointer-events-none drop-shadow-md"
+                  style={{ 
+                    '--tx': `${h.tx}px`, 
+                    '--ty': `${h.ty}px`,
+                    animation: 'pop-heart 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards'
+                  } as React.CSSProperties}
+                />
+              ))}
             </div>
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2 text-secondary font-semibold">
