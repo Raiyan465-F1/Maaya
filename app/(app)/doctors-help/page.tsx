@@ -46,6 +46,7 @@ type FilterType = 'newest' | 'oldest' | 'recent';
 
 const QUESTION_TITLE_LIMIT = 70;
 const QUESTION_PREVIEW_LIMIT = 180;
+const QUESTIONS_PER_PAGE = 20;
 
 const parseQuestionContent = (value: string) => {
   const normalizedValue = value.replace(/\r\n/g, '\n');
@@ -111,6 +112,7 @@ export default function DoctorsHelpPage() {
   const [pendingCloseId, setPendingCloseId] = useState<number | null>(null);
   const [postCloseDoctors, setPostCloseDoctors] = useState<RateableDoctor[]>([]);
   const [postClosePromptOpen, setPostClosePromptOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [topDoctors, setTopDoctors] = useState<Array<{
     userId: string;
     displayName: string;
@@ -319,6 +321,23 @@ export default function DoctorsHelpPage() {
       });
   }, [questions, searchTerm, filter]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredAndSortedQuestions.length / QUESTIONS_PER_PAGE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedQuestions = useMemo(() => {
+    const startIndex = (safeCurrentPage - 1) * QUESTIONS_PER_PAGE;
+    return filteredAndSortedQuestions.slice(startIndex, startIndex + QUESTIONS_PER_PAGE);
+  }, [filteredAndSortedQuestions, safeCurrentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filter, questions.length]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = currentTime;
@@ -435,9 +454,19 @@ export default function DoctorsHelpPage() {
           </div>
         </div>
 
-        <h2 className="font-heading text-lg font-semibold text-foreground mb-3">
-          {feedHeading}
-        </h2>
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="font-heading text-lg font-semibold text-foreground">
+            {feedHeading}
+          </h2>
+          {!loading && filteredAndSortedQuestions.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Showing {(safeCurrentPage - 1) * QUESTIONS_PER_PAGE + 1}
+              –
+              {Math.min(safeCurrentPage * QUESTIONS_PER_PAGE, filteredAndSortedQuestions.length)}
+              {' '}of {filteredAndSortedQuestions.length}
+            </p>
+          )}
+        </div>
         <div className="space-y-4">
           {loading ? (
             <div className="text-center py-8 text-muted-foreground">
@@ -452,7 +481,7 @@ export default function DoctorsHelpPage() {
                   : emptyFeedMessage}
             </div>
           ) : (
-            filteredAndSortedQuestions.map((question) => {
+            paginatedQuestions.map((question) => {
               const parsedQuestion = parseQuestionContent(question.questionText);
               const shouldTruncate = parsedQuestion.details.length > QUESTION_PREVIEW_LIMIT;
               const previewText = shouldTruncate
@@ -513,10 +542,65 @@ export default function DoctorsHelpPage() {
             })
           )}
         </div>
+
+        {!loading && filteredAndSortedQuestions.length > QUESTIONS_PER_PAGE && (
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safeCurrentPage <= 1}
+              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+            >
+              Previous
+            </Button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => {
+                const isActive = pageNumber === safeCurrentPage;
+                const nearby =
+                  pageNumber === 1 ||
+                  pageNumber === totalPages ||
+                  Math.abs(pageNumber - safeCurrentPage) <= 1;
+
+                if (!nearby) {
+                  if (
+                    pageNumber === safeCurrentPage - 2 ||
+                    pageNumber === safeCurrentPage + 2
+                  ) {
+                    return (
+                      <span key={pageNumber} className="px-1 text-muted-foreground">
+                        ...
+                      </span>
+                    );
+                  }
+                  return null;
+                }
+
+                return (
+                  <Button
+                    key={pageNumber}
+                    variant={isActive ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setCurrentPage(pageNumber)}
+                  >
+                    {pageNumber}
+                  </Button>
+                );
+              })}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safeCurrentPage >= totalPages}
+              onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+            >
+              Next
+            </Button>
+          </div>
+        )}
         </div>
 
         <div className="w-80 shrink-0">
-          <div className="sticky top-8 space-y-6">
+          <div className="sticky top-8 max-h-[calc(100vh-4rem)] overflow-y-auto scrollbar-hidden space-y-6">
             <div className="bg-card rounded-2xl border border-border p-6">
               <h2 className="font-heading text-xl font-semibold text-foreground mb-4">
                 Share your question
