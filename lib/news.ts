@@ -42,10 +42,6 @@ const FEEDS: Record<string, string[]> = {
   "Pregnancy": [
     "https://www.sciencedaily.com/rss/health_medicine/pregnancy_and_childbirth.xml"
   ],
-  "STIs": [
-    "https://www.sciencedaily.com/rss/health_medicine/std.xml",
-    "https://www.sciencedaily.com/rss/health_medicine/sexual_health.xml",
-  ],
   "default": [
     "https://www.sciencedaily.com/rss/top/health.xml"
   ]
@@ -84,10 +80,6 @@ const FALLBACK_IMAGES: Record<string, string[]> = {
   "Pregnancy": [
     "https://images.unsplash.com/photo-1555243896-c709bfa0b564?w=800&q=80",
     "https://images.unsplash.com/photo-1519802772250-a50a0afcb676?w=800&q=80",
-  ],
-  "STIs": [
-    "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&q=80",
-    "https://images.unsplash.com/photo-1584308666744-24d5e16541f5?w=800&q=80",
   ],
   "default": [
     "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=800&q=80",

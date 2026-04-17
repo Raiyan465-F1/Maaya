@@ -12,7 +12,6 @@ const CATEGORIES = [
   "Reproductive Health",
   "Consent",
   "Pregnancy",
-  "STIs",
 ];
 
 export function EducationDashboard({ initialArticles = [] }: { initialArticles?: NewsArticle[] }) {
