@@ -3,8 +3,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { MessageSquare } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { DoctorRatingDialog, type RateableDoctor } from '@/components/doctor-rating-dialog';
 
 type QuestionStatus = 'pending' | 'answered' | 'closed';
@@ -97,6 +108,9 @@ export default function DoctorsHelpPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [ratingDoctors, setRatingDoctors] = useState<RateableDoctor[]>([]);
   const [ratingPromptOpen, setRatingPromptOpen] = useState(false);
+  const [pendingCloseId, setPendingCloseId] = useState<number | null>(null);
+  const [postCloseDoctors, setPostCloseDoctors] = useState<RateableDoctor[]>([]);
+  const [postClosePromptOpen, setPostClosePromptOpen] = useState(false);
   const [topDoctors, setTopDoctors] = useState<Array<{
     userId: string;
     displayName: string;
@@ -182,14 +196,14 @@ export default function DoctorsHelpPage() {
         setQuestionTitle('');
         setQuestionText('');
         setIsAnonymous(false);
-        alert('Question posted successfully!');
+        toast.success('Question posted successfully.');
         fetchQuestions();
       } else {
-        alert('Failed to post question. Please try again.');
+        toast.error('Failed to post question. Please try again.');
       }
     } catch (error) {
       console.error('Error posting question:', error);
-      alert('An error occurred. Please try again.');
+      toast.error('An error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -213,26 +227,23 @@ export default function DoctorsHelpPage() {
 
       if (response.ok) {
         setAnswerText('');
-        alert('Answer posted successfully!');
+        toast.success('Answer posted successfully.');
         fetchQuestions();
       } else {
         const data = await response.json().catch(() => null);
-        alert(data?.error ?? 'Failed to post answer. Please try again.');
+        toast.error(data?.error ?? 'Failed to post answer. Please try again.');
       }
     } catch (error) {
       console.error('Error posting answer:', error);
-      alert('An error occurred. Please try again.');
+      toast.error('An error occurred. Please try again.');
     } finally {
       setIsSubmittingAnswer(false);
     }
   };
 
-  const handleCloseQuestion = async (questionId: number) => {
-    const confirmClose = window.confirm(
-      'Close this question? Doctors will no longer be able to add answers.'
-    );
-    if (!confirmClose) return;
-
+  const confirmCloseQuestion = async () => {
+    if (pendingCloseId === null) return;
+    const questionId = pendingCloseId;
     const questionToClose = questions.find((q) => q.id === questionId);
 
     setIsClosing(true);
@@ -245,6 +256,7 @@ export default function DoctorsHelpPage() {
 
       if (response.ok) {
         await fetchQuestions();
+        toast.success('Question closed.');
 
         const uniqueDoctors = new Map<string, RateableDoctor>();
         (questionToClose?.answers ?? []).forEach((answer) => {
@@ -258,24 +270,20 @@ export default function DoctorsHelpPage() {
         });
 
         if (uniqueDoctors.size > 0) {
-          const shouldRate = window.confirm(
-            'Question closed. Would you like to rate the doctor(s) who answered?'
-          );
-          if (shouldRate) {
-            setOpenQuestionId(null);
-            setRatingDoctors(Array.from(uniqueDoctors.values()));
-            setRatingPromptOpen(true);
-          }
+          setOpenQuestionId(null);
+          setPostCloseDoctors(Array.from(uniqueDoctors.values()));
+          setPostClosePromptOpen(true);
         }
       } else {
         const data = await response.json().catch(() => null);
-        alert(data?.error ?? 'Failed to close question. Please try again.');
+        toast.error(data?.error ?? 'Failed to close question. Please try again.');
       }
     } catch (error) {
       console.error('Error closing question:', error);
-      alert('An error occurred. Please try again.');
+      toast.error('An error occurred. Please try again.');
     } finally {
       setIsClosing(false);
+      setPendingCloseId(null);
     }
   };
 
@@ -709,7 +717,7 @@ export default function DoctorsHelpPage() {
                       variant="outline"
                       size="sm"
                       disabled={isClosing}
-                      onClick={() => handleCloseQuestion(openQuestion.id)}
+                      onClick={() => setPendingCloseId(openQuestion.id)}
                     >
                       {isClosing ? 'Closing...' : 'Close question'}
                     </Button>
@@ -776,6 +784,74 @@ export default function DoctorsHelpPage() {
           setRatingDoctors([]);
         }}
       />
+
+      <AlertDialog
+        open={pendingCloseId !== null}
+        onOpenChange={(open) => {
+          if (!open && !isClosing) setPendingCloseId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Close this question?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Doctors will no longer be able to add answers. Existing answers stay visible to you.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isClosing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isClosing}
+              onClick={(event) => {
+                event.preventDefault();
+                confirmCloseQuestion();
+              }}
+            >
+              {isClosing ? 'Closing...' : 'Close question'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={postClosePromptOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPostClosePromptOpen(false);
+            setPostCloseDoctors([]);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rate the doctor(s) who answered?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your feedback helps other patients find the right care.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setPostClosePromptOpen(false);
+                setPostCloseDoctors([]);
+              }}
+            >
+              Not now
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const doctorsForRating = postCloseDoctors;
+                setPostClosePromptOpen(false);
+                setPostCloseDoctors([]);
+                setRatingDoctors(doctorsForRating);
+                setRatingPromptOpen(true);
+              }}
+            >
+              Rate now
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
