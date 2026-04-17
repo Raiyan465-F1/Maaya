@@ -20,3 +20,6 @@ export type AlertType = (typeof alertType)[number];
 
 export const forumMediaKind = ["image", "video"] as const;
 export type ForumMediaKind = (typeof forumMediaKind)[number];
+
+export const questionStatus = ["pending", "answered", "closed"] as const;
+export type QuestionStatus = (typeof questionStatus)[number];

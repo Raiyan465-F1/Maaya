@@ -57,6 +57,7 @@ export async function GET(
         id: doctorQuestions.id,
         questionText: doctorQuestions.questionText,
         isAnonymous: doctorQuestions.isAnonymous,
+        status: doctorQuestions.status,
         createdAt: doctorQuestions.createdAt,
         userEmail: users.email,
       })
