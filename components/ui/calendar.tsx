@@ -34,9 +34,9 @@ function Calendar({
           "absolute right-1 top-1 h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 z-10"
         ),
         month_grid: "w-full border-collapse space-y-1 block",
-        weekdays: "grid grid-cols-7 w-full",
+        weekdays: "grid grid-cols-7 gap-x-2 sm:gap-x-3 w-full",
         weekday: "text-muted-foreground font-medium text-[0.8rem] text-center pb-2",
-        week: "grid grid-cols-7 w-full mt-2",
+        week: "grid grid-cols-7 gap-x-2 sm:gap-x-3 w-full mt-2",
         day: "text-center text-sm p-0 m-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
         day_button: cn(
           buttonVariants({ variant: "ghost" }),
