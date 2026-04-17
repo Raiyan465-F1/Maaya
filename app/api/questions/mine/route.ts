@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
         id: doctorQuestions.id,
         questionText: doctorQuestions.questionText,
         isAnonymous: doctorQuestions.isAnonymous,
+        status: doctorQuestions.status,
         createdAt: doctorQuestions.createdAt,
         userEmail: users.email,
       })

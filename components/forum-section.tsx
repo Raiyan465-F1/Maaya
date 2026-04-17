@@ -10,6 +10,7 @@ import type {
   ForumResponse,
 } from "@/lib/forum-types";
 import { FORUM_MEDIA_LIMIT, FORUM_TAG_LIMIT } from "@/lib/forum-types";
+import { useConfirm } from "@/hooks/use-confirm";
 
 type MediaDraft = ForumMediaInput & { key: number };
 type ForumSortOption = "latest" | "oldest" | "popular";
@@ -527,6 +528,7 @@ function CommentTree({
 }
 
 export function ForumSection() {
+  const { confirm, ConfirmDialog } = useConfirm();
   const [forum, setForum] = useState<ForumResponse>(EMPTY_FORUM);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -883,10 +885,14 @@ export function ForumSection() {
                   `post-${postId}`
                 )
               }
-              onDelete={(postId) => {
-                if (!window.confirm("Delete this post? This action cannot be undone.")) {
-                  return Promise.resolve(false);
-                }
+              onDelete={async (postId) => {
+                const ok = await confirm({
+                  title: "Delete this post?",
+                  description: "This action cannot be undone.",
+                  confirmLabel: "Delete",
+                  destructive: true,
+                });
+                if (!ok) return false;
 
                 return submitJson(`/api/forum/posts/${postId}`, { method: "DELETE" }, `post-${postId}`);
               }}
@@ -1081,10 +1087,14 @@ export function ForumSection() {
                   `post-${postId}`
                 )
               }
-              onDelete={(postId) => {
-                if (!window.confirm("Delete this post? This action cannot be undone.")) {
-                  return Promise.resolve(false);
-                }
+              onDelete={async (postId) => {
+                const ok = await confirm({
+                  title: "Delete this post?",
+                  description: "This action cannot be undone.",
+                  confirmLabel: "Delete",
+                  destructive: true,
+                });
+                if (!ok) return false;
 
                 setFocusedPostId(null);
                 return submitJson(`/api/forum/posts/${postId}`, { method: "DELETE" }, `post-${postId}`);
@@ -1263,6 +1273,7 @@ export function ForumSection() {
           </button>
         </div>
       </div>
+      <ConfirmDialog />
     </section>
   );
 }
