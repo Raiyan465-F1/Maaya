@@ -29,6 +29,7 @@ export default async function EducationPage() {
           Start Quiz
         </button>
       </div>
+
       <EducationDashboard initialArticles={initialArticles} />
     </>
   );
