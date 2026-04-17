@@ -1,0 +1,2 @@
+786118f - 2026-03-29 - built a connection with science daily, brings articles from there and upon clicking the card gets redirected to the actual website. added filtering options as well
+cb6c465 - 2026-03-15 - Profile page and other page layouts and sidebar
