@@ -103,7 +103,7 @@ export default function CycleTrackingPage() {
                 mode="single"
                 selected={date}
                 onSelect={setDate}
-                className="rounded-xl border border-primary/10 shadow-sm p-4 sm:p-6 bg-background w-full max-w-[420px]"
+                className="rounded-xl border border-primary/10 shadow-sm p-4 sm:p-6 bg-background w-full"
               />
             </CardContent>
           </Card>
