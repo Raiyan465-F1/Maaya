@@ -2,11 +2,14 @@
 
 import { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
-import { Heart, Sparkles, Stethoscope } from "lucide-react";
+import { Heart, Sparkles, Stethoscope, ArrowRight } from "lucide-react";
+import { DateRange } from "react-day-picker";
+import { isSameDay, format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getTodayMood, saveDailyMood } from "@/lib/health-actions";
+import { OnboardingJourney } from "@/components/onboarding-journey";
 
 const MOOD_MESSAGES: Record<string, string> = {
   terrible: "Sending you a gentle hug. Be extra kind to yourself today. 🤍",
@@ -17,13 +20,17 @@ const MOOD_MESSAGES: Record<string, string> = {
 };
 
 export default function CycleTrackingPage() {
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  const [isLogging, setIsLogging] = useState(false);
+  const [analytics, setAnalytics] = useState<any>(null);
   const [dailyMessage, setDailyMessage] = useState({ title: "Loading...", body: "" });
   const [flyingHearts, setFlyingHearts] = useState<{ id: number; tx: number; ty: number }[]>([]);
   
   const [isPending, startTransition] = useTransition();
   const [lockedMood, setLockedMood] = useState<string | null>(null);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: "error" | "success"; text: string } | null>(null);
+  const [calFeedback, setCalFeedback] = useState<{ type: "error" | "success"; text: string } | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const handleHeartClick = () => {
     const newHearts = Array.from({ length: 3 }).map(() => ({
@@ -57,6 +64,41 @@ export default function CycleTrackingPage() {
     });
   };
 
+  const handleLogPeriod = async () => {
+    if (!selectedDate) return;
+    if (selectedDate > new Date()) {
+      setCalFeedback({ type: "error", text: "You cannot log a period for a future date." });
+      return;
+    }
+    setCalFeedback(null);
+    setIsLogging(true);
+    try {
+      const resp = await fetch("/api/cycle-tracking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          startDate: selectedDate
+        })
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        setCalFeedback({ 
+          type: "success", 
+          text: "Period logged! Predictions updated." 
+        });
+        setSelectedDate(undefined);
+        // Refresh analytics dynamically
+        const newAnalytics = await fetch("/api/cycle-tracking/analytics").then(res => res.json());
+        setAnalytics(newAnalytics);
+      } else {
+        setCalFeedback({ type: "error", text: "Failed to log cycle." });
+      }
+    } catch(err) {
+      setCalFeedback({ type: "error", text: "Error logging cycle." });
+    }
+    setIsLogging(false);
+  };
+
   useEffect(() => {
     // Mount algorithm hook to prevent SSR hydration mismatch
     import("@/lib/daily-messages").then((mod) => {
@@ -70,6 +112,12 @@ export default function CycleTrackingPage() {
         setLockedMood(fetchedMood);
       }
     });
+
+    // Fetch cycle analytics
+    fetch("/api/cycle-tracking/analytics")
+      .then(res => res.json())
+      .then(data => setAnalytics(data))
+      .catch(err => console.error(err));
   }, []);
 
   return (
@@ -90,7 +138,49 @@ export default function CycleTrackingPage() {
       </div>
 
       <div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-8 items-start px-4 sm:px-8">
-        <div className="flex flex-col gap-6 w-full max-w-[500px]">
+        {analytics && !analytics.hasData && !analytics.isOnboarded && (
+          <div className="col-span-full mb-4">
+            <Card className="w-full overflow-hidden border-none shadow-2xl bg-gradient-to-br from-primary/20 via-rose-50 to-orange-50 dark:from-primary/10 dark:via-background dark:to-orange-950/20">
+              <CardContent className="p-0">
+                <div className="flex flex-col md:flex-row items-center justify-between p-8 gap-8">
+                  <div className="flex-1 text-center md:text-left">
+                    <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4">
+                      <Sparkles className="w-4 h-4" />
+                      New Feature
+                    </div>
+                    <h2 className="text-4xl font-bold mb-4 tracking-tight">Your Cycle Journey <span className="italic text-primary">Starts Here</span></h2>
+                    <p className="text-muted-foreground text-lg mb-8 max-w-xl leading-relaxed">
+                      Welcome to Maaya's cycle tracking. Answer a few questions to unlock personalized predictions, health insights, and wellness tips tailored just for you.
+                    </p>
+                    <Button 
+                      onClick={() => setShowOnboarding(true)}
+                      size="lg" 
+                      className="rounded-2xl px-10 py-7 text-xl font-bold shadow-xl hover:scale-105 transition-all shadow-primary/20"
+                    >
+                      Start Your Journey
+                      <ArrowRight className="w-6 h-6 ml-2" />
+                    </Button>
+                  </div>
+                  <div className="relative w-full max-w-[300px] aspect-square flex items-center justify-center">
+                    <div className="absolute inset-0 bg-primary/20 rounded-full blur-3xl animate-pulse" />
+                    <Heart className="w-48 h-48 text-primary fill-primary/10 animate-pulse relative z-10" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {showOnboarding && (
+          <OnboardingJourney onComplete={() => {
+            setShowOnboarding(false);
+            fetch("/api/cycle-tracking/analytics")
+              .then(res => res.json())
+              .then(data => setAnalytics(data));
+          }} onClose={() => setShowOnboarding(false)} />
+        )}
+
+        <div className="flex flex-col gap-6 w-full max-w-[400px]">
           <Card className="w-full shadow-xl border-primary/15 bg-card">
             <CardHeader className="text-center pb-2">
               <CardTitle className="text-2xl">Menstrual Calendar</CardTitle>
@@ -98,46 +188,56 @@ export default function CycleTrackingPage() {
                 Track your cycle to predict upcoming phases
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex justify-center pt-6 pb-8">
+            <CardContent className="flex flex-col items-center justify-center pt-6 pb-8 gap-4">
+              <style>{`
+                .rdp-day_button { position: relative !important; }
+                .logged-period-day {
+                  outline: 2px solid #ef4444 !important; /* Extremely obvious crimson border */
+                  border-radius: 8px;
+                }
+                .logged-period-day .rdp-day_button::after {
+                  content: '';
+                  position: absolute;
+                  top: 2px;
+                  right: 2px;
+                  width: 8px;
+                  height: 8px;
+                  border-radius: 50%;
+                  background-color: #ef4444 !important; /* Bright Red */
+                  box-shadow: 0 0 5px rgba(255,0,0,0.5);
+                  z-index: 50;
+                }
+              `}</style>
               <Calendar
                 mode="single"
-                selected={date}
-                onSelect={setDate}
-                className="rounded-xl border border-primary/10 shadow-sm p-4 sm:p-6 bg-background w-full max-w-[420px]"
+                selected={selectedDate}
+                onSelect={setSelectedDate}
+                disabled={{ after: new Date() }}
+                className="rounded-xl border border-primary/10 shadow-sm p-4 sm:p-6 bg-background w-full"
+                modifiers={{
+                  periodStart: (analytics?.periodStartDates || []).map((d: string) => {
+                    const [year, month, day] = d.split('-').map(Number);
+                    return new Date(year, month - 1, day);
+                  })
+                }}
+                modifiersClassNames={{
+                  periodStart: "logged-period-day"
+                }}
               />
-            </CardContent>
-          </Card>
-
-          {/* Doctor's Help Card */}
-          <Card className="w-full shadow-md border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors">
-            <CardHeader className="pb-3 text-center">
-              <div className="mx-auto bg-primary/10 p-3 rounded-full mb-2 w-fit">
-                <Stethoscope className="w-8 h-8 text-primary" />
-              </div>
-              <CardTitle className="text-xl">Facing a problem?</CardTitle>
-              <CardDescription className="text-sm">
-                Consult our verified doctors here.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex justify-center pb-6">
-              <Link href="/doctors-help" className="w-full sm:w-auto">
-                <Button className="w-full sm:min-w-[200px] rounded-xl text-md font-semibold transition-all hover:scale-105 shadow-md">
-                  Get Help
+              {selectedDate && (
+                <Button 
+                   onClick={handleLogPeriod} 
+                   disabled={isLogging} 
+                   className="w-full max-w-[200px]"
+                >
+                  {isLogging ? "Saving..." : "Log Period"}
                 </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
-        {/* Right Column: Insights & Mood */}
-        <div className="hidden lg:flex flex-col gap-6 w-full">
-          {/* Insights Card Placeholder */}
-          <Card className="w-full shadow-md border-primary/10 bg-card/50">
-            <CardHeader>
-              <CardTitle className="text-lg">Cycle Insights</CardTitle>
-              <CardDescription>Analytics based on your tracking</CardDescription>
-            </CardHeader>
-            <CardContent className="h-[200px] flex items-center justify-center rounded-xl border border-dashed border-primary/20 bg-muted/10 mx-6 mb-6">
-              <p className="text-muted-foreground text-sm font-medium">More data needed for insights</p>
+              )}
+              {calFeedback && (
+                <p className={`text-sm font-semibold mt-2 animate-in slide-in-from-top-1 fade-in duration-300 ${calFeedback.type === 'error' ? "text-destructive" : "text-primary"}`}>
+                  {calFeedback.text}
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -198,6 +298,109 @@ export default function CycleTrackingPage() {
             </CardContent>
           </Card>
 
+          {/* Doctor's Help Card */}
+          <Card className="w-full shadow-md border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors">
+            <CardHeader className="pb-3 text-center">
+              <div className="mx-auto bg-primary/10 p-3 rounded-full mb-2 w-fit">
+                <Stethoscope className="w-8 h-8 text-primary" />
+              </div>
+              <CardTitle className="text-xl">Facing a problem?</CardTitle>
+              <CardDescription className="text-sm">
+                Consult our verified doctors here.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-center pb-6">
+              <Link href="/doctors-help" className="w-full sm:w-auto">
+                <Button className="w-full sm:min-w-[200px] rounded-xl text-md font-semibold transition-all hover:scale-105 shadow-md">
+                  Get Help
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+
+        </div>
+        {/* Right Column: Insights & Mood */}
+        <div className="hidden lg:flex flex-col gap-6 w-full">
+          {/* Insights Card */}
+          <Card className="w-full shadow-md border-primary/10 bg-card/50">
+            <CardHeader>
+              <CardTitle className="text-lg">Cycle Insights</CardTitle>
+              <CardDescription>Analytics based on your tracking</CardDescription>
+            </CardHeader>
+            <CardContent className="px-6 pb-6">
+              {!analytics ? (
+                <div className="h-[100px] flex items-center justify-center rounded-xl border border-dashed border-primary/20 bg-muted/10">
+                  <p className="text-muted-foreground text-sm font-medium animate-pulse">Loading insights...</p>
+                </div>
+              ) : !analytics.hasData ? (
+                <div className="h-[100px] flex items-center justify-center rounded-xl border border-dashed border-primary/20 bg-muted/10">
+                  <p className="text-muted-foreground text-sm font-medium">{analytics.message}</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  <div className="bg-primary/5 p-4 rounded-xl border border-primary/10">
+                     <p className="text-xs uppercase text-primary font-bold mb-1">Current Phase</p>
+                     <p className="text-lg font-semibold">{analytics.currentPhase} (Day {analytics.dayOfCycle})</p>
+                  </div>
+                  <div>
+                     <p className="text-sm font-semibold mb-1">Expected Mood</p>
+                     <p className="text-sm text-muted-foreground leading-snug">{analytics.expectedMood}</p>
+                  </div>
+                  <div>
+                     <p className="text-sm font-semibold mb-2">Recommendations</p>
+                     {analytics.recommendations?.map((tip: any, i: number) => (
+                       <div key={i} className="mb-2 bg-muted/30 p-2 rounded-lg">
+                         <p className="text-sm font-medium text-foreground">{tip.tipTitle || "Tip"}</p>
+                         <p className="text-xs text-muted-foreground mt-1">{tip.tipDescription}</p>
+                       </div>
+                     ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Cycle Predictions Card */}
+          <Card className="w-full shadow-md border-primary/10 bg-card/50">
+            <CardHeader>
+              <CardTitle className="text-lg">Cycle Predictions</CardTitle>
+              <CardDescription>Estimated dates for your cycle</CardDescription>
+            </CardHeader>
+            <CardContent className="px-6 pb-6">
+              {!analytics ? (
+                <div className="h-[100px] flex items-center justify-center rounded-xl border border-dashed border-primary/20 bg-muted/10">
+                  <p className="text-muted-foreground text-sm font-medium animate-pulse">Loading predictions...</p>
+                </div>
+              ) : !analytics.hasData ? (
+                <div className="h-[100px] flex items-center justify-center rounded-xl border border-dashed border-primary/20 bg-muted/10">
+                  <p className="text-muted-foreground text-sm font-medium">Log a period to see predictions.</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 flex justify-between items-center">
+                    <div>
+                      <p className="text-xs uppercase text-primary font-bold mb-1">Period Ends</p>
+                      <p className="text-sm font-semibold">
+                        {analytics.latestCycle?.expectedPeriodEnd && !isNaN(new Date(analytics.latestCycle.expectedPeriodEnd).getTime()) 
+                          ? new Date(analytics.latestCycle.expectedPeriodEnd).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+                          : 'Pending'}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs uppercase text-primary font-bold mb-1">Next Period Starts</p>
+                      <p className="text-sm font-semibold">
+                        {analytics.latestCycle?.predictedEndDate && !isNaN(new Date(analytics.latestCycle.predictedEndDate).getTime())
+                          ? new Date(analytics.latestCycle.predictedEndDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+                          : 'Pending'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Daily Check-up Card */}
           <Card className="w-full shadow-sm border-secondary/30 bg-secondary/5 relative overflow-hidden group">
             <style>{`
@@ -240,6 +443,10 @@ export default function CycleTrackingPage() {
               </div>
             </CardContent>
           </Card>
+
+
+
+
 
         </div>
       </div>

@@ -42,6 +42,12 @@ export async function POST(request: NextRequest) {
 
     const start = new Date(startDate);
     const end = endDate ? new Date(endDate) : null;
+    const now = new Date();
+
+    if (start > now || (end && end > now)) {
+      return NextResponse.json({ error: "Dates cannot be in the future." }, { status: 400 });
+    }
+
     const pLength = predictedCycleLength ? parseInt(predictedCycleLength) : 28;
 
     // Calculate actual difference if we have both start and end dates
