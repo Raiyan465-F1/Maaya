@@ -1,5 +1,8 @@
-import { pgTable, text, timestamp, uuid, bigint, boolean } from "drizzle-orm/pg-core";
+import { pgTable, pgEnum, text, timestamp, uuid, bigint, boolean } from "drizzle-orm/pg-core";
 import { users } from "./users";
+import { questionStatus } from "./enums";
+
+export const questionStatusEnum = pgEnum("question_status", questionStatus);
 
 export const doctorQuestions = pgTable("doctor_questions", {
   id: bigint("question_id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
@@ -7,6 +10,7 @@ export const doctorQuestions = pgTable("doctor_questions", {
   doctorUserId: uuid("doctor_user_id").references(() => users.id, { onDelete: "set null" }),
   questionText: text("question_text").notNull(),
   isAnonymous: boolean("is_anonymous").default(false),
+  status: questionStatusEnum("status").notNull().default("pending"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

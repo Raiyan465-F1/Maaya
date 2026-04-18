@@ -1,14 +1,76 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
-import { Droplets, Sparkles, Stethoscope } from "lucide-react";
+import { Heart, Sparkles, Stethoscope } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { getTodayMood, saveDailyMood } from "@/lib/health-actions";
+
+const MOOD_MESSAGES: Record<string, string> = {
+  terrible: "Sending you a gentle hug. Be extra kind to yourself today. 🤍",
+  bad: "It's completely okay to have off days. Take it easy and rest up. ☁️",
+  okay: "Steady and balanced! Make sure to keep taking care of yourself. 🌱",
+  good: "Glad you're having a good day! Let's keep that positive energy flowing. ☀️",
+  great: "Love to see it! Harness that amazing energy today! ✨"
+};
 
 export default function CycleTrackingPage() {
   const [date, setDate] = useState<Date | undefined>(new Date());
+  const [dailyMessage, setDailyMessage] = useState({ title: "Loading...", body: "" });
+  const [flyingHearts, setFlyingHearts] = useState<{ id: number; tx: number; ty: number }[]>([]);
+  
+  const [isPending, startTransition] = useTransition();
+  const [lockedMood, setLockedMood] = useState<string | null>(null);
+  const [feedbackMsg, setFeedbackMsg] = useState<{ type: "error" | "success"; text: string } | null>(null);
+
+  const handleHeartClick = () => {
+    const newHearts = Array.from({ length: 3 }).map(() => ({
+      id: Math.random(),
+      tx: (Math.random() - 0.5) * 120, // Spread X 
+      ty: (Math.random() - 0.8) * 120, // Mostly spread Upwards Y
+    }));
+    
+    setFlyingHearts((prev) => [...prev, ...newHearts]);
+
+    // Remove from DOM precisely after 1 second per requirement
+    setTimeout(() => {
+      setFlyingHearts((prev) => prev.filter((h) => !newHearts.some((nh) => nh.id === h.id)));
+    }, 1000);
+  };
+
+  const handleMoodSelect = (moodId: string, moodLabel: string) => {
+    if (lockedMood) return; // Locked 24 hrs natively natively prevents client firing
+
+    setFeedbackMsg(null);
+    startTransition(async () => {
+      const localToday = new Date().toLocaleDateString("en-CA");
+      const result = await saveDailyMood(moodId, localToday);
+      
+      if (result.error) {
+        setFeedbackMsg({ type: "error", text: result.error });
+      } else {
+        setLockedMood(moodId);
+        setFeedbackMsg({ type: "success", text: MOOD_MESSAGES[moodId] || `Locked in! You're feeling ${moodLabel} today. 🌸` });
+      }
+    });
+  };
+
+  useEffect(() => {
+    // Mount algorithm hook to prevent SSR hydration mismatch
+    import("@/lib/daily-messages").then((mod) => {
+      setDailyMessage(mod.getDailyMessage());
+    });
+
+    // Cross-verify with Neon database if the user already logged in today
+    const localToday = new Date().toLocaleDateString("en-CA");
+    getTodayMood(localToday).then((fetchedMood) => {
+      if (fetchedMood) {
+        setLockedMood(fetchedMood);
+      }
+    });
+  }, []);
 
   return (
     <div className="flex flex-col h-full items-center pt-10">
@@ -80,7 +142,7 @@ export default function CycleTrackingPage() {
           </Card>
 
           {/* Mood Tracker Card */}
-          <Card className="w-full shadow-lg border-primary/20 bg-gradient-to-br from-card to-card/90">
+          <Card className={`w-full shadow-lg border-primary/20 bg-gradient-to-br from-card to-card/90 transition-opacity duration-300 ${isPending ? "opacity-60 pointer-events-none" : ""}`}>
             <CardHeader className="pb-4">
               <CardTitle className="text-xl">How are you feeling today?</CardTitle>
               <CardDescription>Track your daily mood to see cycle trends</CardDescription>
@@ -93,39 +155,87 @@ export default function CycleTrackingPage() {
                   { id: "okay", emoji: "😐", label: "Okay" },
                   { id: "good", emoji: "🙂", label: "Good" },
                   { id: "great", emoji: "😄", label: "Great" },
-                ].map((m) => (
-                  <button
-                    key={m.id}
-                    className="flex flex-col items-center justify-center gap-2 p-3 rounded-xl transition-all hover:bg-background hover:shadow-sm hover:scale-105 group w-full"
-                  >
-                    <span className="text-3xl grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-300">
-                      {m.emoji}
-                    </span>
-                    <span className="text-[0.7rem] font-medium text-muted-foreground group-hover:text-foreground">
-                      {m.label}
-                    </span>
-                  </button>
-                ))}
+                ].map((m) => {
+                  const isSelected = lockedMood === m.id;
+                  const isBlurred = lockedMood && lockedMood !== m.id;
+                  
+                  return (
+                    <button
+                      key={m.id}
+                      onClick={() => handleMoodSelect(m.id, m.label)}
+                      disabled={!!lockedMood || isPending}
+                      className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl transition-all duration-500 group w-full 
+                        ${isSelected ? 'bg-primary/20 ring-2 ring-primary scale-105 shadow-sm my-2' : ''} 
+                        ${isBlurred ? 'opacity-30 grayscale blur-[1px] hover:scale-100 hover:bg-transparent' : 'hover:bg-background hover:shadow-sm hover:scale-105'}
+                      `}
+                    >
+                      <span className={`text-3xl transition-all duration-300 ${isSelected ? 'grayscale-0 drop-shadow-md' : 'grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100'}`}>
+                        {m.emoji}
+                      </span>
+                      <span className={`text-[0.7rem] font-medium transition-colors ${isSelected ? 'text-primary drop-shadow-md' : 'text-muted-foreground group-hover:text-foreground'}`}>
+                        {m.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Secure 24-hr Lock Feedback Display */}
+              <div className="mt-3 flex flex-col sm:flex-row items-center justify-between min-h-[3rem] gap-2">
+                <div className="flex-1 text-center sm:text-left">
+                  {feedbackMsg && (
+                    <p className={`text-sm font-semibold animate-in slide-in-from-top-2 fade-in duration-500 ${feedbackMsg.type === 'error' ? "text-destructive" : "text-primary"}`}>
+                      {feedbackMsg.text}
+                    </p>
+                  )}
+                  {lockedMood && !feedbackMsg && (
+                    <p className="text-sm font-medium text-muted-foreground delay-500 animate-in fade-in">
+                      {MOOD_MESSAGES[lockedMood] || "Your mood is safely tracked for today."}
+                    </p>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Daily Check-up Card */}
           <Card className="w-full shadow-sm border-secondary/30 bg-secondary/5 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity duration-500 pointer-events-none">
-              <Droplets className="w-24 h-24 text-secondary rotate-12" />
+            <style>{`
+              @keyframes pop-heart {
+                0% { transform: translate(-50%, -50%) scale(0.2) rotate(0deg); opacity: 0.8; }
+                40% { opacity: 1; }
+                100% { transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(1.5) rotate(15deg); opacity: 0; }
+              }
+            `}</style>
+            <div 
+              className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-30 transition-all duration-500 cursor-pointer z-10 active:scale-95"
+              onClick={handleHeartClick}
+            >
+              <Heart className="w-24 h-24 text-secondary rotate-12 fill-secondary/20 transition-transform active:rotate-0" />
+              
+              {flyingHearts.map((h) => (
+                <Heart 
+                  key={h.id}
+                  className="absolute top-1/2 left-1/2 w-10 h-10 text-pink-500 fill-pink-500 pointer-events-none drop-shadow-md"
+                  style={{ 
+                    '--tx': `${h.tx}px`, 
+                    '--ty': `${h.ty}px`,
+                    animation: 'pop-heart 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards'
+                  } as React.CSSProperties}
+                />
+              ))}
             </div>
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2 text-secondary font-semibold">
-                <Sparkles className="w-4 h-4" />
-                <span className="text-xs uppercase tracking-wider">Daily Check-up</span>
+                <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+                <span className="text-xs uppercase tracking-wider text-primary">Daily Check-up</span>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col gap-1">
-                <h3 className="text-lg font-bold text-foreground">Don't forget to drink water today!</h3>
+              <div className="flex flex-col gap-1 transition-opacity duration-500">
+                <h3 className="text-lg font-bold text-foreground">{dailyMessage.title}</h3>
                 <p className="text-muted-foreground text-sm">
-                  Staying hydrated helps regulate hormone levels and can reduce cycle symptoms. Aim for 8 glasses.
+                  {dailyMessage.body}
                 </p>
               </div>
             </CardContent>

@@ -1,31 +1,44 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { MessageSquare } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { DoctorRatingDialog, type RateableDoctor } from '@/components/doctor-rating-dialog';
 
-interface Question {
-  id: number;
-  questionText: string;
-  isAnonymous: boolean;
-  createdAt: string;
-  userEmail?: string;
-  userAgeGroup?: string;
-  userGender?: string;
-}
+type QuestionStatus = 'pending' | 'answered' | 'closed';
 
 interface QuestionAnswer {
   id: number;
   answerText: string;
   createdAt: string;
+  doctorUserId: string;
   doctorDisplayName: string;
   doctorSpecialty?: string | null;
 }
 
-interface MyQuestion extends Question {
+interface Question {
+  id: number;
+  questionText: string;
+  isAnonymous: boolean;
+  status: QuestionStatus;
+  createdAt: string;
+  userId?: string;
+  userEmail?: string;
+  userAgeGroup?: string;
+  userGender?: string;
   answers: QuestionAnswer[];
 }
 
@@ -33,6 +46,7 @@ type FilterType = 'newest' | 'oldest' | 'recent';
 
 const QUESTION_TITLE_LIMIT = 70;
 const QUESTION_PREVIEW_LIMIT = 180;
+const QUESTIONS_PER_PAGE = 20;
 
 const parseQuestionContent = (value: string) => {
   const normalizedValue = value.replace(/\r\n/g, '\n');
@@ -61,8 +75,22 @@ const truncateText = (value: string, limit: number) => {
   return `${value.slice(0, limit).trimEnd()}...`;
 };
 
+const STATUS_LABEL: Record<QuestionStatus, string> = {
+  pending: 'Pending Answer',
+  answered: 'Answered',
+  closed: 'Closed',
+};
+
+const STATUS_BADGE_CLASSES: Record<QuestionStatus, string> = {
+  pending:
+    'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
+  answered:
+    'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300',
+  closed:
+    'bg-muted text-muted-foreground',
+};
+
 export default function DoctorsHelpPage() {
-  const router = useRouter();
   const [questionTitle, setQuestionTitle] = useState('');
   const [questionText, setQuestionText] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
@@ -73,14 +101,18 @@ export default function DoctorsHelpPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [expandedQuestionId, setExpandedQuestionId] = useState<number | null>(null);
-  const [answeringQuestionId, setAnsweringQuestionId] = useState<number | null>(null);
+  const [openQuestionId, setOpenQuestionId] = useState<number | null>(null);
   const [answerText, setAnswerText] = useState('');
   const [isSubmittingAnswer, setIsSubmittingAnswer] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [showMyQuestions, setShowMyQuestions] = useState(false);
-  const [myQuestions, setMyQuestions] = useState<MyQuestion[]>([]);
-  const [myQuestionsLoading, setMyQuestionsLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [ratingDoctors, setRatingDoctors] = useState<RateableDoctor[]>([]);
+  const [ratingPromptOpen, setRatingPromptOpen] = useState(false);
+  const [pendingCloseId, setPendingCloseId] = useState<number | null>(null);
+  const [postCloseDoctors, setPostCloseDoctors] = useState<RateableDoctor[]>([]);
+  const [postClosePromptOpen, setPostClosePromptOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [topDoctors, setTopDoctors] = useState<Array<{
     userId: string;
     displayName: string;
@@ -94,7 +126,7 @@ export default function DoctorsHelpPage() {
   useEffect(() => {
     fetchQuestions();
     fetchTopDoctors();
-    fetchUserRole();
+    fetchProfile();
   }, []);
 
   useEffect(() => {
@@ -131,30 +163,16 @@ export default function DoctorsHelpPage() {
     }
   };
 
-  const fetchUserRole = async () => {
+  const fetchProfile = async () => {
     try {
       const response = await fetch('/api/profile');
       if (response.ok) {
         const userData = await response.json();
-        setUserRole(userData.role);
+        setUserRole(userData.role ?? null);
+        setUserId(userData.id ?? userData.userId ?? null);
       }
     } catch (error) {
-      console.error('Error fetching user role:', error);
-    }
-  };
-
-  const fetchMyQuestions = async () => {
-    setMyQuestionsLoading(true);
-    try {
-      const response = await fetch('/api/questions/mine');
-      if (response.ok) {
-        const data = await response.json();
-        setMyQuestions(data);
-      }
-    } catch (error) {
-      console.error('Error fetching your questions:', error);
-    } finally {
-      setMyQuestionsLoading(false);
+      console.error('Error fetching user profile:', error);
     }
   };
 
@@ -180,17 +198,14 @@ export default function DoctorsHelpPage() {
         setQuestionTitle('');
         setQuestionText('');
         setIsAnonymous(false);
-        alert('Question posted successfully!');
+        toast.success('Question posted successfully.');
         fetchQuestions();
-        if (userRole) {
-          fetchMyQuestions();
-        }
       } else {
-        alert('Failed to post question. Please try again.');
+        toast.error('Failed to post question. Please try again.');
       }
     } catch (error) {
       console.error('Error posting question:', error);
-      alert('An error occurred. Please try again.');
+      toast.error('An error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -214,53 +229,114 @@ export default function DoctorsHelpPage() {
 
       if (response.ok) {
         setAnswerText('');
-        setAnsweringQuestionId(null);
-        alert('Answer posted successfully!');
+        toast.success('Answer posted successfully.');
         fetchQuestions();
-        if (showMyQuestions) {
-          fetchMyQuestions();
-        }
       } else {
-        alert('Failed to post answer. Please try again.');
+        const data = await response.json().catch(() => null);
+        toast.error(data?.error ?? 'Failed to post answer. Please try again.');
       }
     } catch (error) {
       console.error('Error posting answer:', error);
-      alert('An error occurred. Please try again.');
+      toast.error('An error occurred. Please try again.');
     } finally {
       setIsSubmittingAnswer(false);
     }
   };
 
-  const filteredAndSortedQuestions = questions
-    .filter((question) => {
-      const parsedQuestion = parseQuestionContent(question.questionText);
-      const normalizedSearch = searchTerm.toLowerCase();
+  const confirmCloseQuestion = async () => {
+    if (pendingCloseId === null) return;
+    const questionId = pendingCloseId;
+    const questionToClose = questions.find((q) => q.id === questionId);
 
-      const matchesSearch =
-        searchTerm === '' ||
-        parsedQuestion.title.toLowerCase().includes(normalizedSearch) ||
-        parsedQuestion.details.toLowerCase().includes(normalizedSearch) ||
-        (!question.isAnonymous && question.userEmail?.toLowerCase().includes(normalizedSearch));
+    setIsClosing(true);
+    try {
+      const response = await fetch(`/api/questions/${questionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'closed' }),
+      });
 
-      return matchesSearch;
-    })
-    .filter((question) => {
-      if (filter === 'recent') {
-        const weekAgo = new Date();
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        return new Date(question.createdAt) > weekAgo;
+      if (response.ok) {
+        await fetchQuestions();
+        toast.success('Question closed.');
+
+        const uniqueDoctors = new Map<string, RateableDoctor>();
+        (questionToClose?.answers ?? []).forEach((answer) => {
+          if (!uniqueDoctors.has(answer.doctorUserId)) {
+            uniqueDoctors.set(answer.doctorUserId, {
+              userId: answer.doctorUserId,
+              displayName: answer.doctorDisplayName,
+              specialty: answer.doctorSpecialty ?? null,
+            });
+          }
+        });
+
+        if (uniqueDoctors.size > 0) {
+          setOpenQuestionId(null);
+          setPostCloseDoctors(Array.from(uniqueDoctors.values()));
+          setPostClosePromptOpen(true);
+        }
+      } else {
+        const data = await response.json().catch(() => null);
+        toast.error(data?.error ?? 'Failed to close question. Please try again.');
       }
-      return true;
-    })
-    .sort((a, b) => {
-      const dateA = new Date(a.createdAt).getTime();
-      const dateB = new Date(b.createdAt).getTime();
+    } catch (error) {
+      console.error('Error closing question:', error);
+      toast.error('An error occurred. Please try again.');
+    } finally {
+      setIsClosing(false);
+      setPendingCloseId(null);
+    }
+  };
 
-      if (filter === 'oldest') {
-        return dateA - dateB;
-      }
-      return dateB - dateA;
-    });
+  const filteredAndSortedQuestions = useMemo(() => {
+    return questions
+      .filter((question) => {
+        const parsedQuestion = parseQuestionContent(question.questionText);
+        const normalizedSearch = searchTerm.toLowerCase();
+
+        return (
+          searchTerm === '' ||
+          parsedQuestion.title.toLowerCase().includes(normalizedSearch) ||
+          parsedQuestion.details.toLowerCase().includes(normalizedSearch) ||
+          (!question.isAnonymous && question.userEmail?.toLowerCase().includes(normalizedSearch))
+        );
+      })
+      .filter((question) => {
+        if (filter === 'recent') {
+          const weekAgo = new Date();
+          weekAgo.setDate(weekAgo.getDate() - 7);
+          return new Date(question.createdAt) > weekAgo;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+
+        if (filter === 'oldest') {
+          return dateA - dateB;
+        }
+        return dateB - dateA;
+      });
+  }, [questions, searchTerm, filter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredAndSortedQuestions.length / QUESTIONS_PER_PAGE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedQuestions = useMemo(() => {
+    const startIndex = (safeCurrentPage - 1) * QUESTIONS_PER_PAGE;
+    return filteredAndSortedQuestions.slice(startIndex, startIndex + QUESTIONS_PER_PAGE);
+  }, [filteredAndSortedQuestions, safeCurrentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filter, questions.length]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -276,6 +352,32 @@ export default function DoctorsHelpPage() {
     return date.toLocaleDateString();
   };
 
+  const formatFullDate = (dateString: string) =>
+    new Date(dateString).toLocaleString([], {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+
+  const openQuestion = openQuestionId !== null
+    ? questions.find((question) => question.id === openQuestionId) ?? null
+    : null;
+  const openQuestionParsed = openQuestion
+    ? parseQuestionContent(openQuestion.questionText)
+    : null;
+  const isOwnerOfOpenQuestion =
+    !!openQuestion && !!userId && openQuestion.userId === userId;
+  const isDoctor = userRole === 'doctor';
+
+  const feedHeading = isDoctor || userRole === 'admin'
+    ? 'Community questions'
+    : 'Your questions';
+  const emptyFeedMessage = isDoctor || userRole === 'admin'
+    ? 'No questions yet.'
+    : 'You have not asked any doctor questions yet. Share one on the right to get started.';
+
   return (
     <>
       <div className="flex gap-8">
@@ -290,7 +392,9 @@ export default function DoctorsHelpPage() {
           </span>
         </h1>
         <p className="text-muted-foreground text-sm leading-relaxed mb-6">
-          Get answers from verified medical professionals and browse community questions.
+          {isDoctor || userRole === 'admin'
+            ? 'Review incoming questions from the community and answer the ones that match your expertise.'
+            : 'Get answers from verified medical professionals. Only you can see your own questions below.'}
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -298,7 +402,7 @@ export default function DoctorsHelpPage() {
             <div className="relative">
               <input
                 type="text"
-                placeholder="Search questions by keyword or user..."
+                placeholder="Search your questions by keyword..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-10 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -348,21 +452,21 @@ export default function DoctorsHelpPage() {
               </div>
             )}
           </div>
-          {userRole && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                setShowMyQuestions(true);
-                fetchMyQuestions();
-              }}
-              className="w-full sm:w-auto"
-            >
-              My Questions
-            </Button>
-          )}
         </div>
 
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="font-heading text-lg font-semibold text-foreground">
+            {feedHeading}
+          </h2>
+          {!loading && filteredAndSortedQuestions.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Showing {(safeCurrentPage - 1) * QUESTIONS_PER_PAGE + 1}
+              –
+              {Math.min(safeCurrentPage * QUESTIONS_PER_PAGE, filteredAndSortedQuestions.length)}
+              {' '}of {filteredAndSortedQuestions.length}
+            </p>
+          )}
+        </div>
         <div className="space-y-4">
           {loading ? (
             <div className="text-center py-8 text-muted-foreground">
@@ -374,120 +478,129 @@ export default function DoctorsHelpPage() {
                 ? `No questions found matching "${searchTerm}".`
                 : filter === 'recent'
                   ? 'No questions from the last 7 days.'
-                  : 'No questions yet. Be the first to ask!'}
+                  : emptyFeedMessage}
             </div>
           ) : (
-            filteredAndSortedQuestions.map((question) => {
+            paginatedQuestions.map((question) => {
               const parsedQuestion = parseQuestionContent(question.questionText);
               const shouldTruncate = parsedQuestion.details.length > QUESTION_PREVIEW_LIMIT;
               const previewText = shouldTruncate
                 ? truncateText(parsedQuestion.details, QUESTION_PREVIEW_LIMIT)
                 : parsedQuestion.details;
+              const answersCount = question.answers?.length ?? 0;
 
               return (
-                <div key={question.id} className="bg-card rounded-xl border border-border p-6 hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
+                <button
+                  key={question.id}
+                  type="button"
+                  onClick={() => {
+                    setOpenQuestionId(question.id);
+                    setAnswerText('');
+                  }}
+                  className="w-full text-left bg-card rounded-xl border border-border p-6 hover:border-primary hover:shadow-md transition-all"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
                       {parsedQuestion.title && (
-                        <h2 className="text-base font-semibold text-foreground leading-snug mb-2">
+                        <h3 className="text-base font-semibold text-foreground leading-snug mb-2">
                           {parsedQuestion.title}
-                        </h2>
+                        </h3>
                       )}
-                      <p className="text-sm text-foreground/85 leading-relaxed mb-2 whitespace-pre-line">
-                        {previewText}
+                      <p className="text-sm text-foreground/85 leading-relaxed mb-3 whitespace-pre-line">
+                        {previewText || parsedQuestion.title}
                       </p>
-                      {shouldTruncate && (
-                        <button
-                          type="button"
-                          onClick={() => setExpandedQuestionId(question.id)}
-                          className="mb-3 text-xs font-medium text-primary hover:underline"
-                        >
-                          See more
-                        </button>
-                      )}
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
                         <span>
                           {question.isAnonymous ? 'Anonymous' : question.userEmail}
                         </span>
                         <span>{formatDate(question.createdAt)}</span>
+                        <span className="inline-flex items-center gap-1">
+                          <MessageSquare
+                            className={`h-3.5 w-3.5 ${answersCount > 0 ? 'text-primary' : 'text-muted-foreground'}`}
+                          />
+                          {answersCount} answer{answersCount === 1 ? '' : 's'}
+                        </span>
                       </div>
                     </div>
-                    <div className="ml-4 flex flex-col items-end gap-2">
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300">
-                        Pending Answer
+                    <div className="ml-4 flex flex-col items-end gap-2 shrink-0">
+                      <span
+                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${STATUS_BADGE_CLASSES[question.status]}`}
+                      >
+                        {STATUS_LABEL[question.status]}
                       </span>
-                      {userRole === 'doctor' && (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setAnsweringQuestionId(answeringQuestionId === question.id ? null : question.id);
-                              setAnswerText('');
-                            }}
-                            className="text-xs"
-                          >
-                            {answeringQuestionId === question.id ? 'Cancel' : 'Answer'}
-                          </Button>
-                          {!question.isAnonymous && (question.userAgeGroup || question.userGender) && (
-                            <div className="text-xs text-muted-foreground text-right">
-                              {question.userAgeGroup && <span>Age: {question.userAgeGroup}</span>}
-                              {question.userAgeGroup && question.userGender && <span className="mx-1">&bull;</span>}
-                              {question.userGender && <span>Gender: {question.userGender}</span>}
-                            </div>
-                          )}
-                        </>
+                      {isDoctor && !question.isAnonymous && (question.userAgeGroup || question.userGender) && (
+                        <div className="text-xs text-muted-foreground text-right">
+                          {question.userAgeGroup && <span>Age: {question.userAgeGroup}</span>}
+                          {question.userAgeGroup && question.userGender && <span className="mx-1">&bull;</span>}
+                          {question.userGender && <span>Gender: {question.userGender}</span>}
+                        </div>
                       )}
                     </div>
                   </div>
-
-                  {answeringQuestionId === question.id && userRole === 'doctor' && (
-                    <div className="mt-4 pt-4 border-t border-border">
-                      <form onSubmit={(e) => handleAnswerSubmit(e, question.id)} className="space-y-3">
-                        <div>
-                          <label className="block text-sm font-medium text-foreground mb-2">
-                            Your Answer
-                          </label>
-                          <textarea
-                            value={answerText}
-                            onChange={(e) => setAnswerText(e.target.value)}
-                            placeholder="Provide a helpful answer to this question..."
-                            className="w-full min-h-[100px] px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
-                            required
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            type="submit"
-                            size="sm"
-                            disabled={isSubmittingAnswer || !answerText.trim()}
-                          >
-                            {isSubmittingAnswer ? 'Posting...' : 'Post Answer'}
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setAnsweringQuestionId(null);
-                              setAnswerText('');
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      </form>
-                    </div>
-                  )}
-                </div>
+                </button>
               );
             })
           )}
         </div>
+
+        {!loading && filteredAndSortedQuestions.length > QUESTIONS_PER_PAGE && (
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safeCurrentPage <= 1}
+              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+            >
+              Previous
+            </Button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => {
+                const isActive = pageNumber === safeCurrentPage;
+                const nearby =
+                  pageNumber === 1 ||
+                  pageNumber === totalPages ||
+                  Math.abs(pageNumber - safeCurrentPage) <= 1;
+
+                if (!nearby) {
+                  if (
+                    pageNumber === safeCurrentPage - 2 ||
+                    pageNumber === safeCurrentPage + 2
+                  ) {
+                    return (
+                      <span key={pageNumber} className="px-1 text-muted-foreground">
+                        ...
+                      </span>
+                    );
+                  }
+                  return null;
+                }
+
+                return (
+                  <Button
+                    key={pageNumber}
+                    variant={isActive ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setCurrentPage(pageNumber)}
+                  >
+                    {pageNumber}
+                  </Button>
+                );
+              })}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safeCurrentPage >= totalPages}
+              onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+            >
+              Next
+            </Button>
+          </div>
+        )}
         </div>
 
         <div className="w-80 shrink-0">
-          <div className="sticky top-8 space-y-6">
+          <div className="sticky top-8 max-h-[calc(100vh-4rem)] overflow-y-auto scrollbar-hidden space-y-6">
             <div className="bg-card rounded-2xl border border-border p-6">
               <h2 className="font-heading text-xl font-semibold text-foreground mb-4">
                 Share your question
@@ -552,7 +665,7 @@ export default function DoctorsHelpPage() {
 
               <div className="mt-4 pt-4 border-t border-border">
                 <p className="text-xs text-muted-foreground">
-                  Your question will be reviewed by our medical professionals before being published.
+                  Your question stays private to you and is only visible to verified doctors who can answer it.
                 </p>
               </div>
             </div>
@@ -598,102 +711,231 @@ export default function DoctorsHelpPage() {
         </div>
       </div>
 
-      <Sheet open={expandedQuestionId !== null} onOpenChange={(open) => !open && setExpandedQuestionId(null)}>
+      <Sheet
+        open={openQuestionId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setOpenQuestionId(null);
+            setAnswerText('');
+          }
+        }}
+      >
         <SheetContent side="right" className="w-full sm:max-w-2xl">
-          {expandedQuestionId !== null && (() => {
-            const selectedQuestion = questions.find((question) => question.id === expandedQuestionId);
-            if (!selectedQuestion) {
-              return null;
-            }
+          {openQuestion && openQuestionParsed && (
+            <>
+              <SheetHeader className="border-b border-border">
+                <div className="flex items-center justify-between gap-3">
+                  <SheetTitle className="text-left">
+                    {openQuestionParsed.title || 'Question details'}
+                  </SheetTitle>
+                  <span
+                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${STATUS_BADGE_CLASSES[openQuestion.status]}`}
+                  >
+                    {STATUS_LABEL[openQuestion.status]}
+                  </span>
+                </div>
+                <SheetDescription>
+                  {openQuestion.isAnonymous ? 'Anonymous' : openQuestion.userEmail} • {formatFullDate(openQuestion.createdAt)}
+                </SheetDescription>
+              </SheetHeader>
 
-            const parsedQuestion = parseQuestionContent(selectedQuestion.questionText);
+              <div className="overflow-y-auto px-4 pb-6 pt-4 space-y-6">
+                <div className="rounded-2xl border border-border bg-card p-5">
+                  <p className="whitespace-pre-line text-sm leading-7 text-foreground/90">
+                    {openQuestionParsed.details || openQuestionParsed.title}
+                  </p>
+                </div>
 
-            return (
-              <>
-                <SheetHeader className="border-b border-border">
-                  <SheetTitle>{parsedQuestion.title || 'Question details'}</SheetTitle>
-                  <SheetDescription>
-                    {selectedQuestion.isAnonymous ? 'Anonymous' : selectedQuestion.userEmail} • {formatDate(selectedQuestion.createdAt)}
-                  </SheetDescription>
-                </SheetHeader>
-                <div className="overflow-y-auto px-4 pb-6">
-                  <div className="rounded-2xl border border-border bg-card p-5">
-                    <p className="whitespace-pre-line text-sm leading-7 text-foreground/90">
-                      {parsedQuestion.details}
-                    </p>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-heading text-lg font-semibold text-foreground">
+                      Doctor answers
+                    </h3>
+                    <span className="text-xs text-muted-foreground">
+                      {openQuestion.answers.length} answer{openQuestion.answers.length === 1 ? '' : 's'}
+                    </span>
                   </div>
-                </div>
-              </>
-            );
-          })()}
-        </SheetContent>
-      </Sheet>
 
-      <Sheet open={showMyQuestions} onOpenChange={setShowMyQuestions}>
-        <SheetContent side="center">
-          <SheetHeader className="border-b border-border">
-            <SheetTitle>My Questions</SheetTitle>
-            <SheetDescription>
-              Preview your posted questions and open any card to see the full question with all answers.
-            </SheetDescription>
-          </SheetHeader>
-
-          <div className="overflow-y-auto px-4 pb-6">
-            <div className="space-y-4">
-              {myQuestionsLoading ? (
-                <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">
-                  Loading your questions...
-                </div>
-              ) : myQuestions.length === 0 ? (
-                <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">
-                  You have not asked any doctor questions yet.
-                </div>
-              ) : (
-                myQuestions.map((question) => {
-                  const parsedQuestion = parseQuestionContent(question.questionText);
-                  const previewText = truncateText(parsedQuestion.details || parsedQuestion.title, 120);
-                  const hasAnswers = question.answers.length > 0;
-
-                  return (
-                    <button
-                      key={question.id}
-                      type="button"
-                      onClick={() => {
-                        setShowMyQuestions(false);
-                        router.push(`/doctors-help/my-questions/${question.id}`);
-                      }}
-                      className="w-full rounded-2xl border border-border bg-card p-5 text-left transition hover:border-primary hover:shadow-md"
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-4">
-                        <div>
-                          <p className="text-base font-semibold text-foreground">
-                            {parsedQuestion.title || 'Untitled question'}
-                          </p>
-                          <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                            <span>{question.isAnonymous ? 'Posted anonymously' : question.userEmail}</span>
-                            <span>{formatDate(question.createdAt)}</span>
+                  {openQuestion.answers.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">
+                      No doctor answers yet. You will see them here as soon as they arrive.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {openQuestion.answers.map((answer) => (
+                        <div
+                          key={answer.id}
+                          className="rounded-2xl border border-primary bg-primary p-5 text-primary-foreground"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold text-primary-foreground">
+                                {answer.doctorDisplayName}
+                              </p>
+                              <p className="text-xs text-primary-foreground/80">
+                                {answer.doctorSpecialty ?? 'Verified doctor'}
+                              </p>
+                            </div>
+                            <p className="text-xs text-primary-foreground/80">
+                              {formatFullDate(answer.createdAt)}
+                            </p>
                           </div>
-                          <p className="mt-3 text-sm leading-6 text-foreground/80">
-                            {previewText}
+                          <p className="mt-3 whitespace-pre-line text-sm leading-7 text-primary-foreground">
+                            {answer.answerText}
                           </p>
                         </div>
-                        <div className="flex shrink-0 items-center gap-2 rounded-full border border-border px-3 py-2 text-xs font-medium text-muted-foreground">
-                          <MessageSquare className={hasAnswers ? 'h-4 w-4 text-primary' : 'h-4 w-4 text-muted-foreground'} />
-                          <span>
-                            {hasAnswers
-                              ? `${question.answers.length} answer${question.answers.length === 1 ? '' : 's'} received`
-                              : 'No answers yet'}
-                          </span>
-                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {isOwnerOfOpenQuestion && openQuestion.status !== 'closed' && (
+                  <div className="rounded-2xl border border-border bg-card p-5">
+                    <p className="text-sm font-medium text-foreground mb-1">
+                      Done with this question?
+                    </p>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Closing it prevents any further doctor answers. You will still be able to view existing answers.
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={isClosing}
+                      onClick={() => setPendingCloseId(openQuestion.id)}
+                    >
+                      {isClosing ? 'Closing...' : 'Close question'}
+                    </Button>
+                  </div>
+                )}
+
+                {isDoctor && openQuestion.status !== 'closed' && (
+                  <div className="rounded-2xl border border-border bg-card p-5">
+                    <form onSubmit={(e) => handleAnswerSubmit(e, openQuestion.id)} className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-2">
+                          Your answer
+                        </label>
+                        <textarea
+                          value={answerText}
+                          onChange={(e) => setAnswerText(e.target.value)}
+                          placeholder="Provide a helpful answer to this question..."
+                          className="w-full min-h-[120px] px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                          required
+                        />
                       </div>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          </div>
+                      <div className="flex gap-2">
+                        <Button
+                          type="submit"
+                          size="sm"
+                          disabled={isSubmittingAnswer || !answerText.trim()}
+                        >
+                          {isSubmittingAnswer ? 'Posting...' : 'Post answer'}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setAnswerText('')}
+                          disabled={!answerText}
+                        >
+                          Clear
+                        </Button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
+                {isDoctor && openQuestion.status === 'closed' && (
+                  <div className="rounded-2xl border border-dashed border-border bg-card p-5 text-sm text-muted-foreground">
+                    This question is closed and no longer accepts new answers.
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </SheetContent>
       </Sheet>
+
+      <DoctorRatingDialog
+        open={ratingPromptOpen}
+        doctors={ratingDoctors}
+        title="Rate your doctor(s)"
+        description="Your question is closed. Help others by rating the doctor(s) who answered."
+        submitLabel="Submit rating"
+        skipLabel="Skip"
+        onClose={() => {
+          setRatingPromptOpen(false);
+          setRatingDoctors([]);
+        }}
+      />
+
+      <AlertDialog
+        open={pendingCloseId !== null}
+        onOpenChange={(open) => {
+          if (!open && !isClosing) setPendingCloseId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Close this question?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Doctors will no longer be able to add answers. Existing answers stay visible to you.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isClosing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isClosing}
+              onClick={(event) => {
+                event.preventDefault();
+                confirmCloseQuestion();
+              }}
+            >
+              {isClosing ? 'Closing...' : 'Close question'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={postClosePromptOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPostClosePromptOpen(false);
+            setPostCloseDoctors([]);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rate the doctor(s) who answered?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your feedback helps other patients find the right care.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setPostClosePromptOpen(false);
+                setPostCloseDoctors([]);
+              }}
+            >
+              Not now
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const doctorsForRating = postCloseDoctors;
+                setPostClosePromptOpen(false);
+                setPostCloseDoctors([]);
+                setRatingDoctors(doctorsForRating);
+                setRatingPromptOpen(true);
+              }}
+            >
+              Rate now
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
