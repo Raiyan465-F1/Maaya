@@ -31,11 +31,15 @@ export async function GET(request: NextRequest) {
 
     const latestCycle = logs[0];
     const today = new Date();
-    const start = new Date(latestCycle.startDate);
+    today.setHours(0, 0, 0, 0);
     
-    // Calculate days since the start of the latest cycle
-    const diffTime = Math.abs(today.getTime() - start.getTime());
-    const dayOfCycle = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
+    const start = new Date(latestCycle.startDate);
+    start.setHours(0, 0, 0, 0);
+
+    // Calculate strict calendar days since the start of the latest cycle
+    const diffTime = today.getTime() - start.getTime();
+    // Add 1 because the start day is Day 1
+    const dayOfCycle = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
     let currentPhase = "Menstrual";
     if (dayOfCycle > 5 && dayOfCycle <= 13) currentPhase = "Follicular";
@@ -62,7 +66,7 @@ export async function GET(request: NextRequest) {
         startDate: latestCycle.startDate,
         endDate: latestCycle.endDate,
         predictedEndDate: latestCycle.predictedEndDate,
-        expectedPeriodEnd: new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
+        expectedPeriodEnd: new Date(start.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString()
       }
     }, { status: 200 });
 
