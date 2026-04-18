@@ -5,6 +5,7 @@ import { db } from "@/src/db";
 import { doctorAnswers, doctorProfiles, doctorQuestions, users } from "@/src/schema";
 import { authOptions } from "@/lib/auth";
 import { withCorsHeaders } from "@/lib/cors";
+import { suspendedMutationBlockedResponse } from "@/lib/suspended-mutation";
 
 function jsonResponse(
   data: object,
@@ -136,6 +137,9 @@ export async function POST(request: NextRequest) {
     if (!session?.user?.id) {
       return jsonResponse({ error: "Unauthorized" }, 401, origin);
     }
+
+    const suspendedBlock = suspendedMutationBlockedResponse(session, origin);
+    if (suspendedBlock) return suspendedBlock;
 
     const body = await request.json();
     const {

@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
+import { isSuspendedAndActive, formatRestrictionRemaining } from '@/lib/account-restriction-helpers';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
@@ -124,6 +126,12 @@ export default function DoctorsHelpPage() {
     avgRating: number;
   }>>([]);
 
+  const { data: session } = useSession();
+  const interactionLocked = isSuspendedAndActive(
+    session?.user?.accountStatus,
+    session?.user?.restrictionEndsAt
+  );
+
   useEffect(() => {
     fetchQuestions();
     fetchTopDoctors();
@@ -182,6 +190,13 @@ export default function DoctorsHelpPage() {
     e.preventDefault();
     if (!questionTitle.trim() || !questionText.trim()) return;
 
+    if (interactionLocked) {
+      toast.error(
+        'Your account is suspended. You can read questions and answers but cannot post new questions until the suspension lifts.'
+      );
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const response = await fetch('/api/questions', {
@@ -216,6 +231,13 @@ export default function DoctorsHelpPage() {
   const handleAnswerSubmit = async (e: React.FormEvent, questionId: number) => {
     e.preventDefault();
     if (!answerText.trim()) return;
+
+    if (interactionLocked) {
+      toast.error(
+        'Your account is suspended. You cannot post answers until the suspension lifts.'
+      );
+      return;
+    }
 
     setIsSubmittingAnswer(true);
     try {
@@ -398,6 +420,16 @@ export default function DoctorsHelpPage() {
             ? 'Review incoming questions from the community and answer the ones that match your expertise.'
             : 'Get answers from verified medical professionals. Only you can see your own questions below.'}
         </p>
+
+        {interactionLocked ? (
+          <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+            <p className="font-medium">Account suspended — read-only</p>
+            <p className="mt-1 text-amber-900/90">
+              You can view questions and answers, but you cannot post questions, answer as a doctor, or rate doctors{' '}
+              {formatRestrictionRemaining(session?.user?.restrictionEndsAt ?? null)}
+            </p>
+          </div>
+        ) : null}
 
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="flex-1">
@@ -624,7 +656,8 @@ export default function DoctorsHelpPage() {
                     onChange={(e) => setQuestionTitle(e.target.value.slice(0, QUESTION_TITLE_LIMIT))}
                     placeholder="Write a short summary of your question"
                     maxLength={QUESTION_TITLE_LIMIT}
-                    className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    disabled={interactionLocked}
+                    className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:cursor-not-allowed disabled:opacity-60"
                     required
                   />
                 </div>
@@ -638,7 +671,8 @@ export default function DoctorsHelpPage() {
                     value={questionText}
                     onChange={(e) => setQuestionText(e.target.value)}
                     placeholder="Add the details doctors should know"
-                    className="w-full min-h-[120px] px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                    disabled={interactionLocked}
+                    className="w-full min-h-[120px] px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none disabled:cursor-not-allowed disabled:opacity-60"
                     required
                   />
                 </div>
@@ -649,7 +683,7 @@ export default function DoctorsHelpPage() {
                       type="checkbox"
                       id="anonymous"
                       checked={isGloballyAnonymous || isAnonymous}
-                      disabled={isGloballyAnonymous}
+                      disabled={isGloballyAnonymous || interactionLocked}
                       onChange={(e) => setIsAnonymous(e.target.checked)}
                       onClick={(e) => {
                         if (isGloballyAnonymous) {
@@ -678,9 +712,9 @@ export default function DoctorsHelpPage() {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={isSubmitting || !questionTitle.trim() || !questionText.trim()}
+                  disabled={interactionLocked || isSubmitting || !questionTitle.trim() || !questionText.trim()}
                 >
-                  {isSubmitting ? 'Posting...' : 'Post Question'}
+                  {interactionLocked ? 'Suspended' : isSubmitting ? 'Posting...' : 'Post Question'}
                 </Button>
               </form>
 
@@ -838,6 +872,11 @@ export default function DoctorsHelpPage() {
 
                 {isDoctor && openQuestion.status !== 'closed' && (
                   <div className="rounded-2xl border border-border bg-card p-5">
+                    {interactionLocked ? (
+                      <p className="text-sm text-muted-foreground">
+                        Your account is suspended. You cannot post answers until the suspension lifts.
+                      </p>
+                    ) : null}
                     <form onSubmit={(e) => handleAnswerSubmit(e, openQuestion.id)} className="space-y-3">
                       <div>
                         <label className="block text-sm font-medium text-foreground mb-2">
@@ -847,7 +886,8 @@ export default function DoctorsHelpPage() {
                           value={answerText}
                           onChange={(e) => setAnswerText(e.target.value)}
                           placeholder="Provide a helpful answer to this question..."
-                          className="w-full min-h-[120px] px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                          disabled={interactionLocked}
+                          className="w-full min-h-[120px] px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none disabled:cursor-not-allowed disabled:opacity-60"
                           required
                         />
                       </div>
@@ -855,7 +895,7 @@ export default function DoctorsHelpPage() {
                         <Button
                           type="submit"
                           size="sm"
-                          disabled={isSubmittingAnswer || !answerText.trim()}
+                          disabled={interactionLocked || isSubmittingAnswer || !answerText.trim()}
                         >
                           {isSubmittingAnswer ? 'Posting...' : 'Post answer'}
                         </Button>

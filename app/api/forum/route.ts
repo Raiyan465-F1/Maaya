@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { db, sql } from "@/src/db";
 import { users } from "@/src/schema/users";
 import { authOptions } from "@/lib/auth";
+import { suspendedMutationBlockedResponse } from "@/lib/suspended-mutation";
 import { buildAnonymousOwnerHash, getForumSnapshot, replacePostMedia, sanitizeMedia } from "@/lib/forum-server";
 import { FORUM_TAG_LIMIT } from "@/lib/forum-types";
 
@@ -38,6 +39,9 @@ export async function POST(request: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "You must be logged in to create a discussion." }, { status: 401 });
   }
+
+  const blocked = suspendedMutationBlockedResponse(session, request.headers.get("origin"));
+  if (blocked) return blocked;
 
   try {
     const body = await request.json();

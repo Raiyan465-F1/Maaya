@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { toast } from 'sonner';
+import { isSuspendedAndActive } from '@/lib/account-restriction-helpers';
 import {
   CalendarDays,
   MessageSquare,
@@ -108,6 +111,11 @@ const formatDate = (value: string | null | undefined) => {
 
 export default function VerifiedDoctorDetailsPage() {
   const params = useParams<{ id: string }>();
+  const { data: session } = useSession();
+  const ratingLocked = isSuspendedAndActive(
+    session?.user?.accountStatus,
+    session?.user?.restrictionEndsAt
+  );
   const [doctor, setDoctor] = useState<DoctorDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -205,7 +213,15 @@ export default function VerifiedDoctorDetailsPage() {
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => setRatingOpen(true)}
+            disabled={ratingLocked}
+            title={ratingLocked ? 'Unavailable while your account is suspended' : undefined}
+            onClick={() => {
+              if (ratingLocked) {
+                toast.error('Suspended accounts cannot rate doctors.');
+                return;
+              }
+              setRatingOpen(true);
+            }}
           >
             <Star className="mr-1 h-4 w-4 fill-yellow-400 text-yellow-500" />
             {myRating ? `Update rating (${myRating}/5)` : 'Rate this doctor'}

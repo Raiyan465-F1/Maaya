@@ -5,6 +5,7 @@ import { db } from "@/src/db";
 import { forumPosts } from "@/src/schema/forum";
 import { users } from "@/src/schema/users";
 import { authOptions } from "@/lib/auth";
+import { suspendedMutationBlockedResponse } from "@/lib/suspended-mutation";
 
 async function isViewerGloballyAnonymous(userId: string) {
   const [row] = await db
@@ -49,6 +50,9 @@ export async function PATCH(
   if (!session?.user?.id) {
     return NextResponse.json({ error: "You must be logged in to edit a discussion." }, { status: 401 });
   }
+
+  const blocked = suspendedMutationBlockedResponse(session, request.headers.get("origin"));
+  if (blocked) return blocked;
 
   if (!postId) {
     return NextResponse.json({ error: "Invalid post id." }, { status: 400 });
@@ -117,6 +121,9 @@ export async function DELETE(
   if (!session?.user?.id) {
     return NextResponse.json({ error: "You must be logged in to delete a discussion." }, { status: 401 });
   }
+
+  const blockedDel = suspendedMutationBlockedResponse(session, _request.headers.get("origin"));
+  if (blockedDel) return blockedDel;
 
   if (!postId) {
     return NextResponse.json({ error: "Invalid post id." }, { status: 400 });

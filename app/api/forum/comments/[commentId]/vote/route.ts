@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { suspendedMutationBlockedResponse } from "@/lib/suspended-mutation";
 import {
   canAccessModeratedContent,
   ensureCommentExists,
@@ -26,6 +27,9 @@ export async function POST(
   if (!session?.user?.id) {
     return NextResponse.json({ error: "You must be logged in to vote." }, { status: 401 });
   }
+
+  const blocked = suspendedMutationBlockedResponse(session, request.headers.get("origin"));
+  if (blocked) return blocked;
 
   if (!commentId) {
     return NextResponse.json({ error: "Invalid comment id." }, { status: 400 });

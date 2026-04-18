@@ -14,6 +14,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { formatRestrictionRemaining } from "@/lib/account-restriction-helpers";
 
 interface DoctorProfileFragment {
   specialty: string | null;
@@ -29,6 +30,7 @@ interface UserProfile {
   email: string;
   role: "user" | "doctor" | "admin";
   accountStatus: "pending" | "active" | "banned" | "suspended" | null;
+  restrictionEndsAt: string | null;
   isAnonymous: boolean | null;
   likedTags: string[] | null;
   ageGroup: string | null;
@@ -492,6 +494,17 @@ export default function ProfilePage() {
                 />
                 <InfoRow label="Member since" value={memberSince} mono />
               </div>
+              {profile.accountStatus === "suspended" ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                  <p className="font-medium">Suspension in effect</p>
+                  <p className="mt-1 text-amber-900/90">
+                    You can browse the app, but you cannot post in the forum, vote, report, ask doctors, or rate doctors.{" "}
+                    {profile.restrictionEndsAt
+                      ? `Time remaining: ${formatRestrictionRemaining(profile.restrictionEndsAt)}`
+                      : "This suspension has no automatic end date; an administrator must restore your account."}
+                  </p>
+                </div>
+              ) : null}
             </div>
           </section>
 

@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { Star } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { DoctorRatingDialog, type RateableDoctor } from '@/components/doctor-rating-dialog';
+import { isSuspendedAndActive } from '@/lib/account-restriction-helpers';
 
 interface Doctor {
   userId: string;
@@ -40,6 +43,11 @@ const buildDisplayName = (email?: string | null) => {
 };
 
 export default function VerifiedDoctorsPage() {
+  const { data: session } = useSession();
+  const ratingLocked = isSuspendedAndActive(
+    session?.user?.accountStatus,
+    session?.user?.restrictionEndsAt
+  );
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [doctorFilter, setDoctorFilter] = useState<DoctorFilterType>('all');
@@ -205,13 +213,18 @@ export default function VerifiedDoctorsPage() {
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={() =>
+                      disabled={ratingLocked}
+                      onClick={() => {
+                        if (ratingLocked) {
+                          toast.error('Suspended accounts cannot rate doctors.');
+                          return;
+                        }
                         setRatingDoctor({
                           userId: doctor.userId,
                           displayName: doctor.displayName,
                           specialty: doctor.specialty,
-                        })
-                      }
+                        });
+                      }}
                     >
                       Rate
                     </Button>
