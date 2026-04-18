@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect } from "react";
 import { 
   Heart, Sparkles, Calendar, Clock, Activity, 
   Droplets, Thermometer, Brain, Moon, 
@@ -185,19 +184,20 @@ const QUESTIONS = [
 
 export function OnboardingJourney({ onComplete }: { onComplete: () => void }) {
   const [step, setStep] = useState(0);
+  const [animKey, setAnimKey] = useState(0);
   const [formData, setFormData] = useState<QuizData>({
     averageCycleLength: 28,
     height: "",
     weight: "",
-    regularity: "mostly",
-    flowIntensity: "medium",
+    regularity: "",
+    flowIntensity: "",
     periodSymptoms: [],
     concerns: [],
-    stressLevel: "medium",
-    sleepHours: "6_8",
-    activityLevel: "sometimes",
-    hydration: "1_2l",
-    primaryGoal: "insights",
+    stressLevel: "",
+    sleepHours: "",
+    activityLevel: "",
+    hydration: "",
+    primaryGoal: "",
     notificationsEnabled: true
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -207,13 +207,14 @@ export function OnboardingJourney({ onComplete }: { onComplete: () => void }) {
   const handleNext = async () => {
     if (step < QUESTIONS.length - 1) {
       setStep(step + 1);
+      setAnimKey(k => k + 1);
     } else {
       await handleSubmit();
     }
   };
 
   const handleBack = () => {
-    if (step > 0) setStep(step - 1);
+    if (step > 0) { setStep(step - 1); setAnimKey(k => k + 1); }
   };
 
   const updateField = (field: keyof QuizData, value: any) => {
@@ -242,7 +243,8 @@ export function OnboardingJourney({ onComplete }: { onComplete: () => void }) {
         toast.success("Onboarding complete! Welcome journey saved.");
         onComplete();
       } else {
-        toast.error("Something went wrong saving your journey.");
+        const errData = await resp.json().catch(() => ({}));
+        toast.error(`Save failed: ${errData.detail || errData.error || "Unknown error"}`);
       }
     } catch (err) {
       toast.error("Network error saving journey.");
@@ -347,7 +349,7 @@ export function OnboardingJourney({ onComplete }: { onComplete: () => void }) {
     }
 
     if (currentQuestion.type === "multi") {
-      const field = currentQuestion.id as "periodSymptoms" | "concerns";
+      const field = (currentQuestion.id === "symptoms" ? "periodSymptoms" : "concerns") as "periodSymptoms" | "concerns";
       return (
         <div className="grid grid-cols-2 gap-3 py-2">
           {currentQuestion.options?.map((opt: any) => {
@@ -378,19 +380,26 @@ export function OnboardingJourney({ onComplete }: { onComplete: () => void }) {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-md">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
+      <div
+        style={{ animation: "onboarding-appear 0.35s cubic-bezier(0.16,1,0.3,1) both" }}
         className="w-full max-w-2xl relative"
       >
+        <style>{`
+          @keyframes onboarding-appear {
+            from { opacity: 0; transform: scale(0.95) translateY(20px); }
+            to   { opacity: 1; transform: scale(1)   translateY(0); }
+          }
+          @keyframes step-in {
+            from { opacity: 0; transform: translateX(20px); }
+            to   { opacity: 1; transform: translateX(0); }
+          }
+        `}</style>
         <Card className="shadow-2xl border-primary/20 bg-gradient-to-br from-background via-background to-primary/5 overflow-hidden">
           {/* Progress Bar */}
           <div className="absolute top-0 left-0 w-full h-1.5 bg-muted flex">
-            <motion.div 
-              className="h-full bg-primary shadow-[0_0_10px_rgba(255,0,0,0.5)]"
-              initial={{ width: "0%" }}
-              animate={{ width: `${((step + 1) / QUESTIONS.length) * 100}%` }}
-              transition={{ duration: 0.5 }}
+            <div
+              className="h-full bg-primary shadow-[0_0_10px_rgba(255,0,0,0.5)] transition-all duration-500"
+              style={{ width: `${((step + 1) / QUESTIONS.length) * 100}%` }}
             />
           </div>
 
@@ -412,18 +421,13 @@ export function OnboardingJourney({ onComplete }: { onComplete: () => void }) {
           </CardHeader>
 
           <CardContent className="min-h-[400px] flex flex-col justify-center px-6 sm:px-10">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={step}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3 }}
-                className="w-full"
-              >
-                {renderContent()}
-              </motion.div>
-            </AnimatePresence>
+            <div
+              key={animKey}
+              style={{ animation: "step-in 0.3s ease both" }}
+              className="w-full"
+            >
+              {renderContent()}
+            </div>
           </CardContent>
 
           <div className="p-8 border-t bg-muted/30 flex items-center justify-between">
@@ -446,7 +450,7 @@ export function OnboardingJourney({ onComplete }: { onComplete: () => void }) {
             </Button>
           </div>
         </Card>
-      </motion.div>
+      </div>
     </div>
   );
 }
