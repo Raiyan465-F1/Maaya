@@ -3,6 +3,7 @@
 import { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
 import { Heart, Sparkles, Stethoscope } from "lucide-react";
+import { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,9 @@ const MOOD_MESSAGES: Record<string, string> = {
 };
 
 export default function CycleTrackingPage() {
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  const [isLogging, setIsLogging] = useState(false);
+  const [analytics, setAnalytics] = useState<any>(null);
   const [dailyMessage, setDailyMessage] = useState({ title: "Loading...", body: "" });
   const [flyingHearts, setFlyingHearts] = useState<{ id: number; tx: number; ty: number }[]>([]);
   
@@ -57,6 +60,36 @@ export default function CycleTrackingPage() {
     });
   };
 
+  const handleLogPeriod = async () => {
+    if (!selectedDate) return;
+    setIsLogging(true);
+    try {
+      const resp = await fetch("/api/cycle-tracking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          startDate: selectedDate
+        })
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        setFeedbackMsg({ 
+          type: "success", 
+          text: data.state === "started" ? "Cycle started! Predictions updated." : "Cycle ended! Period logged." 
+        });
+        setSelectedDate(undefined);
+        // Refresh analytics dynamically
+        const newAnalytics = await fetch("/api/cycle-tracking/analytics").then(res => res.json());
+        setAnalytics(newAnalytics);
+      } else {
+        setFeedbackMsg({ type: "error", text: "Failed to log cycle." });
+      }
+    } catch(err) {
+      setFeedbackMsg({ type: "error", text: "Error logging cycle." });
+    }
+    setIsLogging(false);
+  };
+
   useEffect(() => {
     // Mount algorithm hook to prevent SSR hydration mismatch
     import("@/lib/daily-messages").then((mod) => {
@@ -70,6 +103,12 @@ export default function CycleTrackingPage() {
         setLockedMood(fetchedMood);
       }
     });
+
+    // Fetch cycle analytics
+    fetch("/api/cycle-tracking/analytics")
+      .then(res => res.json())
+      .then(data => setAnalytics(data))
+      .catch(err => console.error(err));
   }, []);
 
   return (
@@ -98,46 +137,22 @@ export default function CycleTrackingPage() {
                 Track your cycle to predict upcoming phases
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex justify-center pt-6 pb-8">
+            <CardContent className="flex flex-col items-center justify-center pt-6 pb-8 gap-4">
               <Calendar
                 mode="single"
-                selected={date}
-                onSelect={setDate}
-                className="rounded-xl border border-primary/10 shadow-sm p-4 sm:p-6 bg-background w-full max-w-[420px]"
+                selected={selectedDate}
+                onSelect={setSelectedDate}
+                className="rounded-xl border border-primary/10 shadow-sm p-4 sm:p-6 bg-background w-full"
               />
-            </CardContent>
-          </Card>
-
-          {/* Doctor's Help Card */}
-          <Card className="w-full shadow-md border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors">
-            <CardHeader className="pb-3 text-center">
-              <div className="mx-auto bg-primary/10 p-3 rounded-full mb-2 w-fit">
-                <Stethoscope className="w-8 h-8 text-primary" />
-              </div>
-              <CardTitle className="text-xl">Facing a problem?</CardTitle>
-              <CardDescription className="text-sm">
-                Consult our verified doctors here.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex justify-center pb-6">
-              <Link href="/doctors-help" className="w-full sm:w-auto">
-                <Button className="w-full sm:min-w-[200px] rounded-xl text-md font-semibold transition-all hover:scale-105 shadow-md">
-                  Get Help
+              {selectedDate && (
+                <Button 
+                   onClick={handleLogPeriod} 
+                   disabled={isLogging} 
+                   className="w-full max-w-[200px]"
+                >
+                  {isLogging ? "Saving..." : "Log Period"}
                 </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
-        {/* Right Column: Insights & Mood */}
-        <div className="hidden lg:flex flex-col gap-6 w-full">
-          {/* Insights Card Placeholder */}
-          <Card className="w-full shadow-md border-primary/10 bg-card/50">
-            <CardHeader>
-              <CardTitle className="text-lg">Cycle Insights</CardTitle>
-              <CardDescription>Analytics based on your tracking</CardDescription>
-            </CardHeader>
-            <CardContent className="h-[200px] flex items-center justify-center rounded-xl border border-dashed border-primary/20 bg-muted/10 mx-6 mb-6">
-              <p className="text-muted-foreground text-sm font-medium">More data needed for insights</p>
+              )}
             </CardContent>
           </Card>
 
@@ -198,6 +213,109 @@ export default function CycleTrackingPage() {
             </CardContent>
           </Card>
 
+          {/* Doctor's Help Card */}
+          <Card className="w-full shadow-md border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors">
+            <CardHeader className="pb-3 text-center">
+              <div className="mx-auto bg-primary/10 p-3 rounded-full mb-2 w-fit">
+                <Stethoscope className="w-8 h-8 text-primary" />
+              </div>
+              <CardTitle className="text-xl">Facing a problem?</CardTitle>
+              <CardDescription className="text-sm">
+                Consult our verified doctors here.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-center pb-6">
+              <Link href="/doctors-help" className="w-full sm:w-auto">
+                <Button className="w-full sm:min-w-[200px] rounded-xl text-md font-semibold transition-all hover:scale-105 shadow-md">
+                  Get Help
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+
+        </div>
+        {/* Right Column: Insights & Mood */}
+        <div className="hidden lg:flex flex-col gap-6 w-full">
+          {/* Insights Card */}
+          <Card className="w-full shadow-md border-primary/10 bg-card/50">
+            <CardHeader>
+              <CardTitle className="text-lg">Cycle Insights</CardTitle>
+              <CardDescription>Analytics based on your tracking</CardDescription>
+            </CardHeader>
+            <CardContent className="px-6 pb-6">
+              {!analytics ? (
+                <div className="h-[100px] flex items-center justify-center rounded-xl border border-dashed border-primary/20 bg-muted/10">
+                  <p className="text-muted-foreground text-sm font-medium animate-pulse">Loading insights...</p>
+                </div>
+              ) : !analytics.hasData ? (
+                <div className="h-[100px] flex items-center justify-center rounded-xl border border-dashed border-primary/20 bg-muted/10">
+                  <p className="text-muted-foreground text-sm font-medium">{analytics.message}</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  <div className="bg-primary/5 p-4 rounded-xl border border-primary/10">
+                     <p className="text-xs uppercase text-primary font-bold mb-1">Current Phase</p>
+                     <p className="text-lg font-semibold">{analytics.currentPhase} (Day {analytics.dayOfCycle})</p>
+                  </div>
+                  <div>
+                     <p className="text-sm font-semibold mb-1">Expected Mood</p>
+                     <p className="text-sm text-muted-foreground leading-snug">{analytics.expectedMood}</p>
+                  </div>
+                  <div>
+                     <p className="text-sm font-semibold mb-2">Recommendations</p>
+                     {analytics.recommendations?.map((tip: any, i: number) => (
+                       <div key={i} className="mb-2 bg-muted/30 p-2 rounded-lg">
+                         <p className="text-sm font-medium text-foreground">{tip.tipTitle || "Tip"}</p>
+                         <p className="text-xs text-muted-foreground mt-1">{tip.tipDescription}</p>
+                       </div>
+                     ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Cycle Predictions Card */}
+          <Card className="w-full shadow-md border-primary/10 bg-card/50">
+            <CardHeader>
+              <CardTitle className="text-lg">Cycle Predictions</CardTitle>
+              <CardDescription>Estimated dates for your cycle</CardDescription>
+            </CardHeader>
+            <CardContent className="px-6 pb-6">
+              {!analytics ? (
+                <div className="h-[100px] flex items-center justify-center rounded-xl border border-dashed border-primary/20 bg-muted/10">
+                  <p className="text-muted-foreground text-sm font-medium animate-pulse">Loading predictions...</p>
+                </div>
+              ) : !analytics.hasData ? (
+                <div className="h-[100px] flex items-center justify-center rounded-xl border border-dashed border-primary/20 bg-muted/10">
+                  <p className="text-muted-foreground text-sm font-medium">Log a period to see predictions.</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 flex justify-between items-center">
+                    <div>
+                      <p className="text-xs uppercase text-primary font-bold mb-1">Period Ends</p>
+                      <p className="text-sm font-semibold">
+                        {analytics.latestCycle?.expectedPeriodEnd && !isNaN(new Date(analytics.latestCycle.expectedPeriodEnd).getTime()) 
+                          ? new Date(analytics.latestCycle.expectedPeriodEnd).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+                          : 'Pending'}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs uppercase text-primary font-bold mb-1">Next Period Starts</p>
+                      <p className="text-sm font-semibold">
+                        {analytics.latestCycle?.predictedEndDate && !isNaN(new Date(analytics.latestCycle.predictedEndDate).getTime())
+                          ? new Date(analytics.latestCycle.predictedEndDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+                          : 'Pending'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Daily Check-up Card */}
           <Card className="w-full shadow-sm border-secondary/30 bg-secondary/5 relative overflow-hidden group">
             <style>{`
@@ -240,6 +358,10 @@ export default function CycleTrackingPage() {
               </div>
             </CardContent>
           </Card>
+
+
+
+
 
         </div>
       </div>
