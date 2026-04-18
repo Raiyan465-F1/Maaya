@@ -18,7 +18,7 @@ const MOOD_MESSAGES: Record<string, string> = {
 };
 
 export default function CycleTrackingPage() {
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [isLogging, setIsLogging] = useState(false);
   const [analytics, setAnalytics] = useState<any>(null);
   const [dailyMessage, setDailyMessage] = useState({ title: "Loading...", body: "" });
@@ -61,20 +61,23 @@ export default function CycleTrackingPage() {
   };
 
   const handleLogPeriod = async () => {
-    if (!dateRange?.from) return;
+    if (!selectedDate) return;
     setIsLogging(true);
     try {
       const resp = await fetch("/api/cycle-tracking", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          startDate: dateRange.from,
-          endDate: dateRange.to
+          startDate: selectedDate
         })
       });
       if (resp.ok) {
-        setFeedbackMsg({ type: "success", text: "Period logged! Cycle predictions updated." });
-        setDateRange(undefined);
+        const data = await resp.json();
+        setFeedbackMsg({ 
+          type: "success", 
+          text: data.state === "started" ? "Cycle started! Predictions updated." : "Cycle ended! Period logged." 
+        });
+        setSelectedDate(undefined);
         // Refresh analytics dynamically
         const newAnalytics = await fetch("/api/cycle-tracking/analytics").then(res => res.json());
         setAnalytics(newAnalytics);
@@ -136,12 +139,12 @@ export default function CycleTrackingPage() {
             </CardHeader>
             <CardContent className="flex flex-col items-center justify-center pt-6 pb-8 gap-4">
               <Calendar
-                mode="range"
-                selected={dateRange}
-                onSelect={setDateRange}
+                mode="single"
+                selected={selectedDate}
+                onSelect={setSelectedDate}
                 className="rounded-xl border border-primary/10 shadow-sm p-4 sm:p-6 bg-background w-full"
               />
-              {dateRange?.from && (
+              {selectedDate && (
                 <Button 
                   onClick={handleLogPeriod} 
                   disabled={isLogging} 

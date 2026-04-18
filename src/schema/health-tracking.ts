@@ -7,7 +7,7 @@ export const cycleLogs = pgTable("cycle_logs", {
   startDate: date("start_date").notNull(),
   endDate: date("end_date"),
   cyclePhase: varchar("cycle_phase", { length: 50 }),
-  predictedCycleLength: integer("predicted_cycle_length"),
+  predictedCycleLength: integer("predicted_cycle_length").default(28),
   actualCycleLength: integer("actual_cycle_length"),
   predictedDifference: integer("predicted_difference"),
   predictedStartDate: date("predicted_start_date"),

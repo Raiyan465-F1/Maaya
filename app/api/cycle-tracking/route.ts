@@ -40,41 +40,54 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Start date is required." }, { status: 400 });
     }
 
-    const start = new Date(startDate);
-    const end = endDate ? new Date(endDate) : null;
+    const startOrEnd = new Date(startDate);
     const pLength = predictedCycleLength ? parseInt(predictedCycleLength) : 28;
 
-    // Calculate actual difference if we have both start and end dates
-    let actualCycleLength = null;
-    let predictedDifference = null;
-    
-    if (end) {
-      const diffTime = Math.abs(end.getTime() - start.getTime());
-      actualCycleLength = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      predictedDifference = actualCycleLength - pLength;
+    // Check for an active open cycle
+    const logs = await db
+      .select()
+      .from(cycleLogs)
+      .where(eq(cycleLogs.userId, session.user.id))
+      .orderBy(desc(cycleLogs.startDate))
+      .limit(1);
+
+    const latestCycle = logs[0];
+
+    if (latestCycle && !latestCycle.endDate) {
+      // User is currently in "menstrual state". This second click logs the END of the cycle.
+      const diffTime = Math.abs(startOrEnd.getTime() - new Date(latestCycle.startDate).getTime());
+      const actualCycleLength = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      // In this specific implementation, actualCycleLength tracks the length between start and end of bleeding.
+
+      const [updated] = await db
+        .update(cycleLogs)
+        .set({
+          endDate: startOrEnd.toISOString()
+        })
+        .where(eq(cycleLogs.id, latestCycle.id))
+        .returning();
+        
+      return NextResponse.json({ cycleLog: updated, state: "closed" }, { status: 200 });
+    } else {
+      // User is NOT in a menstrual state. This click starts a NEW cycle.
+      const predictedEndDate = new Date(startOrEnd);
+      predictedEndDate.setDate(predictedEndDate.getDate() + pLength);
+
+      const [inserted] = await db
+        .insert(cycleLogs)
+        .values({
+          userId: session.user.id,
+          startDate: startOrEnd.toISOString(),
+          endDate: null,
+          cyclePhase: "Menstrual",
+          predictedCycleLength: pLength,
+          predictedStartDate: startOrEnd.toISOString(),
+          predictedEndDate: predictedEndDate.toISOString(),
+        })
+        .returning();
+
+      return NextResponse.json({ cycleLog: inserted, state: "started" }, { status: 200 });
     }
-
-    // Theoretical end date based on predicted cycle length (assuming bleeding length + full cycle length)
-    // Actually predictedEndDate is when the NEXT cycle is supposed to start minus 1 day.
-    const predictedEndDate = new Date(start);
-    predictedEndDate.setDate(predictedEndDate.getDate() + pLength);
-
-    const [inserted] = await db
-      .insert(cycleLogs)
-      .values({
-        userId: session.user.id,
-        startDate: start.toISOString(),
-        endDate: end ? end.toISOString() : null,
-        cyclePhase: "Menstrual",
-        predictedCycleLength: pLength,
-        actualCycleLength: actualCycleLength,
-        predictedDifference: predictedDifference,
-        predictedStartDate: start.toISOString(),
-        predictedEndDate: predictedEndDate.toISOString(),
-      })
-      .returning();
-
-    return NextResponse.json({ cycleLog: inserted }, { status: 200 });
   } catch (error) {
     console.error("POST cycle-tracking error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
