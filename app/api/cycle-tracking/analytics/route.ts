@@ -46,10 +46,12 @@ export async function GET(request: NextRequest) {
         message: "Logged your profile, now log your first period start on the calendar!",
         config: {
           averageCycleLength: config.averageCycleLength,
+          averagePeriodLength: config.averagePeriodLength,
           height: config.height,
           weight: config.weight,
           primaryGoal: config.primaryGoal
         },
+        periodStartDates: [],
         recommendations: [{ 
           tipTitle: "Ready to start?", 
           tipDescription: "Click a date on the calendar to log your first period and unlock full phase predictions!" 
@@ -89,6 +91,7 @@ export async function GET(request: NextRequest) {
       currentPhase,
       dayOfCycle,
       expectedMood,
+      periodStartDates: logs.map(l => l.startDate),
       recommendations: tips.length > 0 ? tips : [{ tipTitle: "Rest and Hydrate", tipDescription: "Listen to your body today." }],
       latestCycle: {
         startDate: latestCycle.startDate,

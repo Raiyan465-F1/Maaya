@@ -4,6 +4,7 @@ import { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
 import { Heart, Sparkles, Stethoscope, ArrowRight } from "lucide-react";
 import { DateRange } from "react-day-picker";
+import { isSameDay, format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ export default function CycleTrackingPage() {
   const [isPending, startTransition] = useTransition();
   const [lockedMood, setLockedMood] = useState<string | null>(null);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: "error" | "success"; text: string } | null>(null);
+  const [calFeedback, setCalFeedback] = useState<{ type: "error" | "success"; text: string } | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   const handleHeartClick = () => {
@@ -64,6 +66,11 @@ export default function CycleTrackingPage() {
 
   const handleLogPeriod = async () => {
     if (!selectedDate) return;
+    if (selectedDate > new Date()) {
+      setCalFeedback({ type: "error", text: "You cannot log a period for a future date." });
+      return;
+    }
+    setCalFeedback(null);
     setIsLogging(true);
     try {
       const resp = await fetch("/api/cycle-tracking", {
@@ -75,19 +82,19 @@ export default function CycleTrackingPage() {
       });
       if (resp.ok) {
         const data = await resp.json();
-        setFeedbackMsg({ 
+        setCalFeedback({ 
           type: "success", 
-          text: data.state === "started" ? "Cycle started! Predictions updated." : "Cycle ended! Period logged." 
+          text: "Period logged! Predictions updated." 
         });
         setSelectedDate(undefined);
         // Refresh analytics dynamically
         const newAnalytics = await fetch("/api/cycle-tracking/analytics").then(res => res.json());
         setAnalytics(newAnalytics);
       } else {
-        setFeedbackMsg({ type: "error", text: "Failed to log cycle." });
+        setCalFeedback({ type: "error", text: "Failed to log cycle." });
       }
     } catch(err) {
-      setFeedbackMsg({ type: "error", text: "Error logging cycle." });
+      setCalFeedback({ type: "error", text: "Error logging cycle." });
     }
     setIsLogging(false);
   };
@@ -137,7 +144,7 @@ export default function CycleTrackingPage() {
               <CardContent className="p-0">
                 <div className="flex flex-col md:flex-row items-center justify-between p-8 gap-8">
                   <div className="flex-1 text-center md:text-left">
-                    <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4 animate-bounce">
+                    <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4">
                       <Sparkles className="w-4 h-4" />
                       New Feature
                     </div>
@@ -157,7 +164,6 @@ export default function CycleTrackingPage() {
                   <div className="relative w-full max-w-[300px] aspect-square flex items-center justify-center">
                     <div className="absolute inset-0 bg-primary/20 rounded-full blur-3xl animate-pulse" />
                     <Heart className="w-48 h-48 text-primary fill-primary/10 animate-pulse relative z-10" />
-                    <Sparkles className="absolute top-0 right-0 w-12 h-12 text-secondary animate-bounce" />
                   </div>
                 </div>
               </CardContent>
@@ -171,7 +177,7 @@ export default function CycleTrackingPage() {
             fetch("/api/cycle-tracking/analytics")
               .then(res => res.json())
               .then(data => setAnalytics(data));
-          }} />
+          }} onClose={() => setShowOnboarding(false)} />
         )}
 
         <div className="flex flex-col gap-6 w-full max-w-[400px]">
@@ -183,11 +189,40 @@ export default function CycleTrackingPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col items-center justify-center pt-6 pb-8 gap-4">
+              <style>{`
+                .rdp-day_button { position: relative !important; }
+                .logged-period-day {
+                  outline: 2px solid #ef4444 !important; /* Extremely obvious crimson border */
+                  border-radius: 8px;
+                }
+                .logged-period-day .rdp-day_button::after {
+                  content: '';
+                  position: absolute;
+                  top: 2px;
+                  right: 2px;
+                  width: 8px;
+                  height: 8px;
+                  border-radius: 50%;
+                  background-color: #ef4444 !important; /* Bright Red */
+                  box-shadow: 0 0 5px rgba(255,0,0,0.5);
+                  z-index: 50;
+                }
+              `}</style>
               <Calendar
                 mode="single"
                 selected={selectedDate}
                 onSelect={setSelectedDate}
+                disabled={{ after: new Date() }}
                 className="rounded-xl border border-primary/10 shadow-sm p-4 sm:p-6 bg-background w-full"
+                modifiers={{
+                  periodStart: (analytics?.periodStartDates || []).map((d: string) => {
+                    const [year, month, day] = d.split('-').map(Number);
+                    return new Date(year, month - 1, day);
+                  })
+                }}
+                modifiersClassNames={{
+                  periodStart: "logged-period-day"
+                }}
               />
               {selectedDate && (
                 <Button 
@@ -197,6 +232,11 @@ export default function CycleTrackingPage() {
                 >
                   {isLogging ? "Saving..." : "Log Period"}
                 </Button>
+              )}
+              {calFeedback && (
+                <p className={`text-sm font-semibold mt-2 animate-in slide-in-from-top-1 fade-in duration-300 ${calFeedback.type === 'error' ? "text-destructive" : "text-primary"}`}>
+                  {calFeedback.text}
+                </p>
               )}
             </CardContent>
           </Card>

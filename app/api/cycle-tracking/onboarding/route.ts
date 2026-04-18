@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
       .values({
         userId: session.user.id,
         averageCycleLength: data.averageCycleLength,
+        averagePeriodLength: data.averagePeriodLength,
         height: data.height,
         weight: data.weight,
         regularity: data.regularity,
@@ -37,6 +38,7 @@ export async function POST(request: NextRequest) {
         target: userCycleOnboarding.userId,
         set: {
           averageCycleLength: data.averageCycleLength,
+          averagePeriodLength: data.averagePeriodLength,
           height: data.height,
           weight: data.weight,
           regularity: data.regularity,

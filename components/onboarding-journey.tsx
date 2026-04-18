@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { 
   Heart, Sparkles, Calendar, Clock, Activity, 
   Droplets, Thermometer, Brain, Moon, 
-  Coffee, Zap, Target, Bell, ArrowRight, ArrowLeft, Check
+  Coffee, Zap, Target, Bell, ArrowRight, ArrowLeft, Check, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -12,6 +12,7 @@ import { toast } from "sonner";
 
 interface QuizData {
   averageCycleLength: number;
+  averagePeriodLength: number;
   height: string;
   weight: string;
   regularity: string;
@@ -42,6 +43,15 @@ const QUESTIONS = [
     options: Array.from({ length: 20 }, (_, i) => ({ value: i + 21, label: `${i + 21} Days` })),
     default: 28,
     icon: Calendar
+  },
+  {
+    id: "period_length",
+    title: "Period Duration",
+    description: "How many days does your period usually last?",
+    type: "select",
+    options: Array.from({ length: 9 }, (_, i) => ({ value: i + 2, label: `${i + 2} Days` })),
+    default: 5,
+    icon: Clock
   },
   {
     id: "vitals",
@@ -182,11 +192,12 @@ const QUESTIONS = [
   }
 ];
 
-export function OnboardingJourney({ onComplete }: { onComplete: () => void }) {
+export function OnboardingJourney({ onComplete, onClose }: { onComplete: () => void; onClose: () => void }) {
   const [step, setStep] = useState(0);
   const [animKey, setAnimKey] = useState(0);
   const [formData, setFormData] = useState<QuizData>({
     averageCycleLength: 28,
+    averagePeriodLength: 5,
     height: "",
     weight: "",
     regularity: "",
@@ -403,7 +414,14 @@ export function OnboardingJourney({ onComplete }: { onComplete: () => void }) {
             />
           </div>
 
-          <CardHeader className="pt-8 pb-4">
+          <CardHeader className="pt-8 pb-4 relative">
+            <button
+              onClick={onClose}
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              aria-label="Close quiz"
+            >
+              <X className="w-5 h-5" />
+            </button>
             <div className="flex justify-between items-center mb-2">
               <span className="text-xs font-mono tracking-widest text-primary uppercase">
                 Step {step + 1} of {QUESTIONS.length}
