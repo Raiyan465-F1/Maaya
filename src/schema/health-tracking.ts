@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, date, varchar, bigint, json, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, date, varchar, bigint, json, integer, boolean } from "drizzle-orm/pg-core";
 import { users } from "./users";
 
 export const cycleLogs = pgTable("cycle_logs", {
@@ -37,4 +37,24 @@ export const cycleStageTips = pgTable("cycle_stage_tips", {
   tipTitle: varchar("tip_title", { length: 255 }).notNull(),
   tipDescription: text("tip_description").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const userCycleOnboarding = pgTable("user_cycle_onboarding", {
+  id: bigint("onboarding_id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+  userId: uuid("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  averageCycleLength: integer("average_cycle_length").default(28),
+  height: varchar("height", { length: 20 }),
+  weight: varchar("weight", { length: 20 }),
+  regularity: varchar("regularity", { length: 50 }),
+  flowIntensity: varchar("flow_intensity", { length: 50 }),
+  periodSymptoms: json("period_symptoms").$type<string[]>(), 
+  concerns: json("concerns").$type<string[]>(),
+  stressLevel: varchar("stress_level", { length: 50 }),
+  sleepHours: varchar("sleep_hours", { length: 50 }),
+  activityLevel: varchar("activity_level", { length: 50 }),
+  hydration: varchar("hydration", { length: 50 }),
+  primaryGoal: varchar("primary_goal", { length: 255 }),
+  notificationsEnabled: boolean("notifications_enabled").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

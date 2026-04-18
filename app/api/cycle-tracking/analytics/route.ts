@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { db } from "@/src/db";
-import { cycleLogs, cycleStageTips } from "@/src/schema";
+import { cycleLogs, cycleStageTips, userCycleOnboarding } from "@/src/schema";
 import { authOptions } from "@/lib/auth";
 import { eq, desc } from "drizzle-orm";
 
@@ -25,8 +25,36 @@ export async function GET(request: NextRequest) {
       .where(eq(cycleLogs.userId, session.user.id))
       .orderBy(desc(cycleLogs.startDate));
 
-    if (!logs || logs.length === 0) {
+    // Check for onboarding data as fallback
+    const onboardingData = await db
+      .select()
+      .from(userCycleOnboarding)
+      .where(eq(userCycleOnboarding.userId, session.user.id))
+      .limit(1);
+
+    const isOnboarded = onboardingData.length > 0;
+
+    if ((!logs || logs.length === 0) && !isOnboarded) {
       return NextResponse.json({ hasData: false, message: "No cycles logged yet." }, { status: 200 });
+    }
+
+    if ((!logs || logs.length === 0) && isOnboarded) {
+      const config = onboardingData[0];
+      return NextResponse.json({
+        hasData: false,
+        isOnboarded: true,
+        message: "Logged your profile, now log your first period start on the calendar!",
+        config: {
+          averageCycleLength: config.averageCycleLength,
+          height: config.height,
+          weight: config.weight,
+          primaryGoal: config.primaryGoal
+        },
+        recommendations: [{ 
+          tipTitle: "Ready to start?", 
+          tipDescription: "Click a date on the calendar to log your first period and unlock full phase predictions!" 
+        }]
+      }, { status: 200 });
     }
 
     const latestCycle = logs[0];

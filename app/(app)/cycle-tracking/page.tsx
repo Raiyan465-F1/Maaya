@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
-import { Heart, Sparkles, Stethoscope } from "lucide-react";
+import { Heart, Sparkles, Stethoscope, ArrowRight } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getTodayMood, saveDailyMood } from "@/lib/health-actions";
+import { OnboardingJourney } from "@/components/onboarding-journey";
 
 const MOOD_MESSAGES: Record<string, string> = {
   terrible: "Sending you a gentle hug. Be extra kind to yourself today. 🤍",
@@ -27,6 +28,7 @@ export default function CycleTrackingPage() {
   const [isPending, startTransition] = useTransition();
   const [lockedMood, setLockedMood] = useState<string | null>(null);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: "error" | "success"; text: string } | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const handleHeartClick = () => {
     const newHearts = Array.from({ length: 3 }).map(() => ({
@@ -129,7 +131,50 @@ export default function CycleTrackingPage() {
       </div>
 
       <div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-8 items-start px-4 sm:px-8">
-        <div className="flex flex-col gap-6 w-full max-w-[500px]">
+        {analytics && !analytics.hasData && !analytics.isOnboarded && (
+          <div className="col-span-full mb-4">
+            <Card className="w-full overflow-hidden border-none shadow-2xl bg-gradient-to-br from-primary/20 via-rose-50 to-orange-50 dark:from-primary/10 dark:via-background dark:to-orange-950/20">
+              <CardContent className="p-0">
+                <div className="flex flex-col md:flex-row items-center justify-between p-8 gap-8">
+                  <div className="flex-1 text-center md:text-left">
+                    <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4 animate-bounce">
+                      <Sparkles className="w-4 h-4" />
+                      New Feature
+                    </div>
+                    <h2 className="text-4xl font-bold mb-4 tracking-tight">Your Cycle Journey <span className="italic text-primary">Starts Here</span></h2>
+                    <p className="text-muted-foreground text-lg mb-8 max-w-xl leading-relaxed">
+                      Welcome to Maaya's cycle tracking. Answer a few questions to unlock personalized predictions, health insights, and wellness tips tailored just for you.
+                    </p>
+                    <Button 
+                      onClick={() => setShowOnboarding(true)}
+                      size="lg" 
+                      className="rounded-2xl px-10 py-7 text-xl font-bold shadow-xl hover:scale-105 transition-all shadow-primary/20"
+                    >
+                      Start Your Journey
+                      <ArrowRight className="w-6 h-6 ml-2" />
+                    </Button>
+                  </div>
+                  <div className="relative w-full max-w-[300px] aspect-square flex items-center justify-center">
+                    <div className="absolute inset-0 bg-primary/20 rounded-full blur-3xl animate-pulse" />
+                    <Heart className="w-48 h-48 text-primary fill-primary/10 animate-pulse relative z-10" />
+                    <Sparkles className="absolute top-0 right-0 w-12 h-12 text-secondary animate-bounce" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {showOnboarding && (
+          <OnboardingJourney onComplete={() => {
+            setShowOnboarding(false);
+            fetch("/api/cycle-tracking/analytics")
+              .then(res => res.json())
+              .then(data => setAnalytics(data));
+          }} />
+        )}
+
+        <div className="flex flex-col gap-6 w-full max-w-[400px]">
           <Card className="w-full shadow-xl border-primary/15 bg-card">
             <CardHeader className="text-center pb-2">
               <CardTitle className="text-2xl">Menstrual Calendar</CardTitle>
