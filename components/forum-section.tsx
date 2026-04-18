@@ -7,6 +7,7 @@ import { ArrowDown, ArrowUp, MessageSquare, MoreHorizontal } from "lucide-react"
 import { toast } from "sonner";
 import { isSuspendedAndActive, formatRestrictionRemaining } from "@/lib/account-restriction-helpers";
 import type {
+  ForumAuthorTag,
   ForumCommentRecord,
   ForumMediaInput,
   ForumPostRecord,
@@ -14,6 +15,7 @@ import type {
 } from "@/lib/forum-types";
 import { FORUM_MEDIA_LIMIT, FORUM_TAG_LIMIT } from "@/lib/forum-types";
 import { useConfirm } from "@/hooks/use-confirm";
+import { Button } from "@/components/ui/button";
 
 type MediaDraft = ForumMediaInput & { key: number };
 type ForumSortOption = "latest" | "oldest" | "popular";
@@ -61,10 +63,10 @@ function initialsFromEmail(email: string) {
   return email.slice(0, 2).toUpperCase();
 }
 
-function tagStyles(tag: "Admin" | "User") {
-  return tag === "Admin"
-    ? "bg-secondary/10 text-secondary border-secondary/20"
-    : "bg-primary/10 text-primary border-primary/20";
+function tagStyles(tag: ForumAuthorTag) {
+  if (tag === "Admin") return "bg-secondary/10 text-secondary border-secondary/20";
+  if (tag === "Doctor") return "bg-emerald-100 text-emerald-900 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-800";
+  return "bg-primary/10 text-primary border-primary/20";
 }
 
 function normalizeTagValue(tag: string) {
@@ -396,7 +398,10 @@ function CommentTree({
         const replyCount = countReplies(comment.replies);
 
         return (
-          <div key={comment.id} className="rounded-[1.6rem] border border-primary/12 bg-white/85 p-4 shadow-sm">
+          <div
+            key={comment.id}
+            className="rounded-[1.6rem] border border-primary/12 bg-white/85 p-4 shadow-sm"
+          >
             <div className="flex items-start gap-3">
               <Link
                 href={forumProfileHref(comment.author.id)}
@@ -837,8 +842,8 @@ export function ForumSection() {
         </div>
       ) : null}
 
-      <div className="grid gap-3 lg:ml-32 lg:grid-cols-[48rem_18rem]">
-        <div className="space-y-6 lg:max-w-[48rem]">
+      <div className="flex flex-col gap-8 lg:ml-32 lg:flex-row lg:items-start lg:gap-8">
+        <div className="min-w-0 flex-1 space-y-6 lg:max-w-[48rem]">
           <div ref={filterPanelRef} className="rounded-[1.8rem] border border-primary/15 bg-card p-5 shadow-sm">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
@@ -886,7 +891,14 @@ export function ForumSection() {
               </div>
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 <span className="text-muted-foreground">
-                  Showing {filteredPosts.length} of {forum.posts.length} discussions
+                  {filteredPosts.length === 0 ? (
+                    <>0 of {forum.posts.length} discussions</>
+                  ) : (
+                    <>
+                      {filteredPosts.length} of {forum.posts.length} discussions
+                      {filteredPosts.length !== forum.posts.length ? " matching" : ""}
+                    </>
+                  )}
                 </span>
                 {activeTag ? (
                   <button
@@ -997,10 +1009,12 @@ export function ForumSection() {
               }
             />
           ))}
+
         </div>
 
-        <aside className="space-y-6 lg:sticky lg:top-5 lg:self-start">
-          {userLikedTags.length > 0 && (
+        <div className="w-full shrink-0 lg:w-80">
+          <div className="space-y-6 lg:sticky lg:top-8 lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto lg:overflow-x-hidden scrollbar-hidden">
+            {userLikedTags.length > 0 && (
             <div className="overflow-hidden rounded-[2rem] border border-secondary/15 bg-gradient-to-br from-white via-card to-secondary/5 shadow-sm">
               <div className="border-b border-secondary/10 px-5 py-4">
                 <p className="font-mono text-xs tracking-[0.22em] text-secondary uppercase">Your interests</p>
@@ -1027,9 +1041,9 @@ export function ForumSection() {
                 ))}
               </div>
             </div>
-          )}
+            )}
 
-          <div className="overflow-hidden rounded-[2rem] border border-primary/15 bg-gradient-to-br from-white via-card to-primary/5 shadow-sm">
+            <div className="overflow-hidden rounded-[2rem] border border-primary/15 bg-gradient-to-br from-white via-card to-primary/5 shadow-sm">
             <div className="border-b border-primary/10 px-5 py-4">
               <p className="font-mono text-xs tracking-[0.22em] text-primary uppercase">Trending now</p>
               <h2 className="mt-2 font-heading text-2xl font-semibold text-foreground">Topics and tags</h2>
@@ -1110,7 +1124,8 @@ export function ForumSection() {
               </div>
             </div>
           </div>
-        </aside>
+          </div>
+        </div>
       </div>
 
       {focusedPost ? (
@@ -1524,6 +1539,11 @@ function ForumPostCard({
                   <span className={`rounded-full border ${expanded ? "px-2 py-0.5 text-[10px]" : "px-2 py-0.5 text-[10px]"} font-medium ${tagStyles(post.author.tag)}`}>
                     {post.author.tag}
                   </span>
+                  {post.hasDoctorReply ? (
+                    <span className={`rounded-full border ${expanded ? "px-2 py-0.5 text-[10px]" : "px-2 py-0.5 text-[10px]"} font-medium ${tagStyles("Doctor")}`}>
+                      Doctor
+                    </span>
+                  ) : null}
                   {post.isAnonymous ? (
                     <span className={expanded ? "rounded-full border border-primary/20 bg-primary/8 px-2 py-0.5 text-[10px] font-medium text-primary" : "rounded-full border border-primary/20 bg-primary/8 px-2 py-0.5 text-[10px] font-medium text-primary"}>
                       Posted anonymously

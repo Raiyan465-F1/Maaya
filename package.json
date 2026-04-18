@@ -13,6 +13,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit push",
     "db:push": "drizzle-kit push",
+    "db:apply-restriction-column": "tsx scripts/apply-restriction-ends-at.ts",
     "db:seed-admin": "tsx scripts/seed-admin.ts",
     "forum:apply-anonymous-privacy": "node scripts/apply-anonymous-forum-privacy.mjs",
     "forum:backfill-anonymous": "node scripts/backfill-anonymous-forum-posts.mjs"
