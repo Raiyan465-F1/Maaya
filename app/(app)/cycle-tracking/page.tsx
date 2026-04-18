@@ -75,6 +75,9 @@ export default function CycleTrackingPage() {
       if (resp.ok) {
         setFeedbackMsg({ type: "success", text: "Period logged! Cycle predictions updated." });
         setDateRange(undefined);
+        // Refresh analytics dynamically
+        const newAnalytics = await fetch("/api/cycle-tracking/analytics").then(res => res.json());
+        setAnalytics(newAnalytics);
       } else {
         setFeedbackMsg({ type: "error", text: "Failed to log cycle." });
       }
@@ -232,13 +235,17 @@ export default function CycleTrackingPage() {
                     <div>
                       <p className="text-xs uppercase text-primary font-bold mb-1">Period Ends</p>
                       <p className="text-sm font-semibold">
-                        {new Date(analytics.latestCycle.expectedPeriodEnd).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                        {analytics.latestCycle?.expectedPeriodEnd && !isNaN(new Date(analytics.latestCycle.expectedPeriodEnd).getTime()) 
+                          ? new Date(analytics.latestCycle.expectedPeriodEnd).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+                          : 'Pending'}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="text-xs uppercase text-primary font-bold mb-1">Next Period Starts</p>
                       <p className="text-sm font-semibold">
-                        {new Date(analytics.latestCycle.predictedEndDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                        {analytics.latestCycle?.predictedEndDate && !isNaN(new Date(analytics.latestCycle.predictedEndDate).getTime())
+                          ? new Date(analytics.latestCycle.predictedEndDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+                          : 'Pending'}
                       </p>
                     </div>
                   </div>

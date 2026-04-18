@@ -61,7 +61,8 @@ export async function GET(request: NextRequest) {
       latestCycle: {
         startDate: latestCycle.startDate,
         endDate: latestCycle.endDate,
-        predictedEndDate: latestCycle.predictedEndDate
+        predictedEndDate: latestCycle.predictedEndDate,
+        expectedPeriodEnd: new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
       }
     }, { status: 200 });
 
