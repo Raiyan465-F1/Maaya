@@ -1,6 +1,6 @@
 import type { ForumMediaKind } from "@/src/schema/enums";
 
-export type ForumAuthorTag = "Admin" | "User";
+export type ForumAuthorTag = "Admin" | "Doctor" | "User";
 
 export type ForumMediaInput = {
   kind: ForumMediaKind;
@@ -39,6 +39,8 @@ export type ForumPostRecord = {
   isAnonymous: boolean;
   createdAt: string;
   updatedAt: string;
+  /** True when any reply in the thread was written by a verified doctor. */
+  hasDoctorReply: boolean;
   author: {
     id: string;
     email: string;
