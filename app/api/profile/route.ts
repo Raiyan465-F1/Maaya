@@ -25,6 +25,7 @@ const PROFILE_SELECT = {
   email: users.email,
   role: users.role,
   accountStatus: users.accountStatus,
+  restrictionEndsAt: users.restrictionEndsAt,
   isAnonymous: users.isAnonymous,
   likedTags: users.likedTags,
   ageGroup: users.ageGroup,

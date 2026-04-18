@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { db } from "@/src/db";
 import { reports } from "@/src/schema/reports";
 import { authOptions } from "@/lib/auth";
+import { suspendedMutationBlockedResponse } from "@/lib/suspended-mutation";
 import {
   canAccessModeratedContent,
   canManageContent,
@@ -25,6 +26,9 @@ export async function POST(
   if (!session?.user?.id) {
     return NextResponse.json({ error: "You must be logged in to report a comment." }, { status: 401 });
   }
+
+  const blocked = suspendedMutationBlockedResponse(session, request.headers.get("origin"));
+  if (blocked) return blocked;
 
   if (!commentId) {
     return NextResponse.json({ error: "Invalid comment id." }, { status: 400 });

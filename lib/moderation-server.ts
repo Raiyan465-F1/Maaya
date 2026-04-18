@@ -40,6 +40,7 @@ export async function getModerationSnapshot(): Promise<ModerationSnapshot> {
         name: users.name,
         role: users.role,
         accountStatus: users.accountStatus,
+        restrictionEndsAt: users.restrictionEndsAt,
         createdAt: users.createdAt,
       })
       .from(users),
@@ -80,6 +81,11 @@ export async function getModerationSnapshot(): Promise<ModerationSnapshot> {
         name: user.name ?? null,
         role: user.role,
         accountStatus: user.accountStatus ?? null,
+        restrictionEndsAt: user.restrictionEndsAt
+          ? (user.restrictionEndsAt instanceof Date
+              ? user.restrictionEndsAt.toISOString()
+              : new Date(user.restrictionEndsAt).toISOString())
+          : null,
         createdAt: toIsoString(user.createdAt),
         postCount: 0,
         anonymousPostCount: 0,
@@ -286,7 +292,11 @@ export async function getModerationUser(userId: string) {
   return user ?? null;
 }
 
-export async function updateUserModerationStatus(userId: string, status: AccountStatus) {
+export async function updateUserModerationStatus(
+  userId: string,
+  status: AccountStatus,
+  restrictionEndsAt: Date | null
+) {
   const [existing] = await db
     .select({ id: users.id })
     .from(users)
@@ -295,10 +305,14 @@ export async function updateUserModerationStatus(userId: string, status: Account
 
   if (!existing) return false;
 
+  const ends =
+    status === "banned" || status === "suspended" ? restrictionEndsAt : null;
+
   await db
     .update(users)
     .set({
       accountStatus: status,
+      restrictionEndsAt: ends,
       updatedAt: new Date(),
     })
     .where(eq(users.id, userId));

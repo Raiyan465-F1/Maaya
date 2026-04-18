@@ -16,6 +16,7 @@ export const users = pgTable("users", {
   ageGroup: varchar("age_group", { length: 50 }),
   gender: varchar("gender", { length: 30 }),
   location: varchar("location", { length: 100 }),
+  restrictionEndsAt: timestamp("restriction_ends_at", { withTimezone: true }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

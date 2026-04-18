@@ -14,6 +14,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { formatRestrictionRemaining } from "@/lib/account-restriction-helpers";
 
 interface DoctorProfileFragment {
   specialty: string | null;
@@ -29,6 +30,7 @@ interface UserProfile {
   email: string;
   role: "user" | "doctor" | "admin";
   accountStatus: "pending" | "active" | "banned" | "suspended" | null;
+  restrictionEndsAt: string | null;
   isAnonymous: boolean | null;
   likedTags: string[] | null;
   ageGroup: string | null;
@@ -320,6 +322,13 @@ export default function ProfilePage() {
     try {
       const updated = await patchProfile({ isAnonymous: newValue });
       setProfile(updated);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("profile:anonymous-changed", {
+            detail: { isAnonymous: Boolean(updated.isAnonymous) },
+          }),
+        );
+      }
     } catch {
       setIsAnonymous(!newValue);
     } finally {
@@ -485,6 +494,17 @@ export default function ProfilePage() {
                 />
                 <InfoRow label="Member since" value={memberSince} mono />
               </div>
+              {profile.accountStatus === "suspended" ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                  <p className="font-medium">Suspension in effect</p>
+                  <p className="mt-1 text-amber-900/90">
+                    You can browse the app, but you cannot post in the forum, vote, report, ask doctors, or rate doctors.{" "}
+                    {profile.restrictionEndsAt
+                      ? `Time remaining: ${formatRestrictionRemaining(profile.restrictionEndsAt)}`
+                      : "This suspension has no automatic end date; an administrator must restore your account."}
+                  </p>
+                </div>
+              ) : null}
             </div>
           </section>
 
@@ -598,7 +618,9 @@ export default function ProfilePage() {
               <div>
                 <p className="text-sm font-medium text-foreground">Anonymous posting</p>
                 <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                  When enabled, your forum posts and doctor questions appear as anonymous to other users.
+                  When enabled, all of your forum posts and doctor questions are
+                  published anonymously. The per-post anonymous toggles are
+                  locked on while this is active.
                 </p>
               </div>
             </div>
@@ -606,6 +628,8 @@ export default function ProfilePage() {
               <div className="mt-4 rounded-xl border border-primary/10 bg-primary/5 px-4 py-3">
                 <p className="text-xs font-medium text-primary">
                   Anonymous mode is on — your identity is hidden in the community.
+                  Forum and Doctor&apos;s Help anonymous toggles are disabled and
+                  all new posts go out anonymously.
                 </p>
               </div>
             )}

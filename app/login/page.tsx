@@ -1,10 +1,20 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { formatRestrictionRemaining } from "@/lib/account-restriction-helpers";
 
 function BrandPanel() {
   return (
@@ -70,11 +80,18 @@ function LoginPageContent() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
   const justRegistered = searchParams.get("registered") === "1";
+  const banError = searchParams.get("error") === "banned";
+  const banEndsParam = searchParams.get("ends");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [banDialogOpen, setBanDialogOpen] = useState(false);
+
+  useEffect(() => {
+    if (banError) setBanDialogOpen(true);
+  }, [banError]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -192,6 +209,23 @@ function LoginPageContent() {
           </div>
         </div>
       </div>
+
+      <AlertDialog open={banDialogOpen} onOpenChange={setBanDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Account banned</AlertDialogTitle>
+            <AlertDialogDescription>
+              You cannot sign in while this ban is active.{" "}
+              {banEndsParam
+                ? `The ban is in place ${formatRestrictionRemaining(banEndsParam)}`
+                : "An administrator must restore your account before you can sign in again."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction type="button">Understood</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

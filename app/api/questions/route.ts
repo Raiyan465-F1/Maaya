@@ -5,6 +5,7 @@ import { db } from "@/src/db";
 import { doctorAnswers, doctorProfiles, doctorQuestions, users } from "@/src/schema";
 import { authOptions } from "@/lib/auth";
 import { withCorsHeaders } from "@/lib/cors";
+import { suspendedMutationBlockedResponse } from "@/lib/suspended-mutation";
 
 function jsonResponse(
   data: object,
@@ -137,6 +138,9 @@ export async function POST(request: NextRequest) {
       return jsonResponse({ error: "Unauthorized" }, 401, origin);
     }
 
+    const suspendedBlock = suspendedMutationBlockedResponse(session, origin);
+    if (suspendedBlock) return suspendedBlock;
+
     const body = await request.json();
     const {
       questionTitle,
@@ -147,6 +151,14 @@ export async function POST(request: NextRequest) {
       questionText?: string;
       isAnonymous?: boolean;
     } = body;
+
+    const [currentUserRow] = await db
+      .select({ isAnonymous: users.isAnonymous })
+      .from(users)
+      .where(eq(users.id, session.user.id))
+      .limit(1);
+    const globallyAnonymous = Boolean(currentUserRow?.isAnonymous);
+    const effectiveAnonymous = globallyAnonymous || Boolean(isAnonymous);
 
     const trimmedTitle = questionTitle?.trim() ?? "";
     const trimmedText = questionText?.trim() ?? "";
@@ -174,7 +186,7 @@ export async function POST(request: NextRequest) {
       .values({
         userId: session.user.id,
         questionText: storedQuestionText,
-        isAnonymous,
+        isAnonymous: effectiveAnonymous,
       })
       .returning();
 

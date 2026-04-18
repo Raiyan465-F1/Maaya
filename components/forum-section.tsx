@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useSession } from "next-auth/react";
 import { ArrowDown, ArrowUp, MessageSquare, MoreHorizontal } from "lucide-react";
+import { toast } from "sonner";
+import { isSuspendedAndActive, formatRestrictionRemaining } from "@/lib/account-restriction-helpers";
 import type {
   ForumCommentRecord,
   ForumMediaInput,
@@ -110,11 +113,13 @@ function TagSelector({
   onChange,
   availableTags,
   placeholder,
+  disabled,
 }: {
   value: string;
   onChange: (nextValue: string) => void;
   availableTags: string[];
   placeholder: string;
+  disabled?: boolean;
 }) {
   const selectedTags = parseTagString(value);
   const suggestedTags = availableTags.filter((tag) => !selectedTags.includes(tag)).slice(0, 12);
@@ -125,7 +130,8 @@ function TagSelector({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-3xl border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40"
+        disabled={disabled}
+        className="w-full rounded-3xl border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40 disabled:cursor-not-allowed disabled:opacity-60"
       />
 
       {selectedTags.length ? (
@@ -134,8 +140,9 @@ function TagSelector({
             <button
               key={tag}
               type="button"
+              disabled={disabled}
               onClick={() => onChange(stringifyTags(selectedTags.filter((item) => item !== tag)))}
-              className="rounded-full border border-primary/15 bg-primary/8 px-3 py-1.5 text-xs font-medium text-primary transition hover:bg-primary/14"
+              className="rounded-full border border-primary/15 bg-primary/8 px-3 py-1.5 text-xs font-medium text-primary transition hover:bg-primary/14 disabled:cursor-not-allowed disabled:opacity-50"
             >
               #{tag} x
             </button>
@@ -151,8 +158,9 @@ function TagSelector({
               <button
                 key={tag}
                 type="button"
+                disabled={disabled}
                 onClick={() => onChange(stringifyTags(toggleTag(selectedTags, tag)))}
-                className="rounded-full border border-primary/15 bg-card px-3 py-1.5 text-xs font-medium text-foreground transition hover:border-primary/30 hover:text-primary"
+                className="rounded-full border border-primary/15 bg-card px-3 py-1.5 text-xs font-medium text-foreground transition hover:border-primary/30 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
               >
                 #{tag}
               </button>
@@ -243,11 +251,14 @@ function ManagementMenu({
   onDelete,
   onReport,
   deleteDisabled,
+  menuDisabled,
 }: {
   onEdit?: () => void;
   onDelete?: () => void;
   onReport?: () => void;
   deleteDisabled?: boolean;
+  /** When true (e.g. account suspended), actions are not available. */
+  menuDisabled?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -280,8 +291,12 @@ function ManagementMenu({
     <div ref={menuRef} className="relative">
       <button
         type="button"
-        onClick={() => setIsOpen((current) => !current)}
-        className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition hover:bg-primary/8 hover:text-foreground"
+        disabled={menuDisabled}
+        onClick={() => {
+          if (menuDisabled) return;
+          setIsOpen((current) => !current);
+        }}
+        className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition hover:bg-primary/8 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
       >
         <MoreHorizontal className="h-4 w-4" />
       </button>
@@ -345,6 +360,7 @@ function postPopularityScore(post: ForumPostRecord) {
 function CommentTree({
   comments,
   canInteract,
+  interactionLocked,
   busyKey,
   onVote,
   onDelete,
@@ -355,6 +371,7 @@ function CommentTree({
 }: {
   comments: ForumCommentRecord[];
   canInteract: boolean;
+  interactionLocked: boolean;
   busyKey: string | null;
   onVote: (commentId: number, voteType: "upvote" | "downvote") => void;
   onDelete: (commentId: number) => void;
@@ -411,12 +428,13 @@ function CommentTree({
                       value={draft}
                       onChange={(event) => setDrafts((current) => ({ ...current, [comment.id]: event.target.value }))}
                       rows={3}
-                      className="w-full rounded-3xl border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40"
+                      disabled={interactionLocked}
+                      className="w-full rounded-3xl border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40 disabled:cursor-not-allowed disabled:opacity-60"
                     />
                     <div className="flex flex-wrap gap-2">
                       <ActionButton
                         active
-                        disabled={busy}
+                        disabled={busy || interactionLocked}
                         onClick={() => {
                           onEdit(comment.id, draft);
                           setEditingId(null);
@@ -433,15 +451,24 @@ function CommentTree({
 
                 <div className="mt-4 flex items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-4">
-                    <InlineActionButton active={comment.viewerHasUpvoted} disabled={busy} onClick={() => onVote(comment.id, "upvote")}>
+                    <InlineActionButton
+                      active={comment.viewerHasUpvoted}
+                      disabled={busy || interactionLocked || !canInteract}
+                      onClick={() => onVote(comment.id, "upvote")}
+                    >
                       <ArrowUp className="h-4 w-4" />
                       <span>{comment.upvotes > 0 ? comment.upvotes : "Upvote"}</span>
                     </InlineActionButton>
-                    <InlineActionButton active={comment.viewerHasDownvoted} disabled={busy} onClick={() => onVote(comment.id, "downvote")}>
+                    <InlineActionButton
+                      active={comment.viewerHasDownvoted}
+                      disabled={busy || interactionLocked || !canInteract}
+                      onClick={() => onVote(comment.id, "downvote")}
+                    >
                       <ArrowDown className="h-4 w-4" />
                       <span>{comment.downvotes > 0 ? comment.downvotes : "Downvote"}</span>
                     </InlineActionButton>
                     <InlineActionButton
+                      disabled={interactionLocked || !canInteract}
                       onClick={() => {
                         setReplyingTo(replyingTo === comment.id ? null : comment.id);
                         setEditingId(null);
@@ -454,6 +481,7 @@ function CommentTree({
                   {comment.canManage ? (
                     <ManagementMenu
                       deleteDisabled={busy}
+                      menuDisabled={interactionLocked}
                       onEdit={() => {
                         setEditingId(comment.id);
                         setReplyingTo(null);
@@ -463,6 +491,7 @@ function CommentTree({
                     />
                   ) : canInteract ? (
                     <ManagementMenu
+                      menuDisabled={interactionLocked}
                       onReport={() => {
                         const reason = window.prompt("Why are you reporting this comment?");
                         if (!reason?.trim()) return;
@@ -479,12 +508,13 @@ function CommentTree({
                       onChange={(event) => setDrafts((current) => ({ ...current, [comment.id]: event.target.value }))}
                       rows={3}
                       placeholder="Write a thoughtful reply..."
-                      className="w-full rounded-3xl border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40"
+                      disabled={interactionLocked}
+                      className="w-full rounded-3xl border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40 disabled:cursor-not-allowed disabled:opacity-60"
                     />
                     <div className="flex flex-wrap gap-2">
                       <ActionButton
                         active
-                        disabled={busy}
+                        disabled={busy || interactionLocked}
                         onClick={() => {
                           onReply(comment.id, draft);
                           setReplyingTo(null);
@@ -510,6 +540,7 @@ function CommentTree({
                 <CommentTree
                   comments={comment.replies}
                   canInteract={canInteract}
+                  interactionLocked={interactionLocked}
                   busyKey={busyKey}
                   onVote={onVote}
                   onDelete={onDelete}
@@ -544,10 +575,16 @@ export function ForumSection() {
   const [content, setContent] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [isGloballyAnonymous, setIsGloballyAnonymous] = useState(false);
   const [media, setMedia] = useState<MediaDraft[]>([{ key: 1, kind: "image", url: "" }]);
   const [userLikedTags, setUserLikedTags] = useState<string[]>([]);
   const deferredSearchTerm = useDeferredValue(searchTerm);
   const filterPanelRef = useRef<HTMLDivElement | null>(null);
+  const { data: session } = useSession();
+  const interactionLocked = isSuspendedAndActive(
+    session?.user?.accountStatus,
+    session?.user?.restrictionEndsAt
+  );
 
   const discussionCount = forum.posts.length;
   const replyCount = useMemo(() => {
@@ -653,11 +690,14 @@ export function ForumSection() {
       try {
         const res = await fetch("/api/profile");
         if (!res.ok) return;
-        const data = (await res.json()) as { likedTags?: unknown };
+        const data = (await res.json()) as { likedTags?: unknown; isAnonymous?: unknown };
         const tags = Array.isArray(data.likedTags)
           ? data.likedTags.filter((t): t is string => typeof t === "string" && Boolean(t.trim())).map((t) => t.trim().toLowerCase())
           : [];
-        if (isMounted) setUserLikedTags(tags);
+        if (isMounted) {
+          setUserLikedTags(tags);
+          setIsGloballyAnonymous(Boolean(data.isAnonymous));
+        }
       } catch {
         // best-effort
       }
@@ -702,6 +742,12 @@ export function ForumSection() {
   const focusedPost = forum.posts.find((post) => post.id === focusedPostId) ?? null;
 
   async function handleCreatePost() {
+    if (interactionLocked) {
+      toast.error(
+        "Your account is suspended. You can read discussions but cannot start new topics until the suspension lifts."
+      );
+      return;
+    }
     const wasSuccessful = await submitJson(
       "/api/forum",
       {
@@ -710,7 +756,7 @@ export function ForumSection() {
           title,
           content,
           tags: parseTagString(tagInput),
-          isAnonymous,
+          isAnonymous: isGloballyAnonymous || isAnonymous,
           media: media.filter((item) => item.url.trim()).map(({ kind, url }) => ({ kind, url: url.trim() })),
         }),
       },
@@ -780,6 +826,16 @@ export function ForumSection() {
           </div>
         </div>
       </div>
+
+      {interactionLocked ? (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <p className="font-medium">Account suspended — read-only mode</p>
+          <p className="mt-1 text-amber-900/90">
+            Posting, commenting, voting, and reporting are disabled{" "}
+            {formatRestrictionRemaining(session?.user?.restrictionEndsAt ?? null)}
+          </p>
+        </div>
+      ) : null}
 
       <div className="grid gap-3 lg:ml-32 lg:grid-cols-[48rem_18rem]">
         <div className="space-y-6 lg:max-w-[48rem]">
@@ -866,6 +922,8 @@ export function ForumSection() {
               expanded={false}
               canInteract={forum.viewer.isAuthenticated}
               isAdminViewer={forum.viewer.role === "admin"}
+              isGloballyAnonymous={isGloballyAnonymous}
+              interactionLocked={interactionLocked}
               activeTag={activeTag}
               availableTags={availableTags}
               onOpen={(postId) => {
@@ -1070,6 +1128,8 @@ export function ForumSection() {
               expanded
               canInteract={forum.viewer.isAuthenticated}
               isAdminViewer={forum.viewer.role === "admin"}
+              isGloballyAnonymous={isGloballyAnonymous}
+              interactionLocked={interactionLocked}
               activeTag={activeTag}
               availableTags={availableTags}
               autoOpenComments={commentTargetPostId === focusedPost.id}
@@ -1159,24 +1219,32 @@ export function ForumSection() {
             </div>
 
             <div className="mt-5 space-y-4">
+              {interactionLocked ? (
+                <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                  Suspended accounts cannot start discussions.
+                </p>
+              ) : null}
               <input
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 placeholder="Discussion title"
-                className="w-full rounded-3xl border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40"
+                disabled={interactionLocked}
+                className="w-full rounded-3xl border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40 disabled:cursor-not-allowed disabled:opacity-60"
               />
               <textarea
                 value={content}
                 onChange={(event) => setContent(event.target.value)}
                 rows={5}
                 placeholder="What would you like help with?"
-                className="w-full rounded-[1.75rem] border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40"
+                disabled={interactionLocked}
+                className="w-full rounded-[1.75rem] border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40 disabled:cursor-not-allowed disabled:opacity-60"
               />
               <TagSelector
                 value={tagInput}
                 onChange={setTagInput}
                 availableTags={availableTags}
                 placeholder="Type custom tags, separated by commas"
+                disabled={interactionLocked}
               />
 
               <div className="rounded-[1.75rem] border border-primary/12 bg-muted/25 p-4">
@@ -1188,7 +1256,7 @@ export function ForumSection() {
                   <button
                     type="button"
                     onClick={addMediaField}
-                    disabled={media.length >= FORUM_MEDIA_LIMIT}
+                    disabled={interactionLocked || media.length >= FORUM_MEDIA_LIMIT}
                     className="rounded-full border border-primary/15 px-4 py-2 text-sm text-muted-foreground transition hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Add media
@@ -1200,6 +1268,7 @@ export function ForumSection() {
                     <div key={item.key} className="flex flex-col gap-3 sm:flex-row">
                       <select
                         value={item.kind}
+                        disabled={interactionLocked}
                         onChange={(event) =>
                           setMedia((current) =>
                             current.map((entry) =>
@@ -1207,25 +1276,27 @@ export function ForumSection() {
                             )
                           )
                         }
-                        className="rounded-full border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40 sm:w-40"
+                        className="rounded-full border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40 disabled:cursor-not-allowed disabled:opacity-60 sm:w-40"
                       >
                         <option value="image">Image</option>
                         <option value="video">Video</option>
                       </select>
                       <input
                         value={item.url}
+                        disabled={interactionLocked}
                         onChange={(event) =>
                           setMedia((current) =>
                             current.map((entry) => (entry.key === item.key ? { ...entry, url: event.target.value } : entry))
                           )
                         }
                         placeholder="https://example.com/media"
-                        className="flex-1 rounded-full border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40"
+                        className="flex-1 rounded-full border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40 disabled:cursor-not-allowed disabled:opacity-60"
                       />
                       <button
                         type="button"
+                        disabled={interactionLocked}
                         onClick={() => setMedia((current) => current.filter((entry) => entry.key !== item.key))}
-                        className="rounded-full border border-red-200 px-4 py-3 text-sm text-red-500 transition hover:bg-red-50 sm:w-auto"
+                        className="rounded-full border border-red-200 px-4 py-3 text-sm text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                       >
                         Remove
                       </button>
@@ -1234,19 +1305,51 @@ export function ForumSection() {
                 </div>
               </div>
 
-              <label className="flex items-center gap-3 text-sm text-foreground">
-                <input type="checkbox" checked={isAnonymous} onChange={(event) => setIsAnonymous(event.target.checked)} />
-                Post as anonymous user
-              </label>
+              <div>
+                <label
+                  className={[
+                    "flex items-center gap-3 text-sm",
+                    isGloballyAnonymous ? "text-muted-foreground/70" : "text-foreground",
+                  ].join(" ")}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isGloballyAnonymous || isAnonymous}
+                    disabled={isGloballyAnonymous || interactionLocked}
+                    onChange={(event) => setIsAnonymous(event.target.checked)}
+                    onClick={(event) => {
+                      if (isGloballyAnonymous) {
+                        event.preventDefault();
+                        toast.info(
+                          "Anonymous posting is turned on in your profile settings. Turn it off from Profile → Privacy to post with your identity."
+                        );
+                      }
+                    }}
+                    className="disabled:cursor-not-allowed disabled:opacity-60"
+                  />
+                  Post as anonymous user
+                </label>
+                {isGloballyAnonymous ? (
+                  <p className="mt-1.5 text-xs text-primary">
+                    Anonymous mode is on from your profile. All posts are published anonymously.
+                  </p>
+                ) : null}
+              </div>
 
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={handleCreatePost}
-                  disabled={!forum.viewer.isAuthenticated || busyKey === "create-post"}
+                  disabled={!forum.viewer.isAuthenticated || busyKey === "create-post" || interactionLocked}
                   className="flex-1 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {busyKey === "create-post" ? "Saving..." : forum.viewer.isAuthenticated ? "Publish discussion" : "Sign in to post"}
+                  {busyKey === "create-post"
+                    ? "Saving..."
+                    : interactionLocked
+                      ? "Suspended"
+                      : forum.viewer.isAuthenticated
+                        ? "Publish discussion"
+                        : "Sign in to post"}
                 </button>
                 <button
                   type="button"
@@ -1266,8 +1369,10 @@ export function ForumSection() {
           </div>
           <button
             type="button"
+            disabled={interactionLocked}
+            title={interactionLocked ? "Your account is suspended" : undefined}
             onClick={() => setIsComposerOpen((current) => !current)}
-            className="rounded-full border border-primary/20 bg-gradient-to-r from-primary via-accent to-secondary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/25"
+            className="rounded-full border border-primary/20 bg-gradient-to-r from-primary via-accent to-secondary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/25 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Start a discussion
           </button>
@@ -1284,6 +1389,8 @@ function ForumPostCard({
   expanded,
   canInteract,
   isAdminViewer,
+  isGloballyAnonymous,
+  interactionLocked,
   activeTag,
   availableTags,
   autoOpenComments = false,
@@ -1306,6 +1413,8 @@ function ForumPostCard({
   expanded: boolean;
   canInteract: boolean;
   isAdminViewer: boolean;
+  isGloballyAnonymous: boolean;
+  interactionLocked: boolean;
   activeTag: string | null;
   availableTags: string[];
   autoOpenComments?: boolean;
@@ -1456,6 +1565,7 @@ function ForumPostCard({
             {post.canManage ? (
               <ManagementMenu
                 deleteDisabled={busy}
+                menuDisabled={interactionLocked}
                 onEdit={() => setIsEditing((current) => !current)}
                 onDelete={() => {
                   void onDelete(post.id);
@@ -1463,6 +1573,7 @@ function ForumPostCard({
               />
             ) : canInteract ? (
               <ManagementMenu
+                menuDisabled={interactionLocked}
                 onReport={() => {
                   const reason = window.prompt("Why are you reporting this discussion?");
                   if (!reason?.trim()) return;
@@ -1487,34 +1598,63 @@ function ForumPostCard({
             <input
               value={draftTitle}
               onChange={(event) => setDraftTitle(event.target.value)}
-              className="w-full rounded-3xl border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40"
+              disabled={interactionLocked}
+              className="w-full rounded-3xl border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40 disabled:cursor-not-allowed disabled:opacity-60"
             />
             <textarea
               value={draftContent}
               onChange={(event) => setDraftContent(event.target.value)}
               rows={5}
-              className="w-full rounded-[1.75rem] border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40"
+              disabled={interactionLocked}
+              className="w-full rounded-[1.75rem] border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40 disabled:cursor-not-allowed disabled:opacity-60"
             />
             <TagSelector
               value={draftTags}
               onChange={setDraftTags}
               availableTags={availableTags}
               placeholder="Type custom tags, separated by commas"
+              disabled={interactionLocked}
             />
-            <label className="flex items-center gap-3 text-sm text-foreground">
-              <input type="checkbox" checked={draftAnonymous} onChange={(event) => setDraftAnonymous(event.target.checked)} />
-              Post as anonymous user
-            </label>
+            <div>
+              <label
+                className={[
+                  "flex items-center gap-3 text-sm",
+                  isGloballyAnonymous ? "text-muted-foreground/70" : "text-foreground",
+                ].join(" ")}
+              >
+                <input
+                  type="checkbox"
+                  checked={isGloballyAnonymous || draftAnonymous}
+                  disabled={isGloballyAnonymous || interactionLocked}
+                  onChange={(event) => setDraftAnonymous(event.target.checked)}
+                  onClick={(event) => {
+                    if (isGloballyAnonymous) {
+                      event.preventDefault();
+                      toast.info(
+                        "Anonymous posting is turned on in your profile settings. Turn it off from Profile → Privacy to post with your identity."
+                      );
+                    }
+                  }}
+                  className="disabled:cursor-not-allowed disabled:opacity-60"
+                />
+                Post as anonymous user
+              </label>
+              {isGloballyAnonymous ? (
+                <p className="mt-1.5 text-xs text-primary">
+                  Anonymous mode is on from your profile.
+                </p>
+              ) : null}
+            </div>
             <div className="flex flex-wrap gap-2">
               <ActionButton
                 active
-                disabled={busy}
+                disabled={busy || interactionLocked}
                 onClick={() => {
                   onEdit(post.id, {
                     title: draftTitle,
                     content: draftContent,
                     tags: parseTagString(draftTags),
-                    isAnonymous: draftAnonymous,
+                    isAnonymous: isGloballyAnonymous || draftAnonymous,
                     media: post.media.map(({ kind, url }) => ({ kind, url })),
                   });
                   setIsEditing(false);
@@ -1547,7 +1687,7 @@ function ForumPostCard({
               <div className={expanded ? "flex flex-wrap items-center gap-3" : "flex flex-wrap items-center gap-2.5"}>
                 <InlineActionButton
                   active={post.viewerHasUpvoted}
-                  disabled={!canInteract || busy}
+                  disabled={!canInteract || busy || interactionLocked}
                   onClick={() => onVote(post.id, "upvote")}
                 >
                   <ArrowUp className="h-4 w-4" />
@@ -1555,13 +1695,14 @@ function ForumPostCard({
                 </InlineActionButton>
                 <InlineActionButton
                   active={post.viewerHasDownvoted}
-                  disabled={!canInteract || busy}
+                  disabled={!canInteract || busy || interactionLocked}
                   onClick={() => onVote(post.id, "downvote")}
                 >
                   <ArrowDown className="h-4 w-4" />
                   <span>{post.downvotes > 0 ? post.downvotes : "Downvote"}</span>
                 </InlineActionButton>
                 <InlineActionButton
+                  disabled={interactionLocked || !canInteract}
                   onClick={() => {
                     if (expanded) {
                       setShowCommentBox((current) => !current);
@@ -1596,13 +1737,13 @@ function ForumPostCard({
               onChange={(event) => setDraftComment(event.target.value)}
               rows={3}
               placeholder={canInteract ? "Add a comment..." : "Sign in to comment"}
-              disabled={!canInteract}
+              disabled={!canInteract || interactionLocked}
               className="w-full rounded-[1.5rem] border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40 disabled:cursor-not-allowed disabled:opacity-60"
             />
             <div className="mt-3 flex flex-wrap gap-2">
               <ActionButton
                 active
-                disabled={!canInteract || busy}
+                disabled={!canInteract || busy || interactionLocked}
                 onClick={() => {
                   onComment(post.id, null, draftComment);
                   setDraftComment("");
@@ -1621,6 +1762,7 @@ function ForumPostCard({
             <CommentTree
               comments={post.comments}
               canInteract={canInteract}
+              interactionLocked={interactionLocked}
               busyKey={busyKey}
               onVote={onCommentVote}
               onDelete={onCommentDelete}
