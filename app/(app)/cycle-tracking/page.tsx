@@ -211,6 +211,42 @@ export default function CycleTrackingPage() {
             </CardContent>
           </Card>
 
+          {/* Cycle Predictions Card */}
+          <Card className="w-full shadow-md border-primary/10 bg-card/50">
+            <CardHeader>
+              <CardTitle className="text-lg">Cycle Predictions</CardTitle>
+              <CardDescription>Estimated dates for your cycle</CardDescription>
+            </CardHeader>
+            <CardContent className="px-6 pb-6">
+              {!analytics ? (
+                <div className="h-[100px] flex items-center justify-center rounded-xl border border-dashed border-primary/20 bg-muted/10">
+                  <p className="text-muted-foreground text-sm font-medium animate-pulse">Loading predictions...</p>
+                </div>
+              ) : !analytics.hasData ? (
+                <div className="h-[100px] flex items-center justify-center rounded-xl border border-dashed border-primary/20 bg-muted/10">
+                  <p className="text-muted-foreground text-sm font-medium">Log a period to see predictions.</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 flex justify-between items-center">
+                    <div>
+                      <p className="text-xs uppercase text-primary font-bold mb-1">Period Ends</p>
+                      <p className="text-sm font-semibold">
+                        {new Date(analytics.latestCycle.expectedPeriodEnd).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs uppercase text-primary font-bold mb-1">Next Period Starts</p>
+                      <p className="text-sm font-semibold">
+                        {new Date(analytics.latestCycle.predictedEndDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Mood Tracker Card */}
           <Card className={`w-full shadow-lg border-primary/20 bg-gradient-to-br from-card to-card/90 transition-opacity duration-300 ${isPending ? "opacity-60 pointer-events-none" : ""}`}>
             <CardHeader className="pb-4">
