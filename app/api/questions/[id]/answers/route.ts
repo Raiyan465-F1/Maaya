@@ -95,7 +95,11 @@ export async function POST(
     }
 
     const [existingQuestion] = await db
-      .select({ id: doctorQuestions.id, status: doctorQuestions.status })
+      .select({
+        id: doctorQuestions.id,
+        status: doctorQuestions.status,
+        doctorUserId: doctorQuestions.doctorUserId,
+      })
       .from(doctorQuestions)
       .where(eq(doctorQuestions.id, questionId))
       .limit(1);
@@ -107,6 +111,17 @@ export async function POST(
     if (existingQuestion.status === "closed") {
       return jsonResponse(
         { error: "This question has been closed and no longer accepts answers" },
+        403,
+        origin
+      );
+    }
+
+    if (
+      existingQuestion.doctorUserId &&
+      existingQuestion.doctorUserId !== session.user.id
+    ) {
+      return jsonResponse(
+        { error: "This question was assigned to another doctor" },
         403,
         origin
       );

@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -190,12 +191,19 @@ function LoginPageContent() {
                 />
               </div>
 
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="w-full h-11 text-base font-semibold bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-xl hover:opacity-90 transition-opacity shadow-sm disabled:opacity-70"
-              >
-                {isLoading ? "Signing in..." : "Log in"}
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full h-11 text-base font-semibold bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-xl hover:opacity-90 transition-opacity shadow-sm disabled:opacity-70"
+                >
+                {isLoading ? (
+                  <span className="inline-flex items-center gap-2">
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                    Signing in...
+                  </span>
+                ) : (
+                  "Log in"
+                )}
               </Button>
             </form>
 

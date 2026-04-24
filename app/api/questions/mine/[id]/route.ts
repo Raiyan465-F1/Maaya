@@ -59,6 +59,7 @@ export async function GET(
         isAnonymous: doctorQuestions.isAnonymous,
         status: doctorQuestions.status,
         createdAt: doctorQuestions.createdAt,
+        doctorUserId: doctorQuestions.doctorUserId,
         userEmail: users.email,
       })
       .from(doctorQuestions)
@@ -91,9 +92,29 @@ export async function GET(
       .where(eq(doctorAnswers.questionId, questionId))
       .orderBy(doctorAnswers.createdAt);
 
+    const [assignedDoctor] = question.doctorUserId
+      ? await db
+          .select({
+            id: users.id,
+            email: users.email,
+            name: users.name,
+            specialty: doctorProfiles.specialty,
+          })
+          .from(users)
+          .leftJoin(doctorProfiles, eq(users.id, doctorProfiles.userId))
+          .where(eq(users.id, question.doctorUserId))
+          .limit(1)
+      : [];
+
     return jsonResponse(
       {
         ...question,
+        isSpecified: Boolean(question.doctorUserId),
+        specifiedDoctorName:
+          assignedDoctor && question.doctorUserId
+            ? buildDisplayName(assignedDoctor.name, assignedDoctor.email)
+            : null,
+        specifiedDoctorSpecialty: assignedDoctor?.specialty ?? null,
         answers: answers.map((answer) => ({
           id: answer.id,
           answerText: answer.answerText,

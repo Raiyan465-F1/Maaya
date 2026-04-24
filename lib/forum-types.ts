@@ -70,5 +70,14 @@ export type ForumResponse = {
   posts: ForumPostRecord[];
 };
 
+export type ForumVoteSnapshot = {
+  target: "post" | "comment";
+  id: number;
+  upvotes: number;
+  downvotes: number;
+  viewerHasUpvoted: boolean;
+  viewerHasDownvoted: boolean;
+};
+
 export const FORUM_MEDIA_LIMIT = 4;
 export const FORUM_TAG_LIMIT = 5;

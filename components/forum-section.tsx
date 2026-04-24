@@ -12,6 +12,7 @@ import type {
   ForumMediaInput,
   ForumPostRecord,
   ForumResponse,
+  ForumVoteSnapshot,
 } from "@/lib/forum-types";
 import { FORUM_MEDIA_LIMIT, FORUM_TAG_LIMIT } from "@/lib/forum-types";
 import { useConfirm } from "@/hooks/use-confirm";
@@ -35,7 +36,7 @@ async function readJsonResponse(response: Response) {
   if (!text.trim()) return null;
 
   try {
-    return JSON.parse(text) as { error?: string } & Partial<ForumResponse>;
+    return JSON.parse(text) as { error?: string } & Partial<ForumResponse> & Partial<ForumVoteSnapshot>;
   } catch {
     return null;
   }
@@ -357,6 +358,165 @@ function normalizeSearchValue(value: string) {
 
 function postPopularityScore(post: ForumPostRecord) {
   return post.upvotes - post.downvotes + countReplies(post.comments) * 2;
+}
+
+function isVoteSnapshot(data: unknown): data is ForumVoteSnapshot {
+  if (!data || typeof data !== "object") return false;
+
+  const candidate = data as Partial<ForumVoteSnapshot>;
+  return (
+    (candidate.target === "post" || candidate.target === "comment") &&
+    typeof candidate.id === "number" &&
+    typeof candidate.upvotes === "number" &&
+    typeof candidate.downvotes === "number" &&
+    typeof candidate.viewerHasUpvoted === "boolean" &&
+    typeof candidate.viewerHasDownvoted === "boolean"
+  );
+}
+
+function getOptimisticVoteSnapshot(
+  target: "post" | "comment",
+  item: Pick<ForumVoteSnapshot, "id" | "upvotes" | "downvotes" | "viewerHasUpvoted" | "viewerHasDownvoted">,
+  voteType: "upvote" | "downvote"
+): ForumVoteSnapshot {
+  let upvotes = item.upvotes;
+  let downvotes = item.downvotes;
+  let viewerHasUpvoted = item.viewerHasUpvoted;
+  let viewerHasDownvoted = item.viewerHasDownvoted;
+
+  if (voteType === "upvote") {
+    if (viewerHasUpvoted) {
+      upvotes = Math.max(0, upvotes - 1);
+      viewerHasUpvoted = false;
+    } else {
+      if (viewerHasDownvoted) {
+        downvotes = Math.max(0, downvotes - 1);
+        viewerHasDownvoted = false;
+      }
+      upvotes += 1;
+      viewerHasUpvoted = true;
+    }
+  } else if (viewerHasDownvoted) {
+    downvotes = Math.max(0, downvotes - 1);
+    viewerHasDownvoted = false;
+  } else {
+    if (viewerHasUpvoted) {
+      upvotes = Math.max(0, upvotes - 1);
+      viewerHasUpvoted = false;
+    }
+    downvotes += 1;
+    viewerHasDownvoted = true;
+  }
+
+  return {
+    target,
+    id: item.id,
+    upvotes,
+    downvotes,
+    viewerHasUpvoted,
+    viewerHasDownvoted,
+  };
+}
+
+function applyVoteSnapshotToComments(
+  comments: ForumCommentRecord[],
+  voteSnapshot: ForumVoteSnapshot
+): ForumCommentRecord[] {
+  return comments.map((comment) => {
+    const updatedReplies: ForumCommentRecord[] = applyVoteSnapshotToComments(comment.replies, voteSnapshot);
+
+    if (voteSnapshot.target === "comment" && comment.id === voteSnapshot.id) {
+      return {
+        ...comment,
+        upvotes: voteSnapshot.upvotes,
+        downvotes: voteSnapshot.downvotes,
+        viewerHasUpvoted: voteSnapshot.viewerHasUpvoted,
+        viewerHasDownvoted: voteSnapshot.viewerHasDownvoted,
+        replies: updatedReplies,
+      };
+    }
+
+    if (updatedReplies !== comment.replies) {
+      return { ...comment, replies: updatedReplies };
+    }
+
+    return comment;
+  });
+}
+
+function findCommentVoteSnapshot(comments: ForumCommentRecord[], commentId: number): ForumVoteSnapshot | null {
+  for (const comment of comments) {
+    if (comment.id === commentId) {
+      return {
+        target: "comment",
+        id: comment.id,
+        upvotes: comment.upvotes,
+        downvotes: comment.downvotes,
+        viewerHasUpvoted: comment.viewerHasUpvoted,
+        viewerHasDownvoted: comment.viewerHasDownvoted,
+      };
+    }
+
+    const nestedComment = findCommentVoteSnapshot(comment.replies, commentId);
+    if (nestedComment) {
+      return nestedComment;
+    }
+  }
+
+  return null;
+}
+
+function findVoteSnapshotInForum(
+  currentForum: ForumResponse,
+  target: "post" | "comment",
+  itemId: number
+): ForumVoteSnapshot | null {
+  if (target === "post") {
+    const post = currentForum.posts.find((entry) => entry.id === itemId);
+    return post
+      ? {
+          target: "post",
+          id: post.id,
+          upvotes: post.upvotes,
+          downvotes: post.downvotes,
+          viewerHasUpvoted: post.viewerHasUpvoted,
+          viewerHasDownvoted: post.viewerHasDownvoted,
+        }
+      : null;
+  }
+
+  for (const post of currentForum.posts) {
+    const comment = findCommentVoteSnapshot(post.comments, itemId);
+    if (comment) {
+      return comment;
+    }
+  }
+
+  return null;
+}
+
+function applyVoteSnapshotToForum(currentForum: ForumResponse, voteSnapshot: ForumVoteSnapshot): ForumResponse {
+  return {
+    ...currentForum,
+    posts: currentForum.posts.map((post) => {
+      if (voteSnapshot.target === "post" && post.id === voteSnapshot.id) {
+        return {
+          ...post,
+          upvotes: voteSnapshot.upvotes,
+          downvotes: voteSnapshot.downvotes,
+          viewerHasUpvoted: voteSnapshot.viewerHasUpvoted,
+          viewerHasDownvoted: voteSnapshot.viewerHasDownvoted,
+        };
+      }
+
+      const updatedComments = applyVoteSnapshotToComments(post.comments, voteSnapshot);
+      if (updatedComments !== post.comments) {
+        return { ...post, comments: updatedComments };
+      }
+
+      return post;
+    }),
+  };
 }
 
 function CommentTree({
@@ -744,6 +904,55 @@ export function ForumSection() {
     }
   }
 
+  async function submitVote(
+    url: string,
+    nextBusyKey: string,
+    target: "post" | "comment",
+    itemId: number,
+    voteType: "upvote" | "downvote"
+  ) {
+    const currentVote = findVoteSnapshotInForum(forum, target, itemId);
+    if (!currentVote) {
+      return submitJson(url, { method: "POST", body: JSON.stringify({ voteType }) }, nextBusyKey);
+    }
+
+    const optimisticVote = getOptimisticVoteSnapshot(target, currentVote, voteType);
+    const previousForum = forum;
+
+    setBusyKey(nextBusyKey);
+    setError(null);
+    setForum((current) => applyVoteSnapshotToForum(current, optimisticVote));
+
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ voteType }),
+      });
+
+      const data = await readJsonResponse(response);
+      if (!response.ok) {
+        throw new Error((data && "error" in data && data.error) || "Something went wrong.");
+      }
+
+      if (isVoteSnapshot(data)) {
+        setForum((current) => applyVoteSnapshotToForum(current, data));
+      } else {
+        await refreshForum();
+      }
+
+      return true;
+    } catch (caught) {
+      setForum(previousForum);
+      setError(caught instanceof Error ? caught.message : "Something went wrong.");
+      return false;
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
   const focusedPost = forum.posts.find((post) => post.id === focusedPostId) ?? null;
 
   async function handleCreatePost() {
@@ -949,10 +1158,12 @@ export function ForumSection() {
               onClose={() => setFocusedPostId(null)}
               onTagClick={applyTagFilter}
               onVote={(postId, voteType) =>
-                submitJson(
+                submitVote(
                   `/api/forum/posts/${postId}/vote`,
-                  { method: "POST", body: JSON.stringify({ voteType }) },
-                  `post-${postId}`
+                  `post-${postId}`,
+                  "post",
+                  postId,
+                  voteType
                 )
               }
               onDelete={async (postId) => {
@@ -984,10 +1195,12 @@ export function ForumSection() {
                 )
               }
               onCommentVote={(commentId, voteType) =>
-                submitJson(
+                submitVote(
                   `/api/forum/comments/${commentId}/vote`,
-                  { method: "POST", body: JSON.stringify({ voteType }) },
-                  `comment-${commentId}`
+                  `comment-${commentId}`,
+                  "comment",
+                  commentId,
+                  voteType
                 )
               }
               onCommentDelete={(commentId) =>
@@ -1156,10 +1369,12 @@ export function ForumSection() {
               }}
               onTagClick={applyTagFilter}
               onVote={(postId, voteType) =>
-                submitJson(
+                submitVote(
                   `/api/forum/posts/${postId}/vote`,
-                  { method: "POST", body: JSON.stringify({ voteType }) },
-                  `post-${postId}`
+                  `post-${postId}`,
+                  "post",
+                  postId,
+                  voteType
                 )
               }
               onDelete={async (postId) => {
@@ -1192,10 +1407,12 @@ export function ForumSection() {
                 )
               }
               onCommentVote={(commentId, voteType) =>
-                submitJson(
+                submitVote(
                   `/api/forum/comments/${commentId}/vote`,
-                  { method: "POST", body: JSON.stringify({ voteType }) },
-                  `comment-${commentId}`
+                  `comment-${commentId}`,
+                  "comment",
+                  commentId,
+                  voteType
                 )
               }
               onCommentDelete={(commentId) =>

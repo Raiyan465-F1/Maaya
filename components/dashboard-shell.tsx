@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 export type DashboardQuestion = {
@@ -14,6 +13,8 @@ export type DashboardQuestion = {
   answerText: string | null;
   answeredAt: string | null;
   answeredBy: string | null;
+  isSpecified: boolean;
+  specifiedDoctorName: string | null;
 };
 
 export type DashboardAlert = {
@@ -56,6 +57,19 @@ function StatusBadge({ replied }: { replied: boolean }) {
       }`}
     >
       {replied ? "Replied" : "Reply pending"}
+    </span>
+  );
+}
+
+function AssignmentBadge({
+  isSpecified,
+  specifiedDoctorName,
+}: Pick<DashboardQuestion, "isSpecified" | "specifiedDoctorName">) {
+  if (!isSpecified) return null;
+
+  return (
+    <span className="inline-flex rounded-full bg-secondary/10 px-3 py-1 text-xs font-medium text-secondary">
+      {specifiedDoctorName ? `Specified: ${specifiedDoctorName}` : "Specified"}
     </span>
   );
 }
@@ -105,7 +119,6 @@ function Header({
   userEmail: string;
 }) {
   const router = useRouter();
-  const [isSigningOut, startSignOut] = useTransition();
 
   const description =
     role === "doctor" || role === "admin"
@@ -135,18 +148,6 @@ function Header({
             className="inline-flex items-center justify-center rounded-xl border border-primary/20 px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/5"
           >
             Home
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              startSignOut(() => {
-                void signOut({ callbackUrl: "/" });
-              })
-            }
-            disabled={isSigningOut}
-            className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
-          >
-            {isSigningOut ? "Signing out..." : "Sign out"}
           </button>
         </div>
       </div>
@@ -324,9 +325,15 @@ function UserPosts({ questions }: { questions: DashboardQuestion[] }) {
           <article key={question.id} className="rounded-2xl border border-border/80 bg-background p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                  {question.isAnonymous ? "Anonymous" : "Visible profile"}
-                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                    {question.isAnonymous ? "Anonymous" : "Visible profile"}
+                  </p>
+                  <AssignmentBadge
+                    isSpecified={question.isSpecified}
+                    specifiedDoctorName={question.specifiedDoctorName}
+                  />
+                </div>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {formatDate(question.createdAt)}
                 </p>
@@ -432,9 +439,15 @@ function DoctorPending({ questions }: { questions: DashboardQuestion[] }) {
           <article key={question.id} className="rounded-2xl border border-border/80 bg-background p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                  {question.askedBy}
-                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                    {question.askedBy}
+                  </p>
+                  <AssignmentBadge
+                    isSpecified={question.isSpecified}
+                    specifiedDoctorName={question.specifiedDoctorName}
+                  />
+                </div>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {formatDate(question.createdAt)}
                 </p>
@@ -505,9 +518,15 @@ function DoctorAnswered({ questions }: { questions: DashboardQuestion[] }) {
           <article key={question.id} className="rounded-2xl border border-border/80 bg-background p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                  {question.askedBy}
-                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                    {question.askedBy}
+                  </p>
+                  <AssignmentBadge
+                    isSpecified={question.isSpecified}
+                    specifiedDoctorName={question.specifiedDoctorName}
+                  />
+                </div>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {formatDate(question.createdAt)}
                 </p>
