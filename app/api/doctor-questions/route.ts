@@ -1,9 +1,9 @@
 import { getServerSession } from "next-auth";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, isNull, or } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/src/db";
-import { doctorQuestions } from "@/src/schema";
+import { doctorQuestions, users } from "@/src/schema";
 
 const MIN_QUESTION_LENGTH = 10;
 
@@ -14,10 +14,25 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (session.user.role === "doctor" || session.user.role === "admin") {
+  if (session.user.role === "admin") {
     const questions = await db
       .select()
       .from(doctorQuestions)
+      .orderBy(desc(doctorQuestions.createdAt));
+
+    return NextResponse.json({ questions });
+  }
+
+  if (session.user.role === "doctor") {
+    const questions = await db
+      .select()
+      .from(doctorQuestions)
+      .where(
+        or(
+          isNull(doctorQuestions.doctorUserId),
+          eq(doctorQuestions.doctorUserId, session.user.id)
+        )
+      )
       .orderBy(desc(doctorQuestions.createdAt));
 
     return NextResponse.json({ questions });
@@ -43,11 +58,14 @@ export async function POST(request: NextRequest) {
     | {
         questionText?: string;
         isAnonymous?: boolean;
+        selectedDoctorUserId?: string;
       }
     | null;
 
   const questionText = body?.questionText?.trim();
   const isAnonymous = Boolean(body?.isAnonymous);
+  const selectedDoctorUserId =
+    typeof body?.selectedDoctorUserId === "string" ? body.selectedDoctorUserId.trim() : "";
 
   if (!questionText || questionText.length < MIN_QUESTION_LENGTH) {
     return NextResponse.json(
@@ -58,10 +76,26 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  let assignedDoctorId: string | null = null;
+  if (selectedDoctorUserId) {
+    const [doctor] = await db
+      .select({ id: users.id, role: users.role })
+      .from(users)
+      .where(eq(users.id, selectedDoctorUserId))
+      .limit(1);
+
+    if (!doctor || doctor.role !== "doctor") {
+      return NextResponse.json({ error: "Selected doctor is invalid" }, { status: 400 });
+    }
+
+    assignedDoctorId = doctor.id;
+  }
+
   const [createdQuestion] = await db
     .insert(doctorQuestions)
     .values({
       userId: session.user.id,
+      doctorUserId: assignedDoctorId,
       questionText,
       isAnonymous,
     })

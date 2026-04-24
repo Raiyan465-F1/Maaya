@@ -5,7 +5,7 @@ import { suspendedMutationBlockedResponse } from "@/lib/suspended-mutation";
 import {
   canAccessModeratedContent,
   ensurePostExists,
-  getForumSnapshot,
+  getPostVoteSnapshot,
   toggleVoteForPost,
 } from "@/lib/forum-server";
 import type { VoteType } from "@/src/schema/enums";
@@ -42,6 +42,6 @@ export async function POST(
 
   await toggleVoteForPost(postId, session.user.id, voteType);
 
-  const data = await getForumSnapshot(session.user.id, session.user.role);
+  const data = await getPostVoteSnapshot(postId, session.user.id);
   return NextResponse.json(data);
 }

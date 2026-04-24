@@ -39,6 +39,17 @@ export async function GET(
     return NextResponse.json({ error: "Question not found" }, { status: 404 });
   }
 
+  if (
+    question.doctorUserId &&
+    session.user.role !== "admin" &&
+    question.doctorUserId !== session.user.id
+  ) {
+    return NextResponse.json(
+      { error: "This question was assigned to another doctor" },
+      { status: 403 }
+    );
+  }
+
   if (session.user.role === "user" && question.userId !== session.user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -128,7 +139,7 @@ export async function POST(
   const [updatedQuestion] = await db
     .update(doctorQuestions)
     .set({
-      doctorUserId: session.user.id,
+      status: "answered",
     })
     .where(
       and(

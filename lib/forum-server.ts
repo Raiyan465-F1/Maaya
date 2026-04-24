@@ -4,7 +4,7 @@ import { db } from "@/src/db";
 import { comments, commentVotes, forumPostMedia, forumPosts, forumPostVotes } from "@/src/schema/forum";
 import { reports } from "@/src/schema/reports";
 import { users } from "@/src/schema/users";
-import type { ForumAuthorTag, ForumCommentRecord, ForumMediaInput, ForumResponse } from "@/lib/forum-types";
+import type { ForumAuthorTag, ForumCommentRecord, ForumMediaInput, ForumResponse, ForumVoteSnapshot } from "@/lib/forum-types";
 import { FORUM_MEDIA_LIMIT, FORUM_TAG_LIMIT } from "@/lib/forum-types";
 import type { ContentStatus, UserRole, VoteType } from "@/src/schema/enums";
 
@@ -449,4 +449,48 @@ export async function toggleVoteForComment(commentId: number, userId: string, vo
   });
 
   return true;
+}
+
+export async function getPostVoteSnapshot(postId: number, viewerId: string): Promise<ForumVoteSnapshot> {
+  const votes = await db
+    .select({
+      userId: forumPostVotes.userId,
+      voteType: forumPostVotes.voteType,
+    })
+    .from(forumPostVotes)
+    .where(eq(forumPostVotes.postId, postId));
+
+  const upvotes = votes.filter((vote) => vote.voteType === "upvote").length;
+  const downvotes = votes.filter((vote) => vote.voteType === "downvote").length;
+
+  return {
+    target: "post",
+    id: postId,
+    upvotes,
+    downvotes,
+    viewerHasUpvoted: votes.some((vote) => vote.userId === viewerId && vote.voteType === "upvote"),
+    viewerHasDownvoted: votes.some((vote) => vote.userId === viewerId && vote.voteType === "downvote"),
+  };
+}
+
+export async function getCommentVoteSnapshot(commentId: number, viewerId: string): Promise<ForumVoteSnapshot> {
+  const votes = await db
+    .select({
+      userId: commentVotes.userId,
+      voteType: commentVotes.voteType,
+    })
+    .from(commentVotes)
+    .where(eq(commentVotes.commentId, commentId));
+
+  const upvotes = votes.filter((vote) => vote.voteType === "upvote").length;
+  const downvotes = votes.filter((vote) => vote.voteType === "downvote").length;
+
+  return {
+    target: "comment",
+    id: commentId,
+    upvotes,
+    downvotes,
+    viewerHasUpvoted: votes.some((vote) => vote.userId === viewerId && vote.voteType === "upvote"),
+    viewerHasDownvoted: votes.some((vote) => vote.userId === viewerId && vote.voteType === "downvote"),
+  };
 }
