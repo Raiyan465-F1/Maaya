@@ -1,4 +1,4 @@
-import { Heart, Activity, Droplets, CalendarClock, Smile, Moon, Thermometer, Wind } from "lucide-react";
+import { Heart, Activity, Droplets, CalendarClock, Smile, Moon, Thermometer, Wind, Lightbulb } from "lucide-react";
 
 export function CycleRingWidget() {
   return (
@@ -114,6 +114,35 @@ export function SmartInsightsCarousel() {
       <div>
         <h4 className="text-sm font-bold text-amber-900 dark:text-amber-100">Fertile Window</h4>
         <p className="mt-1 text-sm font-medium text-amber-800/80 dark:text-amber-200/80">You are likely entering your fertile window today. Chances of pregnancy are high.</p>
+      </div>
+    </div>
+  );
+}
+
+export function FunFactsWidget() {
+  const facts = [
+    "The average person spends about 38.5 days brushing their teeth over their lifetime.",
+    "Your heart pumps about 2,000 gallons of blood every single day.",
+    "During a typical menstrual cycle, estrogen levels can fluctuate by more than 200%.",
+    "Laughing for 10-15 minutes can burn up to 40 calories!"
+  ];
+  const fact = facts[Math.floor(Math.random() * facts.length)];
+
+  return (
+    <div className="mt-8 rounded-[32px] p-8 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white shadow-xl shadow-purple-500/20 relative overflow-hidden group">
+      <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+      <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-black/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700" />
+      
+      <div className="relative z-10">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
+            <Lightbulb className="w-5 h-5 text-yellow-200" />
+          </div>
+          <h4 className="font-black text-xs uppercase tracking-widest text-white/80">Health Fact</h4>
+        </div>
+        <p className="text-base font-bold leading-relaxed italic text-white">
+          "{fact}"
+        </p>
       </div>
     </div>
   );

@@ -26,7 +26,7 @@ export type DashboardAlert = {
   type: string;
 };
 
-import { CycleRingWidget, HealthMetricsGrid, SmartInsightsCarousel } from "./dashboard-widgets";
+import { CycleRingWidget, HealthMetricsGrid, SmartInsightsCarousel, FunFactsWidget } from "./dashboard-widgets";
 
 type DashboardShellProps = {
   role: "user" | "doctor" | "admin";
@@ -639,11 +639,16 @@ export function DashboardShell({
       <div className="mx-auto flex max-w-[1200px] flex-col gap-8">
         <Header role={role} userEmail={userEmail} />
         <div className="grid gap-8 lg:grid-cols-[18rem_minmax(0,1fr)] items-start">
-          <QuickAccessMenu
-            sections={sections}
-            activeSection={activeSection}
-            onSelect={setActiveSection}
-          />
+          <div className="flex flex-col">
+            <QuickAccessMenu
+              sections={sections}
+              activeSection={activeSection}
+              onSelect={setActiveSection}
+            />
+            <div className="hidden lg:block">
+              <FunFactsWidget />
+            </div>
+          </div>
           <div className="w-full max-w-full overflow-x-hidden pb-10">{activePanel}</div>
         </div>
       </div>
