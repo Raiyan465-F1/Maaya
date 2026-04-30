@@ -48,14 +48,14 @@ export function HealthMetricsGrid() {
   return (
     <div className="grid gap-10 md:grid-cols-2">
       {/* Mood Card */}
-      <div className="rounded-[48px] p-10 min-h-[260px] shadow-sm border-0 bg-indigo-50/50 dark:bg-indigo-950/20 flex flex-col justify-between hover:bg-indigo-100/50 transition-all duration-500 group">
-        <div className="flex items-center gap-3 mb-8">
+      <div className="rounded-[48px] p-10 min-h-[200px] shadow-sm border-0 bg-indigo-50/50 dark:bg-indigo-950/20 flex flex-col hover:bg-indigo-100/50 transition-all duration-500 group">
+        <div className="flex items-center gap-3 mb-6">
           <div className="p-2.5 bg-indigo-100 dark:bg-indigo-900/50 rounded-full group-hover:scale-110 transition-transform">
             <Smile className="w-6 h-6 text-indigo-500" />
           </div>
           <h3 className="text-sm font-bold text-indigo-900/60 dark:text-indigo-100/60 uppercase tracking-widest">Mood</h3>
         </div>
-        <div className="flex items-center gap-4 bg-white/60 dark:bg-black/40 p-5 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm mt-auto w-full">
+        <div className="flex items-center gap-4 bg-white/60 dark:bg-black/40 p-5 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm w-full">
           <span className="text-3xl">🙂</span>
           <div>
             <p className="text-sm font-bold text-indigo-900 dark:text-indigo-100 uppercase tracking-widest">Good</p>
@@ -64,40 +64,40 @@ export function HealthMetricsGrid() {
       </div>
 
       {/* Sleep Card */}
-      <div className="rounded-[48px] p-10 min-h-[300px] shadow-sm border-0 bg-blue-50/50 dark:bg-blue-950/20 flex flex-col justify-between hover:bg-blue-100/50 transition-all duration-500 group">
-        <div className="flex items-center gap-3 mb-8">
+      <div className="rounded-[48px] p-10 min-h-[200px] shadow-sm border-0 bg-blue-50/50 dark:bg-blue-950/20 flex flex-col hover:bg-blue-100/50 transition-all duration-500 group">
+        <div className="flex items-center gap-3 mb-6">
           <div className="p-2.5 bg-blue-100 dark:bg-blue-900/50 rounded-full group-hover:scale-110 transition-transform">
             <Moon className="w-6 h-6 text-blue-500" />
           </div>
           <h3 className="text-sm font-bold text-blue-900/60 dark:text-blue-100/60 uppercase tracking-widest">Sleep</h3>
         </div>
-        <div className="bg-white/60 dark:bg-black/40 p-5 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm mt-auto w-full">
+        <div className="bg-white/60 dark:bg-black/40 p-5 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm w-full">
           <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">7<span className="text-sm font-medium opacity-60 ml-1">hr</span> 30<span className="text-sm font-medium opacity-60 ml-1">m</span></p>
         </div>
       </div>
 
       {/* Temp Card */}
-      <div className="rounded-[48px] p-10 min-h-[300px] shadow-sm border-0 bg-orange-50/50 dark:bg-orange-950/20 flex flex-col justify-between hover:bg-orange-100/50 transition-all duration-500 group">
-        <div className="flex items-center gap-3 mb-8">
+      <div className="rounded-[48px] p-10 min-h-[200px] shadow-sm border-0 bg-orange-50/50 dark:bg-orange-950/20 flex flex-col hover:bg-orange-100/50 transition-all duration-500 group">
+        <div className="flex items-center gap-3 mb-6">
           <div className="p-2.5 bg-orange-100 dark:bg-orange-900/50 rounded-full group-hover:scale-110 transition-transform">
             <Thermometer className="w-6 h-6 text-orange-500" />
           </div>
           <h3 className="text-sm font-bold text-orange-900/60 dark:text-orange-100/60 uppercase tracking-widest">BBT</h3>
         </div>
-        <div className="bg-white/60 dark:bg-black/40 p-5 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm mt-auto w-full">
+        <div className="bg-white/60 dark:bg-black/40 p-5 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm w-full">
           <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">36.5<span className="text-sm font-medium opacity-60 ml-1">°C</span></p>
         </div>
       </div>
 
       {/* Symptoms Card */}
-      <div className="rounded-[48px] p-10 min-h-[300px] shadow-sm border-0 bg-rose-50/50 dark:bg-rose-950/20 flex flex-col justify-between hover:bg-rose-100/50 transition-all duration-500 group">
-        <div className="flex items-center gap-3 mb-8">
+      <div className="rounded-[48px] p-10 min-h-[200px] shadow-sm border-0 bg-rose-50/50 dark:bg-rose-950/20 flex flex-col hover:bg-rose-100/50 transition-all duration-500 group">
+        <div className="flex items-center gap-3 mb-6">
           <div className="p-2.5 bg-rose-100 dark:bg-rose-900/50 rounded-full group-hover:scale-110 transition-transform">
             <Wind className="w-6 h-6 text-rose-500" />
           </div>
           <h3 className="text-sm font-bold text-rose-900/60 dark:text-rose-100/60 uppercase tracking-widest">Symptoms</h3>
         </div>
-        <div className="bg-white/60 dark:bg-black/40 p-5 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm mt-auto w-full">
+        <div className="bg-white/60 dark:bg-black/40 p-5 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm w-full">
           <p className="text-sm font-bold text-rose-900 dark:text-rose-100 leading-tight uppercase tracking-wide">Mild Cramps, Headaches</p>
         </div>
       </div>
