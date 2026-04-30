@@ -30,14 +30,14 @@ export function CycleRingWidget() {
       </div>
       
       {/* Quick Action Buttons (Flo style) */}
-      <div className="flex items-center gap-6 mt-10 z-10">
-        <button className="flex items-center gap-3 px-8 py-4 rounded-full bg-rose-100 text-rose-700 hover:bg-rose-200 transition-colors font-bold text-base shadow-md hover:shadow-lg hover:-translate-y-0.5 duration-200">
+      <div className="flex flex-wrap items-center justify-center gap-8 mt-12 z-10">
+        <button className="flex items-center gap-4 px-12 py-6 rounded-full bg-rose-100 text-rose-700 hover:bg-rose-200 transition-all duration-300 font-bold text-sm shadow-lg hover:shadow-xl hover:-translate-y-1 active:scale-95">
           <Droplets className="w-5 h-5 fill-rose-500 text-rose-500" />
-          Log Period
+          <span className="whitespace-nowrap uppercase tracking-wider">Log Period</span>
         </button>
-        <button className="flex items-center gap-3 px-8 py-4 rounded-full bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors font-bold text-base shadow-md hover:shadow-lg hover:-translate-y-0.5 duration-200">
+        <button className="flex items-center gap-4 px-12 py-6 rounded-full bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-all duration-300 font-bold text-sm shadow-lg hover:shadow-xl hover:-translate-y-1 active:scale-95">
           <Activity className="w-5 h-5" />
-          Log Symptoms
+          <span className="whitespace-nowrap uppercase tracking-wider">Log Symptoms</span>
         </button>
       </div>
     </div>
@@ -46,59 +46,59 @@ export function CycleRingWidget() {
 
 export function HealthMetricsGrid() {
   return (
-    <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-10 md:grid-cols-2">
       {/* Mood Card */}
-      <div className="rounded-[40px] p-8 min-h-[220px] shadow-sm border-0 bg-indigo-50/50 dark:bg-indigo-950/20 flex flex-col justify-between hover:bg-indigo-100/50 transition-colors">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2.5 bg-indigo-100 dark:bg-indigo-900/50 rounded-full">
+      <div className="rounded-[48px] p-10 min-h-[260px] shadow-sm border-0 bg-indigo-50/50 dark:bg-indigo-950/20 flex flex-col justify-between hover:bg-indigo-100/50 transition-all duration-500 group">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="p-2.5 bg-indigo-100 dark:bg-indigo-900/50 rounded-full group-hover:scale-110 transition-transform">
             <Smile className="w-6 h-6 text-indigo-500" />
           </div>
-          <h3 className="text-base font-bold text-indigo-900 dark:text-indigo-100">Mood</h3>
+          <h3 className="text-sm font-bold text-indigo-900/60 dark:text-indigo-100/60 uppercase tracking-widest">Mood</h3>
         </div>
-        <div className="flex items-center gap-4 bg-white/50 dark:bg-black/20 p-5 rounded-2xl border border-white/40 dark:border-white/5 shadow-inner mt-auto">
-          <span className="text-4xl">🙂</span>
+        <div className="flex items-center gap-4 bg-white/60 dark:bg-black/40 p-5 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm mt-auto w-full">
+          <span className="text-3xl">🙂</span>
           <div>
-            <p className="text-sm font-bold text-indigo-900 dark:text-indigo-100 uppercase tracking-wide">Good</p>
+            <p className="text-sm font-bold text-indigo-900 dark:text-indigo-100 uppercase tracking-widest">Good</p>
           </div>
         </div>
       </div>
 
       {/* Sleep Card */}
-      <div className="rounded-[40px] p-8 min-h-[220px] shadow-sm border-0 bg-blue-50/50 dark:bg-blue-950/20 flex flex-col justify-between hover:bg-blue-100/50 transition-colors">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2.5 bg-blue-100 dark:bg-blue-900/50 rounded-full">
+      <div className="rounded-[48px] p-10 min-h-[300px] shadow-sm border-0 bg-blue-50/50 dark:bg-blue-950/20 flex flex-col justify-between hover:bg-blue-100/50 transition-all duration-500 group">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="p-2.5 bg-blue-100 dark:bg-blue-900/50 rounded-full group-hover:scale-110 transition-transform">
             <Moon className="w-6 h-6 text-blue-500" />
           </div>
-          <h3 className="text-base font-bold text-blue-900 dark:text-blue-100">Sleep</h3>
+          <h3 className="text-sm font-bold text-blue-900/60 dark:text-blue-100/60 uppercase tracking-widest">Sleep</h3>
         </div>
-        <div className="bg-white/50 dark:bg-black/20 p-5 rounded-2xl border border-white/40 dark:border-white/5 shadow-inner mt-auto flex items-end">
-          <p className="text-2xl font-black text-blue-900 dark:text-blue-100">7<span className="text-sm font-medium text-blue-700/70 dark:text-blue-300/70 ml-0.5 mr-2">hr</span>30<span className="text-sm font-medium text-blue-700/70 dark:text-blue-300/70 ml-0.5">m</span></p>
+        <div className="bg-white/60 dark:bg-black/40 p-5 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm mt-auto w-full">
+          <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">7<span className="text-sm font-medium opacity-60 ml-1">hr</span> 30<span className="text-sm font-medium opacity-60 ml-1">m</span></p>
         </div>
       </div>
 
       {/* Temp Card */}
-      <div className="rounded-[40px] p-8 min-h-[220px] shadow-sm border-0 bg-orange-50/50 dark:bg-orange-950/20 flex flex-col justify-between hover:bg-orange-100/50 transition-colors">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2.5 bg-orange-100 dark:bg-orange-900/50 rounded-full">
+      <div className="rounded-[48px] p-10 min-h-[300px] shadow-sm border-0 bg-orange-50/50 dark:bg-orange-950/20 flex flex-col justify-between hover:bg-orange-100/50 transition-all duration-500 group">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="p-2.5 bg-orange-100 dark:bg-orange-900/50 rounded-full group-hover:scale-110 transition-transform">
             <Thermometer className="w-6 h-6 text-orange-500" />
           </div>
-          <h3 className="text-base font-bold text-orange-900 dark:text-orange-100">BBT</h3>
+          <h3 className="text-sm font-bold text-orange-900/60 dark:text-orange-100/60 uppercase tracking-widest">BBT</h3>
         </div>
-        <div className="bg-white/50 dark:bg-black/20 p-5 rounded-2xl border border-white/40 dark:border-white/5 shadow-inner mt-auto flex items-end">
-          <p className="text-2xl font-black text-orange-900 dark:text-orange-100">36.5<span className="text-sm font-medium text-orange-700/70 dark:text-orange-300/70 ml-1">°C</span></p>
+        <div className="bg-white/60 dark:bg-black/40 p-5 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm mt-auto w-full">
+          <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">36.5<span className="text-sm font-medium opacity-60 ml-1">°C</span></p>
         </div>
       </div>
 
       {/* Symptoms Card */}
-      <div className="rounded-[40px] p-8 min-h-[220px] shadow-sm border-0 bg-rose-50/50 dark:bg-rose-950/20 flex flex-col justify-between hover:bg-rose-100/50 transition-colors">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2.5 bg-rose-100 dark:bg-rose-900/50 rounded-full">
+      <div className="rounded-[48px] p-10 min-h-[300px] shadow-sm border-0 bg-rose-50/50 dark:bg-rose-950/20 flex flex-col justify-between hover:bg-rose-100/50 transition-all duration-500 group">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="p-2.5 bg-rose-100 dark:bg-rose-900/50 rounded-full group-hover:scale-110 transition-transform">
             <Wind className="w-6 h-6 text-rose-500" />
           </div>
-          <h3 className="text-base font-bold text-rose-900 dark:text-rose-100">Symptoms</h3>
+          <h3 className="text-sm font-bold text-rose-900/60 dark:text-rose-100/60 uppercase tracking-widest">Symptoms</h3>
         </div>
-        <div className="bg-white/50 dark:bg-black/20 p-5 rounded-2xl border border-white/40 dark:border-white/5 shadow-inner mt-auto flex items-end">
-          <p className="text-base font-bold text-rose-900 dark:text-rose-100 leading-tight">Mild Cramps, Headaches</p>
+        <div className="bg-white/60 dark:bg-black/40 p-5 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm mt-auto w-full">
+          <p className="text-sm font-bold text-rose-900 dark:text-rose-100 leading-tight uppercase tracking-wide">Mild Cramps, Headaches</p>
         </div>
       </div>
     </div>
