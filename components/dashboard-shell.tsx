@@ -26,7 +26,7 @@ export type DashboardAlert = {
   type: string;
 };
 
-import { CycleRingWidget, HealthMetricsGrid, SmartInsightsCarousel, FunFactsWidget } from "./dashboard-widgets";
+import { CycleRingWidget, HealthMetricsGrid, SmartInsightsCarousel, FunFactsWidget, FeaturedArticlesWidget } from "./dashboard-widgets";
 
 type DashboardShellProps = {
   role: "user" | "doctor" | "admin";
@@ -647,6 +647,7 @@ export function DashboardShell({
             />
             <div className="hidden lg:block">
               <FunFactsWidget />
+              <FeaturedArticlesWidget />
             </div>
           </div>
           <div className="w-full max-w-full overflow-x-hidden pb-10">{activePanel}</div>

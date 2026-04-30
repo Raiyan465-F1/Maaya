@@ -1,4 +1,4 @@
-import { Heart, Activity, Droplets, CalendarClock, Smile, Moon, Thermometer, Wind, Lightbulb } from "lucide-react";
+import { Heart, Activity, Droplets, CalendarClock, Smile, Moon, Thermometer, Wind, Lightbulb, BookOpen, ShieldAlert } from "lucide-react";
 
 export function CycleRingWidget() {
   return (
@@ -143,6 +143,67 @@ export function FunFactsWidget() {
         <p className="text-base font-bold leading-relaxed italic text-white">
           "{fact}"
         </p>
+      </div>
+    </div>
+  );
+}
+
+export function FeaturedArticlesWidget() {
+  const articles = [
+    {
+      id: 1,
+      title: "Understanding Hormonal Fluctuations",
+      hub: "Education",
+      icon: <BookOpen className="w-3 h-3" />,
+      color: "bg-blue-500",
+      image: "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=200&h=200&fit=crop"
+    },
+    {
+      id: 2,
+      title: "STI Prevention: A Comprehensive Guide",
+      hub: "STI Awareness",
+      icon: <ShieldAlert className="w-3 h-3" />,
+      color: "bg-rose-500",
+      image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=200&h=200&fit=crop"
+    },
+    {
+      id: 3,
+      title: "The Importance of Regular Checkups",
+      hub: "Education",
+      icon: <BookOpen className="w-3 h-3" />,
+      color: "bg-emerald-500",
+      image: "https://images.unsplash.com/photo-1581595220892-b0739db3ba8c?w=200&h=200&fit=crop"
+    }
+  ];
+
+  return (
+    <div className="mt-8 rounded-[32px] p-6 bg-white/60 dark:bg-black/20 backdrop-blur-xl border-0 shadow-sm">
+      <div className="flex items-center justify-between mb-6 px-2">
+        <h4 className="font-black text-xs uppercase tracking-widest text-foreground/70">Recommended Reads</h4>
+        <span className="text-[10px] font-bold text-primary hover:underline cursor-pointer">View All</span>
+      </div>
+      
+      <div className="space-y-4">
+        {articles.map((article) => (
+          <div key={article.id} className="flex items-center gap-4 group cursor-pointer">
+            <div className="relative shrink-0">
+              <img 
+                src={article.image} 
+                alt={article.title} 
+                className="w-16 h-16 rounded-2xl object-cover shadow-sm transition-transform group-hover:scale-105 duration-300"
+              />
+              <div className={`absolute -top-1 -left-1 ${article.color} text-white p-1 rounded-lg shadow-sm`}>
+                {article.icon}
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-black text-primary/60 uppercase tracking-wider mb-0.5">{article.hub}</p>
+              <h5 className="text-sm font-bold text-foreground leading-tight group-hover:text-primary transition-colors line-clamp-2">
+                {article.title}
+              </h5>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
