@@ -640,7 +640,7 @@ export function DashboardShell({
       <div 
         className="fixed inset-0 z-0 pointer-events-none"
         style={{
-          backgroundImage: 'url("https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?q=80&w=2060&auto=format&fit=crop")',
+          backgroundImage: 'url("https://images.unsplash.com/photo-1505330622279-bf7d7fc918f4?q=80&w=2070&auto=format&fit=crop")',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundAttachment: 'fixed',
