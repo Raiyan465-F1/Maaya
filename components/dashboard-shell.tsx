@@ -26,6 +26,8 @@ export type DashboardAlert = {
   type: string;
 };
 
+import { CycleRingWidget, HealthMetricsGrid, SmartInsightsCarousel } from "./dashboard-widgets";
+
 type DashboardShellProps = {
   role: "user" | "doctor" | "admin";
   userEmail: string;
@@ -61,6 +63,19 @@ function StatusBadge({ replied }: { replied: boolean }) {
   );
 }
 
+function CycleDetailsTab() {
+  return (
+    <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <SmartInsightsCarousel />
+      <CycleRingWidget />
+      <div className="mt-4">
+        <h3 className="font-heading text-xl font-bold text-foreground mb-4 pl-2">Today's Logs</h3>
+        <HealthMetricsGrid />
+      </div>
+    </div>
+  );
+}
+
 function AssignmentBadge({
   isSpecified,
   specifiedDoctorName,
@@ -74,7 +89,7 @@ function AssignmentBadge({
   );
 }
 
-function Sidebar({
+function QuickAccessMenu({
   sections,
   activeSection,
   onSelect,
@@ -84,26 +99,23 @@ function Sidebar({
   onSelect: (sectionId: string) => void;
 }) {
   return (
-    <aside className="h-fit rounded-3xl border border-border bg-card p-5 shadow-sm lg:sticky lg:top-8">
-      <p className="font-mono text-xs uppercase tracking-[0.3em] text-primary">
-        Workspace
+    <aside className="h-fit rounded-[32px] border-0 bg-white/60 dark:bg-black/20 p-6 shadow-sm backdrop-blur-xl lg:sticky lg:top-8">
+      <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-primary/70 font-bold ml-2">
+        Quick Access
       </p>
-      <nav className="mt-5 space-y-2">
+      <nav className="mt-4 space-y-1">
         {sections.map((section) => (
           <button
             key={section.id}
             type="button"
             onClick={() => onSelect(section.id)}
-            className={`block w-full rounded-2xl border px-4 py-3 text-left transition-colors ${
+            className={`block w-full rounded-2xl px-4 py-3.5 text-left transition-all duration-300 ${
               activeSection === section.id
-                ? "border-primary/20 bg-primary/8"
-                : "border-transparent hover:border-primary/15 hover:bg-primary/5"
+                ? "bg-white dark:bg-white/10 shadow-sm text-primary font-bold scale-[1.02]"
+                : "bg-transparent text-muted-foreground hover:bg-white/50 dark:hover:bg-white/5 hover:text-foreground"
             }`}
           >
-            <p className="text-sm font-medium text-foreground">{section.label}</p>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              {section.description}
-            </p>
+            <p className="text-sm">{section.label}</p>
           </button>
         ))}
       </nav>
@@ -126,18 +138,17 @@ function Header({
       : "Submit questions for doctors and track which ones are still waiting for a reply.";
 
   return (
-    <header className="rounded-3xl border border-primary/15 bg-card p-8 shadow-sm">
+    <header className="rounded-[32px] border-0 bg-white/60 dark:bg-black/20 backdrop-blur-xl p-8 shadow-sm">
       <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="font-mono text-xs uppercase tracking-[0.3em] text-primary">
+          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-primary/70">
             Dashboard
           </p>
-          <h1 className="mt-3 font-heading text-4xl font-bold tracking-tight text-foreground">
-            Your support posts
+          <h1 className="mt-2 font-heading text-4xl font-black tracking-tight text-foreground">
+            Maaya Health Hub
           </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Signed in as <span className="font-medium text-foreground">{userEmail}</span>.{" "}
-            {description}
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground font-medium tracking-wide">
+            Welcome back, <span className="font-bold text-foreground">{userEmail}</span>.
           </p>
         </div>
 
@@ -568,19 +579,24 @@ export function DashboardShell({
   const canReply = role === "doctor" || role === "admin";
   const sections: DashboardSection[] = [
     {
+      id: "cycle-details",
+      label: "Cycle Details",
+      description: "Your health overview",
+    },
+    {
       id: "feedback-messages",
-      label: "Feedback Messages",
-      description: "Read doctor responses and recent feedback updates.",
+      label: "Notifications & Feedback",
+      description: "Read doctor responses.",
     },
     {
       id: "ask-a-doctor",
-      label: "Ask A Doctor",
-      description: "Create a new post or health question.",
+      label: "Doctor Help",
+      description: "Create a new post.",
     },
     {
       id: "your-posts",
       label: "Your Posts",
-      description: "Review your post history and reply status.",
+      description: "Review your post history.",
     },
     ...(canReply
       ? [
@@ -597,10 +613,12 @@ export function DashboardShell({
         ]
       : []),
   ];
-  const [activeSection, setActiveSection] = useState(sections[0]?.id ?? "feedback-messages");
+  const [activeSection, setActiveSection] = useState(sections[0]?.id ?? "cycle-details");
 
   const activePanel = (() => {
     switch (activeSection) {
+      case "cycle-details":
+        return <CycleDetailsTab />;
       case "feedback-messages":
         return <FeedbackFeed alerts={feedbackAlerts} />;
       case "ask-a-doctor":
@@ -612,21 +630,21 @@ export function DashboardShell({
       case "replied-posts":
         return canReply ? <DoctorAnswered questions={answered} /> : null;
       default:
-        return <FeedbackFeed alerts={feedbackAlerts} />;
+        return <CycleDetailsTab />;
     }
   })();
 
   return (
-    <main className="min-h-screen bg-background px-6 py-10">
-      <div className="mx-auto flex max-w-7xl flex-col gap-8">
+    <main className="min-h-screen bg-slate-50/50 dark:bg-background px-4 py-8 sm:px-6 sm:py-12">
+      <div className="mx-auto flex max-w-[1200px] flex-col gap-8">
         <Header role={role} userEmail={userEmail} />
-        <div className="grid gap-8 lg:grid-cols-[18rem_minmax(0,1fr)]">
-          <Sidebar
+        <div className="grid gap-8 lg:grid-cols-[18rem_minmax(0,1fr)] items-start">
+          <QuickAccessMenu
             sections={sections}
             activeSection={activeSection}
             onSelect={setActiveSection}
           />
-          <div>{activePanel}</div>
+          <div className="w-full max-w-full overflow-x-hidden pb-10">{activePanel}</div>
         </div>
       </div>
     </main>
