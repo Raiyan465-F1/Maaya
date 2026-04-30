@@ -1,4 +1,6 @@
 import { Heart, Activity, Droplets, CalendarClock, Smile, Moon, Thermometer, Wind, Lightbulb, BookOpen, ShieldAlert } from "lucide-react";
+import Link from "next/link";
+
 
 export function CycleRingWidget() {
   return (
@@ -7,7 +9,10 @@ export function CycleRingWidget() {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full bg-teal-50 blur-3xl opacity-50 dark:opacity-20 pointer-events-none" />
       
       {/* The Cycle Ring */}
-      <div className="relative w-64 h-64 rounded-full p-2 bg-white dark:bg-card shadow-xl shadow-black/5 z-10 flex items-center justify-center group transition-transform hover:scale-105 duration-500 cursor-pointer">
+      <Link 
+        href="/cycle-tracking"
+        className="relative w-64 h-64 rounded-full p-2 bg-white dark:bg-card shadow-xl shadow-black/5 z-10 flex items-center justify-center group transition-transform hover:scale-105 duration-500 cursor-pointer"
+      >
         {/* Colorful gradient border ring */}
         <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-teal-400 to-emerald-500 opacity-20 group-hover:opacity-30 transition-opacity" />
         
@@ -27,19 +32,27 @@ export function CycleRingWidget() {
             14 days to period
           </p>
         </div>
-      </div>
+      </Link>
+
       
       {/* Quick Action Buttons (Flo style) */}
       <div className="flex flex-wrap items-center justify-center gap-8 mt-12 z-10">
-        <button className="flex items-center gap-4 px-12 py-6 rounded-full bg-rose-100 text-rose-700 hover:bg-rose-200 transition-all duration-300 font-bold text-sm shadow-lg hover:shadow-xl hover:-translate-y-1 active:scale-95">
+        <Link 
+          href="/cycle-tracking"
+          className="flex items-center gap-4 px-12 py-6 rounded-full bg-rose-100 text-rose-700 hover:bg-rose-200 transition-all duration-300 font-bold text-sm shadow-lg hover:shadow-xl hover:-translate-y-1 active:scale-95"
+        >
           <Droplets className="w-5 h-5 fill-rose-500 text-rose-500" />
           <span className="whitespace-nowrap uppercase tracking-wider">Log Period</span>
-        </button>
-        <button className="flex items-center gap-4 px-12 py-6 rounded-full bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-all duration-300 font-bold text-sm shadow-lg hover:shadow-xl hover:-translate-y-1 active:scale-95">
+        </Link>
+        <Link 
+          href="/cycle-tracking"
+          className="flex items-center gap-4 px-12 py-6 rounded-full bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-all duration-300 font-bold text-sm shadow-lg hover:shadow-xl hover:-translate-y-1 active:scale-95"
+        >
           <Activity className="w-5 h-5" />
           <span className="whitespace-nowrap uppercase tracking-wider">Log Symptoms</span>
-        </button>
+        </Link>
       </div>
+
     </div>
   );
 }
@@ -48,7 +61,10 @@ export function HealthMetricsGrid() {
   return (
     <div className="grid gap-10 md:grid-cols-2">
       {/* Mood Card */}
-      <div className="rounded-[48px] p-10 min-h-[200px] shadow-sm border-0 bg-indigo-50/50 dark:bg-indigo-950/20 flex flex-col hover:bg-indigo-100/50 transition-all duration-500 group">
+      <Link 
+        href="/cycle-tracking"
+        className="rounded-[48px] p-10 min-h-[200px] shadow-sm border-0 bg-indigo-50/50 dark:bg-indigo-950/20 flex flex-col hover:bg-indigo-100/50 transition-all duration-500 group cursor-pointer"
+      >
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2.5 bg-indigo-100 dark:bg-indigo-900/50 rounded-full group-hover:scale-110 transition-transform">
             <Smile className="w-6 h-6 text-indigo-500" />
@@ -61,10 +77,14 @@ export function HealthMetricsGrid() {
             <p className="text-sm font-bold text-indigo-900 dark:text-indigo-100 uppercase tracking-widest">Good</p>
           </div>
         </div>
-      </div>
+      </Link>
+
 
       {/* Sleep Card */}
-      <div className="rounded-[48px] p-10 min-h-[200px] shadow-sm border-0 bg-blue-50/50 dark:bg-blue-950/20 flex flex-col hover:bg-blue-100/50 transition-all duration-500 group">
+      <Link 
+        href="/cycle-tracking"
+        className="rounded-[48px] p-10 min-h-[200px] shadow-sm border-0 bg-blue-50/50 dark:bg-blue-950/20 flex flex-col hover:bg-blue-100/50 transition-all duration-500 group cursor-pointer"
+      >
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2.5 bg-blue-100 dark:bg-blue-900/50 rounded-full group-hover:scale-110 transition-transform">
             <Moon className="w-6 h-6 text-blue-500" />
@@ -74,10 +94,14 @@ export function HealthMetricsGrid() {
         <div className="bg-white/60 dark:bg-black/40 p-5 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm w-full">
           <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">7<span className="text-sm font-medium opacity-60 ml-1">hr</span> 30<span className="text-sm font-medium opacity-60 ml-1">m</span></p>
         </div>
-      </div>
+      </Link>
+
 
       {/* Temp Card */}
-      <div className="rounded-[48px] p-10 min-h-[200px] shadow-sm border-0 bg-orange-50/50 dark:bg-orange-950/20 flex flex-col hover:bg-orange-100/50 transition-all duration-500 group">
+      <Link 
+        href="/cycle-tracking"
+        className="rounded-[48px] p-10 min-h-[200px] shadow-sm border-0 bg-orange-50/50 dark:bg-orange-950/20 flex flex-col hover:bg-orange-100/50 transition-all duration-500 group cursor-pointer"
+      >
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2.5 bg-orange-100 dark:bg-orange-900/50 rounded-full group-hover:scale-110 transition-transform">
             <Thermometer className="w-6 h-6 text-orange-500" />
@@ -87,10 +111,14 @@ export function HealthMetricsGrid() {
         <div className="bg-white/60 dark:bg-black/40 p-5 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm w-full">
           <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">36.5<span className="text-sm font-medium opacity-60 ml-1">°C</span></p>
         </div>
-      </div>
+      </Link>
+
 
       {/* Symptoms Card */}
-      <div className="rounded-[48px] p-10 min-h-[200px] shadow-sm border-0 bg-rose-50/50 dark:bg-rose-950/20 flex flex-col hover:bg-rose-100/50 transition-all duration-500 group">
+      <Link 
+        href="/cycle-tracking"
+        className="rounded-[48px] p-10 min-h-[200px] shadow-sm border-0 bg-rose-50/50 dark:bg-rose-950/20 flex flex-col hover:bg-rose-100/50 transition-all duration-500 group cursor-pointer"
+      >
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2.5 bg-rose-100 dark:bg-rose-900/50 rounded-full group-hover:scale-110 transition-transform">
             <Wind className="w-6 h-6 text-rose-500" />
@@ -100,22 +128,27 @@ export function HealthMetricsGrid() {
         <div className="bg-white/60 dark:bg-black/40 p-5 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm w-full">
           <p className="text-sm font-bold text-rose-900 dark:text-rose-100 leading-tight uppercase tracking-wide">Mild Cramps, Headaches</p>
         </div>
-      </div>
+      </Link>
+
     </div>
   );
 }
 
 export function SmartInsightsCarousel() {
   return (
-    <div className="rounded-[32px] border-0 bg-amber-50/80 p-6 dark:bg-amber-950/20 shadow-sm flex items-start gap-4">
-      <div className="p-3 bg-amber-100 dark:bg-amber-900/50 rounded-2xl shrink-0">
+    <Link 
+      href="/cycle-tracking" 
+      className="rounded-[32px] border-0 bg-amber-50/80 p-6 dark:bg-amber-950/20 shadow-sm flex items-start gap-4 hover:bg-amber-100/80 transition-all duration-300 cursor-pointer group"
+    >
+      <div className="p-3 bg-amber-100 dark:bg-amber-900/50 rounded-2xl shrink-0 group-hover:scale-110 transition-transform">
         <Heart className="w-6 h-6 text-amber-500" />
       </div>
       <div>
         <h4 className="text-sm font-bold text-amber-900 dark:text-amber-100">Fertile Window</h4>
         <p className="mt-1 text-sm font-medium text-amber-800/80 dark:text-amber-200/80">You are likely entering your fertile window today. Chances of pregnancy are high.</p>
       </div>
-    </div>
+    </Link>
+
   );
 }
 
@@ -204,12 +237,17 @@ export function FeaturedArticlesWidget() {
     <div className="mt-8 rounded-[32px] p-6 bg-white/60 dark:bg-black/20 backdrop-blur-xl border-0 shadow-sm">
       <div className="flex items-center justify-between mb-6 px-2">
         <h4 className="font-black text-xs uppercase tracking-widest text-foreground/70">Recommended Reads</h4>
-        <span className="text-[10px] font-bold text-primary hover:underline cursor-pointer">View All</span>
+        <Link href="/education" className="text-[10px] font-bold text-primary hover:underline cursor-pointer">View All</Link>
+
       </div>
       
       <div className="space-y-4">
         {articles.map((article) => (
-          <div key={article.id} className="flex items-center gap-4 group cursor-pointer">
+          <Link 
+            key={article.id} 
+            href={article.hub === "Education" ? "/education" : "/sti-awareness"}
+            className="flex items-center gap-4 group cursor-pointer"
+          >
             <div className="relative shrink-0">
               <img 
                 src={article.image} 
@@ -226,8 +264,9 @@ export function FeaturedArticlesWidget() {
                 {article.title}
               </h5>
             </div>
-          </div>
+          </Link>
         ))}
+
       </div>
     </div>
   );
