@@ -30,13 +30,13 @@ export function CycleRingWidget() {
       </div>
       
       {/* Quick Action Buttons (Flo style) */}
-      <div className="flex items-center gap-4 mt-8 z-10">
-        <button className="flex items-center gap-2 px-6 py-3 rounded-full bg-rose-100 text-rose-700 hover:bg-rose-200 transition-colors font-semibold text-sm shadow-sm">
-          <Droplets className="w-4 h-4 fill-rose-500 text-rose-500" />
+      <div className="flex items-center gap-6 mt-10 z-10">
+        <button className="flex items-center gap-3 px-8 py-4 rounded-full bg-rose-100 text-rose-700 hover:bg-rose-200 transition-colors font-bold text-base shadow-md hover:shadow-lg hover:-translate-y-0.5 duration-200">
+          <Droplets className="w-5 h-5 fill-rose-500 text-rose-500" />
           Log Period
         </button>
-        <button className="flex items-center gap-2 px-6 py-3 rounded-full bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors font-semibold text-sm shadow-sm">
-          <Activity className="w-4 h-4" />
+        <button className="flex items-center gap-3 px-8 py-4 rounded-full bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors font-bold text-base shadow-md hover:shadow-lg hover:-translate-y-0.5 duration-200">
+          <Activity className="w-5 h-5" />
           Log Symptoms
         </button>
       </div>
@@ -48,7 +48,7 @@ export function HealthMetricsGrid() {
   return (
     <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
       {/* Mood Card */}
-      <div className="rounded-[32px] p-8 min-h-[180px] shadow-sm border-0 bg-indigo-50/50 dark:bg-indigo-950/20 flex flex-col justify-between hover:bg-indigo-100/50 transition-colors">
+      <div className="rounded-[40px] p-8 min-h-[220px] shadow-sm border-0 bg-indigo-50/50 dark:bg-indigo-950/20 flex flex-col justify-between hover:bg-indigo-100/50 transition-colors">
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2.5 bg-indigo-100 dark:bg-indigo-900/50 rounded-full">
             <Smile className="w-6 h-6 text-indigo-500" />
@@ -64,7 +64,7 @@ export function HealthMetricsGrid() {
       </div>
 
       {/* Sleep Card */}
-      <div className="rounded-[32px] p-8 min-h-[180px] shadow-sm border-0 bg-blue-50/50 dark:bg-blue-950/20 flex flex-col justify-between hover:bg-blue-100/50 transition-colors">
+      <div className="rounded-[40px] p-8 min-h-[220px] shadow-sm border-0 bg-blue-50/50 dark:bg-blue-950/20 flex flex-col justify-between hover:bg-blue-100/50 transition-colors">
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2.5 bg-blue-100 dark:bg-blue-900/50 rounded-full">
             <Moon className="w-6 h-6 text-blue-500" />
@@ -77,7 +77,7 @@ export function HealthMetricsGrid() {
       </div>
 
       {/* Temp Card */}
-      <div className="rounded-[32px] p-8 min-h-[180px] shadow-sm border-0 bg-orange-50/50 dark:bg-orange-950/20 flex flex-col justify-between hover:bg-orange-100/50 transition-colors">
+      <div className="rounded-[40px] p-8 min-h-[220px] shadow-sm border-0 bg-orange-50/50 dark:bg-orange-950/20 flex flex-col justify-between hover:bg-orange-100/50 transition-colors">
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2.5 bg-orange-100 dark:bg-orange-900/50 rounded-full">
             <Thermometer className="w-6 h-6 text-orange-500" />
@@ -90,7 +90,7 @@ export function HealthMetricsGrid() {
       </div>
 
       {/* Symptoms Card */}
-      <div className="rounded-[32px] p-8 min-h-[180px] shadow-sm border-0 bg-rose-50/50 dark:bg-rose-950/20 flex flex-col justify-between hover:bg-rose-100/50 transition-colors">
+      <div className="rounded-[40px] p-8 min-h-[220px] shadow-sm border-0 bg-rose-50/50 dark:bg-rose-950/20 flex flex-col justify-between hover:bg-rose-100/50 transition-colors">
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2.5 bg-rose-100 dark:bg-rose-900/50 rounded-full">
             <Wind className="w-6 h-6 text-rose-500" />
