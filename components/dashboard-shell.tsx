@@ -635,8 +635,21 @@ export function DashboardShell({
   })();
 
   return (
-    <main className="min-h-screen bg-slate-50/50 dark:bg-background px-4 py-8 sm:px-6 sm:py-12">
-      <div className="mx-auto flex max-w-[1200px] flex-col gap-8">
+    <main className="relative min-h-screen px-4 py-8 sm:px-6 sm:py-12 overflow-x-hidden">
+      {/* Whitewashed Background Image */}
+      <div 
+        className="fixed inset-0 z-0 pointer-events-none"
+        style={{
+          backgroundImage: 'url("https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?q=80&w=2060&auto=format&fit=crop")',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed',
+        }}
+      >
+        <div className="absolute inset-0 bg-white/75 dark:bg-slate-950/75 backdrop-blur-[2px]" />
+      </div>
+
+      <div className="relative z-10 mx-auto flex max-w-[1200px] flex-col gap-8">
         <Header role={role} userEmail={userEmail} />
         <div className="grid gap-8 lg:grid-cols-[18rem_minmax(0,1fr)] items-start">
           <div className="flex flex-col">
