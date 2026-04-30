@@ -173,6 +173,30 @@ export function FeaturedArticlesWidget() {
       icon: <BookOpen className="w-3 h-3" />,
       color: "bg-emerald-500",
       image: "https://images.unsplash.com/photo-1581595220892-b0739db3ba8c?w=200&h=200&fit=crop"
+    },
+    {
+      id: 4,
+      title: "Nutrition Tips for Cycle Balance",
+      hub: "Education",
+      icon: <BookOpen className="w-3 h-3" />,
+      color: "bg-amber-500",
+      image: "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=200&h=200&fit=crop"
+    },
+    {
+      id: 5,
+      title: "Common Myths About STI Transmission",
+      hub: "STI Awareness",
+      icon: <ShieldAlert className="w-3 h-3" />,
+      color: "bg-purple-500",
+      image: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=200&h=200&fit=crop"
+    },
+    {
+      id: 6,
+      title: "Mental Health and the Menstrual Cycle",
+      hub: "Education",
+      icon: <BookOpen className="w-3 h-3" />,
+      color: "bg-indigo-500",
+      image: "https://images.unsplash.com/photo-1516585427167-9f4af9627e6c?w=200&h=200&fit=crop"
     }
   ];
 
