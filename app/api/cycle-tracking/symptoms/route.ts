@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { db } from "@/src/db";
-import { symptomLogs } from "@/src/schema";
+import { symptomLogs, userCycleOnboarding } from "@/src/schema";
 import { authOptions } from "@/lib/auth";
+import { eq } from "drizzle-orm";
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -12,9 +13,25 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { mood, waterIntake, flowIntensity, logDate } = body;
+    const { mood, waterIntake, flowIntensity, logDate, height, weight, pregnancyStatus, vaginalDischarge, sex, sexDrive } = body;
 
     const queryDate = logDate ? new Date(logDate) : new Date();
+
+    if (height || weight) {
+      const updateData: any = {};
+      if (height) updateData.height = height;
+      if (weight) updateData.weight = weight;
+      
+      await db.update(userCycleOnboarding)
+        .set(updateData)
+        .where(eq(userCycleOnboarding.userId, session.user.id));
+    }
+
+    const symptomsObj: any = {};
+    if (pregnancyStatus) symptomsObj.pregnancyStatus = pregnancyStatus;
+    if (vaginalDischarge) symptomsObj.vaginalDischarge = vaginalDischarge;
+    if (sex) symptomsObj.sex = sex;
+    if (sexDrive) symptomsObj.sexDrive = sexDrive;
 
     const [inserted] = await db
       .insert(symptomLogs)
@@ -24,7 +41,7 @@ export async function POST(request: NextRequest) {
         mood: mood,
         waterIntake: waterIntake !== undefined ? waterIntake : null,
         flowIntensity: flowIntensity || null,
-        symptoms: {}, // Minimum required by db schema
+        symptoms: symptomsObj,
       })
       .returning();
 

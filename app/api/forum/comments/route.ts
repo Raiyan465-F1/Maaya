@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { db } from "@/src/db";
 import { comments } from "@/src/schema/forum";
 import { authOptions } from "@/lib/auth";
+import { suspendedMutationBlockedResponse } from "@/lib/suspended-mutation";
 import {
   canAccessModeratedContent,
   ensureCommentExists,
@@ -24,6 +25,9 @@ export async function POST(request: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "You must be logged in to comment." }, { status: 401 });
   }
+
+  const blocked = suspendedMutationBlockedResponse(session, request.headers.get("origin"));
+  if (blocked) return blocked;
 
   try {
     const body = await request.json();

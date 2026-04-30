@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   CalendarHeart,
@@ -13,6 +14,7 @@ import {
   UserPlus,
   Shield,
   Newspaper,
+  EyeOff,
 } from "lucide-react";
 import {
   Sidebar,
@@ -89,7 +91,49 @@ function getNavForRole(role: UserRole | undefined): NavItem[] {
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const [isAnonymous, setIsAnonymous] = useState(false);
+
+  useEffect(() => {
+    if (status !== "authenticated") {
+      setIsAnonymous(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadAnonymous = async () => {
+      try {
+        const res = await fetch("/api/profile", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = (await res.json()) as { isAnonymous?: unknown };
+        if (!cancelled) setIsAnonymous(Boolean(data.isAnonymous));
+      } catch {
+        // best-effort
+      }
+    };
+
+    loadAnonymous();
+
+    const handleAnonymousChange = (event: Event) => {
+      const detail = (event as CustomEvent<{ isAnonymous?: boolean }>).detail;
+      if (detail && typeof detail.isAnonymous === "boolean") {
+        setIsAnonymous(detail.isAnonymous);
+      } else {
+        loadAnonymous();
+      }
+    };
+
+    window.addEventListener("profile:anonymous-changed", handleAnonymousChange);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener(
+        "profile:anonymous-changed",
+        handleAnonymousChange,
+      );
+    };
+  }, [status, pathname]);
 
   const role = session?.user?.role;
   const name = session?.user?.name;
@@ -189,18 +233,36 @@ export function AppSidebar() {
               size="lg"
             >
               <Link href="/profile">
-                <span
-                  className={`flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${accentColor} font-heading text-sm font-semibold text-primary-foreground`}
-                >
-                  {initial}
+                <span className="relative flex size-8 shrink-0 items-center justify-center">
+                  <span
+                    className={`flex size-8 items-center justify-center rounded-full bg-gradient-to-br ${accentColor} font-heading text-sm font-semibold text-primary-foreground`}
+                  >
+                    {initial}
+                  </span>
+                  {isAnonymous && (
+                    <span
+                      title="Anonymous mode is on"
+                      aria-label="Anonymous mode is on"
+                      className="absolute -right-1 -bottom-1 flex size-4 items-center justify-center rounded-full border-2 border-sidebar bg-primary text-primary-foreground"
+                    >
+                      <EyeOff className="size-2.5" />
+                    </span>
+                  )}
                 </span>
                 <span className="flex flex-col">
-                  <span className="truncate text-sm font-medium">
-                    {name || email || "Profile"}
+                  <span className="flex items-center gap-1.5">
+                    <span className="truncate text-sm font-medium">
+                      {name || email || "Profile"}
+                    </span>
+                    {isAnonymous && (
+                      <span className="rounded-full border border-primary/30 bg-primary/10 px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide text-primary group-data-[collapsible=icon]:hidden">
+                        Anon
+                      </span>
+                    )}
                   </span>
                   {role && (
                     <span className="truncate text-xs text-muted-foreground capitalize">
-                      {role}
+                      {isAnonymous ? `${role} • Anonymous mode on` : role}
                     </span>
                   )}
                 </span>

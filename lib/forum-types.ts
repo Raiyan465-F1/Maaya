@@ -1,6 +1,6 @@
 import type { ForumMediaKind } from "@/src/schema/enums";
 
-export type ForumAuthorTag = "Admin" | "User";
+export type ForumAuthorTag = "Admin" | "Doctor" | "User";
 
 export type ForumMediaInput = {
   kind: ForumMediaKind;
@@ -39,6 +39,8 @@ export type ForumPostRecord = {
   isAnonymous: boolean;
   createdAt: string;
   updatedAt: string;
+  /** True when any reply in the thread was written by a verified doctor. */
+  hasDoctorReply: boolean;
   author: {
     id: string;
     email: string;
@@ -66,6 +68,15 @@ export type ForumResponse = {
     tag: ForumAuthorTag | null;
   };
   posts: ForumPostRecord[];
+};
+
+export type ForumVoteSnapshot = {
+  target: "post" | "comment";
+  id: number;
+  upvotes: number;
+  downvotes: number;
+  viewerHasUpvoted: boolean;
+  viewerHasDownvoted: boolean;
 };
 
 export const FORUM_MEDIA_LIMIT = 4;

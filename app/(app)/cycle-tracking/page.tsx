@@ -2,12 +2,14 @@
 
 import { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
-import { Heart, Sparkles, Stethoscope, ArrowRight } from "lucide-react";
+import { Heart, Sparkles, Stethoscope, ArrowRight, CalendarClock, Activity, Baby, Scale, Ruler, Droplets, Flame, CalendarHeart, Smile, Clock, Lightbulb, FileEdit } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { isSameDay, format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { getTodayMood, saveDailyMood } from "@/lib/health-actions";
 import { OnboardingJourney } from "@/components/onboarding-journey";
 
@@ -17,6 +19,12 @@ const MOOD_MESSAGES: Record<string, string> = {
   okay: "Steady and balanced! Make sure to keep taking care of yourself. 🌱",
   good: "Glad you're having a good day! Let's keep that positive energy flowing. ☀️",
   great: "Love to see it! Harness that amazing energy today! ✨"
+};
+
+const getDaysColor = (days: number) => {
+  if (days <= 3) return "text-red-500 font-bold";
+  if (days <= 7) return "text-orange-500 font-bold";
+  return "text-green-500 font-bold";
 };
 
 export default function CycleTrackingPage() {
@@ -31,6 +39,42 @@ export default function CycleTrackingPage() {
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: "error" | "success"; text: string } | null>(null);
   const [calFeedback, setCalFeedback] = useState<{ type: "error" | "success"; text: string } | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  
+  const [insightForm, setInsightForm] = useState({
+    weight: "",
+    height: "",
+    pregnancyStatus: "",
+    vaginalDischarge: "",
+    sex: "",
+    sexDrive: ""
+  });
+  const [isUpdatingHealth, setIsUpdatingHealth] = useState(false);
+
+  useEffect(() => {
+    if (analytics?.userStats) {
+      setInsightForm(prev => ({
+        ...prev,
+        weight: analytics.userStats.weight || "",
+        height: analytics.userStats.height || ""
+      }));
+    }
+  }, [analytics]);
+
+  const handleUpdateHealth = async () => {
+    setIsUpdatingHealth(true);
+    try {
+      await fetch("/api/cycle-tracking/symptoms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(insightForm)
+      });
+      const newAnalytics = await fetch("/api/cycle-tracking/analytics").then(res => res.json());
+      setAnalytics(newAnalytics);
+    } catch(err) {
+      console.error(err);
+    }
+    setIsUpdatingHealth(false);
+  };
 
   const handleHeartClick = () => {
     const newHearts = Array.from({ length: 3 }).map(() => ({
@@ -181,9 +225,12 @@ export default function CycleTrackingPage() {
         )}
 
         <div className="flex flex-col gap-6 w-full max-w-[400px]">
-          <Card className="w-full shadow-xl border-primary/15 bg-card">
+          <Card className="w-full shadow-xl border-rose-200/50 bg-rose-50/50 dark:bg-rose-950/20">
             <CardHeader className="text-center pb-2">
-              <CardTitle className="text-2xl">Menstrual Calendar</CardTitle>
+              <CardTitle className="text-2xl flex items-center justify-center gap-2 text-rose-900 dark:text-rose-100">
+                <CalendarHeart className="w-6 h-6 text-rose-500" />
+                Menstrual Calendar
+              </CardTitle>
               <CardDescription className="text-[0.95rem]">
                 Track your cycle to predict upcoming phases
               </CardDescription>
@@ -242,9 +289,12 @@ export default function CycleTrackingPage() {
           </Card>
 
           {/* Mood Tracker Card */}
-          <Card className={`w-full shadow-lg border-primary/20 bg-gradient-to-br from-card to-card/90 transition-opacity duration-300 ${isPending ? "opacity-60 pointer-events-none" : ""}`}>
+          <Card className={`w-full shadow-lg border-indigo-200/50 bg-indigo-50/30 dark:bg-indigo-950/20 transition-opacity duration-300 ${isPending ? "opacity-60 pointer-events-none" : ""}`}>
             <CardHeader className="pb-4">
-              <CardTitle className="text-xl">How are you feeling today?</CardTitle>
+              <CardTitle className="text-xl flex items-center gap-2 text-indigo-900 dark:text-indigo-100">
+                <Smile className="w-5 h-5 text-indigo-500" />
+                How are you feeling today?
+              </CardTitle>
               <CardDescription>Track your daily mood to see cycle trends</CardDescription>
             </CardHeader>
             <CardContent>
@@ -323,48 +373,148 @@ export default function CycleTrackingPage() {
         {/* Right Column: Insights & Mood */}
         <div className="hidden lg:flex flex-col gap-6 w-full">
           {/* Insights Card */}
-          <Card className="w-full shadow-md border-primary/10 bg-card/50">
-            <CardHeader>
-              <CardTitle className="text-lg">Cycle Insights</CardTitle>
-              <CardDescription>Analytics based on your tracking</CardDescription>
-            </CardHeader>
-            <CardContent className="px-6 pb-6">
-              {!analytics ? (
-                <div className="h-[100px] flex items-center justify-center rounded-xl border border-dashed border-primary/20 bg-muted/10">
-                  <p className="text-muted-foreground text-sm font-medium animate-pulse">Loading insights...</p>
-                </div>
-              ) : !analytics.hasData ? (
-                <div className="h-[100px] flex items-center justify-center rounded-xl border border-dashed border-primary/20 bg-muted/10">
-                  <p className="text-muted-foreground text-sm font-medium">{analytics.message}</p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-4">
-                  <div className="bg-primary/5 p-4 rounded-xl border border-primary/10">
-                     <p className="text-xs uppercase text-primary font-bold mb-1">Current Phase</p>
-                     <p className="text-lg font-semibold">{analytics.currentPhase} (Day {analytics.dayOfCycle})</p>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Card className="w-full shadow-md border-purple-200/50 bg-purple-50/40 dark:bg-purple-950/20 cursor-pointer hover:bg-purple-100/50 transition-colors">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2 text-purple-900 dark:text-purple-100">
+                    <Activity className="w-5 h-5 text-purple-500" />
+                    Cycle Insights
+                  </CardTitle>
+                  <CardDescription>Click to view and update your health data</CardDescription>
+                </CardHeader>
+                <CardContent className="px-6 pb-6">
+                  {!analytics ? (
+                    <div className="h-[100px] flex items-center justify-center rounded-xl border border-dashed border-purple-200 bg-muted/10">
+                      <p className="text-muted-foreground text-sm font-medium animate-pulse">Loading insights...</p>
+                    </div>
+                  ) : !analytics.hasData ? (
+                    <div className="h-[100px] flex items-center justify-center rounded-xl border border-dashed border-purple-200 bg-muted/10">
+                      <p className="text-muted-foreground text-sm font-medium">{analytics.message}</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-4">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-white/50 dark:bg-black/20 p-3 rounded-xl border border-purple-100 dark:border-purple-900 flex flex-col gap-1">
+                           <p className="text-xs uppercase text-purple-600 dark:text-purple-400 font-bold mb-1 flex items-center gap-1"><CalendarClock className="w-3 h-3"/> Period In</p>
+                           <p className={`text-2xl ${getDaysColor(analytics.daysUntilNextPeriod)}`}>{analytics.daysUntilNextPeriod} <span className="text-sm font-medium text-muted-foreground">Days</span></p>
+                        </div>
+                        <div className="bg-white/50 dark:bg-black/20 p-3 rounded-xl border border-purple-100 dark:border-purple-900 flex flex-col gap-1">
+                           <p className="text-xs uppercase text-purple-600 dark:text-purple-400 font-bold mb-1 flex items-center gap-1"><Sparkles className="w-3 h-3"/> Phase</p>
+                           <p className="text-lg font-bold text-purple-700 dark:text-purple-300 truncate">{analytics.currentPhase}</p>
+                           <p className="text-xs text-muted-foreground">Day {analytics.dayOfCycle}</p>
+                        </div>
+                      </div>
+                      <div className="mt-1 bg-white/50 dark:bg-black/20 p-3 rounded-xl border border-purple-100 dark:border-purple-900">
+                         <p className="text-sm font-semibold mb-1 text-purple-700 dark:text-purple-300 flex items-center gap-2"><Activity className="w-4 h-4"/> Symptoms You Might Feel</p>
+                         <p className="text-sm text-muted-foreground leading-snug">{analytics.predictedSymptoms}</p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </DialogTrigger>
+            {analytics?.hasData && (
+              <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2 text-purple-900 dark:text-purple-100 text-xl">
+                    <Sparkles className="w-6 h-6 text-purple-500" />
+                    Detailed Cycle Insights
+                  </DialogTitle>
+                  <DialogDescription className="text-muted-foreground">
+                    Update your daily health status and see extended insights.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="flex flex-col gap-5 mt-2">
+                  <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-950/30 dark:to-indigo-950/30 p-4 rounded-xl border border-purple-100 dark:border-purple-900 shadow-sm">
+                     <p className="text-xs uppercase text-purple-600 dark:text-purple-400 font-bold mb-1 flex items-center gap-1.5"><Activity className="w-4 h-4"/> Current Phase</p>
+                     <p className="text-xl font-bold text-purple-900 dark:text-purple-100">{analytics.currentPhase} <span className="text-base font-medium text-purple-700/70 dark:text-purple-300/70">(Day {analytics.dayOfCycle})</span></p>
                   </div>
+                  
                   <div>
-                     <p className="text-sm font-semibold mb-1">Expected Mood</p>
-                     <p className="text-sm text-muted-foreground leading-snug">{analytics.expectedMood}</p>
+                     <p className="text-sm font-bold text-indigo-700 dark:text-indigo-400 mb-1.5 flex items-center gap-2"><Smile className="w-4 h-4"/> Expected Mood</p>
+                     <p className="text-sm text-muted-foreground leading-relaxed bg-indigo-50/40 dark:bg-indigo-950/20 p-3 rounded-lg border border-indigo-100/50 dark:border-indigo-900/50">{analytics.expectedMood}</p>
                   </div>
+                  
                   <div>
-                     <p className="text-sm font-semibold mb-2">Recommendations</p>
+                     <p className="text-sm font-bold text-amber-600 dark:text-amber-400 mb-2.5 flex items-center gap-2"><Lightbulb className="w-4 h-4"/> Recommendations</p>
                      {analytics.recommendations?.map((tip: any, i: number) => (
-                       <div key={i} className="mb-2 bg-muted/30 p-2 rounded-lg">
-                         <p className="text-sm font-medium text-foreground">{tip.tipTitle || "Tip"}</p>
-                         <p className="text-xs text-muted-foreground mt-1">{tip.tipDescription}</p>
+                       <div key={i} className="mb-2 bg-amber-50/40 dark:bg-amber-950/20 p-3 rounded-lg border-l-4 border-amber-400 shadow-sm">
+                         <p className="text-sm font-bold text-amber-900 dark:text-amber-100">{tip.tipTitle || "Tip"}</p>
+                         <p className="text-xs text-amber-800/80 dark:text-amber-200/80 mt-1 leading-snug">{tip.tipDescription}</p>
                        </div>
                      ))}
                   </div>
+
+                  <div className="mt-2 pt-5 border-t border-border/50">
+                    <h4 className="font-bold text-foreground mb-4 flex items-center gap-2"><FileEdit className="w-5 h-5 text-purple-500"/> Update Daily Health Logs</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-semibold mb-1 flex items-center gap-1"><Scale className="w-3 h-3"/> Weight</label>
+                        <Input value={insightForm.weight} onChange={(e) => setInsightForm(p => ({...p, weight: e.target.value}))} placeholder="e.g. 60kg" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold mb-1 flex items-center gap-1"><Ruler className="w-3 h-3"/> Height</label>
+                        <Input value={insightForm.height} onChange={(e) => setInsightForm(p => ({...p, height: e.target.value}))} placeholder="e.g. 165cm" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold mb-1 flex items-center gap-1"><Baby className="w-3 h-3"/> Pregnancy Status</label>
+                        <select 
+                          className={`flex h-10 w-full rounded-md border border-input px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${insightForm.pregnancyStatus === 'Yes' ? 'text-green-600 bg-green-50 font-bold border-green-200' : insightForm.pregnancyStatus === 'No' ? 'text-red-600 bg-red-50 font-bold border-red-200' : 'bg-background'}`}
+                          value={insightForm.pregnancyStatus} 
+                          onChange={(e) => setInsightForm(p => ({...p, pregnancyStatus: e.target.value}))}
+                        >
+                          <option value="">Select...</option>
+                          <option value="No">No</option>
+                          <option value="Yes">Yes</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold mb-1 flex items-center gap-1"><Droplets className="w-3 h-3"/> Vaginal Discharge</label>
+                        <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={insightForm.vaginalDischarge} onChange={(e) => setInsightForm(p => ({...p, vaginalDischarge: e.target.value}))}>
+                          <option value="">Select...</option>
+                          <option value="None">None</option>
+                          <option value="Clear">Clear</option>
+                          <option value="White/Cloudy">White/Cloudy</option>
+                          <option value="Sticky">Sticky</option>
+                          <option value="Egg White">Egg White</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold mb-1 flex items-center gap-1"><Heart className="w-3 h-3"/> Sex</label>
+                        <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={insightForm.sex} onChange={(e) => setInsightForm(p => ({...p, sex: e.target.value}))}>
+                          <option value="">Select...</option>
+                          <option value="None">None</option>
+                          <option value="Protected">Protected</option>
+                          <option value="Unprotected">Unprotected</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold mb-1 flex items-center gap-1"><Flame className="w-3 h-3"/> Sex Drive</label>
+                        <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" value={insightForm.sexDrive} onChange={(e) => setInsightForm(p => ({...p, sexDrive: e.target.value}))}>
+                          <option value="">Select...</option>
+                          <option value="Low">Low</option>
+                          <option value="Medium">Medium</option>
+                          <option value="High">High</option>
+                        </select>
+                      </div>
+                    </div>
+                    <Button onClick={handleUpdateHealth} disabled={isUpdatingHealth} className="w-full mt-6 font-bold text-md py-6 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white shadow-lg shadow-purple-500/20 border-0 transition-all active:scale-95">
+                      {isUpdatingHealth ? "Saving..." : "Save Logs"}
+                    </Button>
+                  </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </DialogContent>
+            )}
+          </Dialog>
 
           {/* Cycle Predictions Card */}
-          <Card className="w-full shadow-md border-primary/10 bg-card/50">
+          <Card className="w-full shadow-md border-amber-200/50 bg-amber-50/40 dark:bg-amber-950/20">
             <CardHeader>
-              <CardTitle className="text-lg">Cycle Predictions</CardTitle>
+              <CardTitle className="text-lg flex items-center gap-2 text-amber-900 dark:text-amber-100">
+                <Clock className="w-5 h-5 text-amber-500" />
+                Cycle Predictions
+              </CardTitle>
               <CardDescription>Estimated dates for your cycle</CardDescription>
             </CardHeader>
             <CardContent className="px-6 pb-6">
@@ -380,18 +530,18 @@ export default function CycleTrackingPage() {
                 <div className="flex flex-col gap-4">
                   <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 flex justify-between items-center">
                     <div>
-                      <p className="text-xs uppercase text-primary font-bold mb-1">Period Ends</p>
-                      <p className="text-sm font-semibold">
-                        {analytics.latestCycle?.expectedPeriodEnd && !isNaN(new Date(analytics.latestCycle.expectedPeriodEnd).getTime()) 
-                          ? new Date(analytics.latestCycle.expectedPeriodEnd).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
-                          : 'Pending'}
-                      </p>
-                    </div>
-                    <div className="text-right">
                       <p className="text-xs uppercase text-primary font-bold mb-1">Next Period Starts</p>
                       <p className="text-sm font-semibold">
                         {analytics.latestCycle?.predictedEndDate && !isNaN(new Date(analytics.latestCycle.predictedEndDate).getTime())
                           ? new Date(analytics.latestCycle.predictedEndDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+                          : 'Pending'}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs uppercase text-primary font-bold mb-1">Next Period Ends</p>
+                      <p className="text-sm font-semibold">
+                        {analytics.latestCycle?.expectedPeriodEnd && !isNaN(new Date(analytics.latestCycle.expectedPeriodEnd).getTime()) 
+                          ? new Date(analytics.latestCycle.expectedPeriodEnd).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
                           : 'Pending'}
                       </p>
                     </div>
@@ -401,8 +551,48 @@ export default function CycleTrackingPage() {
             </CardContent>
           </Card>
 
+          {/* Generalized Medical Suggestions Card */}
+          <Card className={`w-full shadow-md border-teal-200/50 transition-colors ${analytics?.healthStatus?.status === 'Warning' ? 'bg-red-50 dark:bg-red-950/20 border-red-200' : analytics?.healthStatus?.status === 'Excellent' ? 'bg-green-50 dark:bg-green-950/20 border-green-200' : 'bg-teal-50/40 dark:bg-teal-950/20'}`}>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Stethoscope className={`w-5 h-5 ${analytics?.healthStatus?.status === 'Warning' ? 'text-red-500' : analytics?.healthStatus?.status === 'Excellent' ? 'text-green-500' : 'text-primary'}`} />
+                Medical Suggestions
+              </CardTitle>
+              <CardDescription>Based on your current cycle data</CardDescription>
+            </CardHeader>
+            <CardContent className="px-6 pb-6">
+              {!analytics ? (
+                <div className="h-[50px] flex items-center justify-center rounded-xl border border-dashed border-primary/20 bg-muted/10">
+                  <p className="text-muted-foreground text-sm font-medium animate-pulse">Loading status...</p>
+                </div>
+              ) : !analytics.hasData ? (
+                <div className="h-[50px] flex items-center justify-center rounded-xl border border-dashed border-primary/20 bg-muted/10">
+                  <p className="text-muted-foreground text-sm font-medium">Log a period to see suggestions.</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <div className={`p-4 rounded-xl border ${analytics?.healthStatus?.status === 'Warning' ? 'bg-red-100 border-red-200 dark:bg-red-900/40' : analytics?.healthStatus?.status === 'Excellent' ? 'bg-green-100 border-green-200 dark:bg-green-900/40' : 'bg-primary/5 border-primary/10'}`}>
+                    <p className={`text-sm font-bold mb-1 ${analytics?.healthStatus?.status === 'Warning' ? 'text-red-700 dark:text-red-400' : analytics?.healthStatus?.status === 'Excellent' ? 'text-green-700 dark:text-green-400' : 'text-primary'}`}>
+                      {analytics.healthStatus?.message || "Reproductive system seems fine."}
+                    </p>
+                    <p className="text-sm text-foreground/80 leading-snug">
+                      {analytics.healthStatus?.details || "Everything appears to be within normal ranges."}
+                    </p>
+                  </div>
+                  {analytics?.healthStatus?.status === 'Warning' && (
+                     <Link href="/doctors-help" className="w-full mt-2">
+                        <Button variant="destructive" className="w-full font-bold shadow-md">
+                          Ask for Consultation
+                        </Button>
+                     </Link>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Daily Check-up Card */}
-          <Card className="w-full shadow-sm border-secondary/30 bg-secondary/5 relative overflow-hidden group">
+          <Card className="w-full shadow-sm border-pink-200/50 bg-pink-50/40 dark:bg-pink-950/20 relative overflow-hidden group">
             <style>{`
               @keyframes pop-heart {
                 0% { transform: translate(-50%, -50%) scale(0.2) rotate(0deg); opacity: 0.8; }

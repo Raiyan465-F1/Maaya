@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db } from "@/src/db";
-import { doctorAnswers, doctorProfiles, doctorRatings, users } from "@/src/schema";
+import {
+  doctorAnswers,
+  doctorProfiles,
+  doctorQuestions,
+  doctorRatings,
+  users,
+} from "@/src/schema";
 import { withCorsHeaders } from "@/lib/cors";
 
 function jsonResponse(
@@ -31,6 +37,12 @@ const buildDisplayName = (name: string | null, email: string) => {
   return formatted || "Doctor";
 };
 
+const extractTitle = (questionText: string) => {
+  const normalized = questionText.replace(/\r\n/g, "\n");
+  const [first] = normalized.split("\n\n");
+  return (first ?? normalized).trim();
+};
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -50,6 +62,8 @@ export async function GET(
         bio: doctorProfiles.bio,
         qualifications: doctorProfiles.qualifications,
         institution: doctorProfiles.institution,
+        memberSince: users.createdAt,
+        profileUpdatedAt: doctorProfiles.updatedAt,
       })
       .from(doctorProfiles)
       .innerJoin(users, eq(doctorProfiles.userId, users.id))
@@ -61,27 +75,103 @@ export async function GET(
     }
 
     const answers = await db
-      .select({ id: doctorAnswers.id })
+      .select({
+        id: doctorAnswers.id,
+        questionId: doctorAnswers.questionId,
+        createdAt: doctorAnswers.createdAt,
+        questionText: doctorQuestions.questionText,
+        questionStatus: doctorQuestions.status,
+        questionCreatedAt: doctorQuestions.createdAt,
+        questionIsAnonymous: doctorQuestions.isAnonymous,
+      })
       .from(doctorAnswers)
-      .where(eq(doctorAnswers.doctorUserId, doctor.userId));
+      .innerJoin(
+        doctorQuestions,
+        eq(doctorAnswers.questionId, doctorQuestions.id)
+      )
+      .where(eq(doctorAnswers.doctorUserId, doctor.userId))
+      .orderBy(desc(doctorAnswers.createdAt));
 
     const ratings = await db
-      .select({ rating: doctorRatings.rating })
+      .select({
+        rating: doctorRatings.rating,
+        comment: doctorRatings.comment,
+        createdAt: doctorRatings.createdAt,
+      })
       .from(doctorRatings)
-      .where(eq(doctorRatings.doctorUserId, doctor.userId));
+      .where(eq(doctorRatings.doctorUserId, doctor.userId))
+      .orderBy(desc(doctorRatings.createdAt));
+
+    const replyCount = answers.length;
+    const uniqueQuestionIds = new Set(answers.map((a) => a.questionId));
+    const questionsAnsweredCount = uniqueQuestionIds.size;
+
+    const ratingBreakdown: Record<1 | 2 | 3 | 4 | 5, number> = {
+      1: 0,
+      2: 0,
+      3: 0,
+      4: 0,
+      5: 0,
+    };
+    ratings.forEach((entry) => {
+      const key = Math.min(5, Math.max(1, entry.rating)) as 1 | 2 | 3 | 4 | 5;
+      ratingBreakdown[key] += 1;
+    });
 
     const avgRating = ratings.length
       ? Number(
-          (ratings.reduce((total, entry) => total + entry.rating, 0) / ratings.length).toFixed(1)
+          (
+            ratings.reduce((total, entry) => total + entry.rating, 0) /
+            ratings.length
+          ).toFixed(1)
         )
       : 0;
 
+    const seenQuestions = new Set<number>();
+    const answeredQuestions = answers
+      .filter((answer) => {
+        if (seenQuestions.has(answer.questionId)) {
+          return false;
+        }
+        seenQuestions.add(answer.questionId);
+        return true;
+      })
+      .map((answer) => ({
+        questionId: answer.questionId,
+        title: extractTitle(answer.questionText),
+        status: answer.questionStatus,
+        isAnonymous: answer.questionIsAnonymous ?? false,
+        answeredAt: answer.createdAt,
+      }));
+
+    const reviews = ratings
+      .filter((entry) => entry.comment && entry.comment.trim().length > 0)
+      .map((entry) => ({
+        rating: entry.rating,
+        comment: entry.comment,
+        createdAt: entry.createdAt,
+      }));
+
     return jsonResponse(
       {
-        ...doctor,
+        userId: doctor.userId,
         displayName: buildDisplayName(doctor.name, doctor.email),
-        replyCount: answers.length,
+        email: doctor.email,
+        specialty: doctor.specialty,
+        location: doctor.location,
+        availabilityInfo: doctor.availabilityInfo,
+        bio: doctor.bio,
+        qualifications: doctor.qualifications,
+        institution: doctor.institution,
+        memberSince: doctor.memberSince,
+        profileUpdatedAt: doctor.profileUpdatedAt,
+        replyCount,
+        questionsAnsweredCount,
         avgRating,
+        ratingCount: ratings.length,
+        ratingBreakdown,
+        answeredQuestions,
+        reviews,
       },
       200,
       origin

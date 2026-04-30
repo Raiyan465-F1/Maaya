@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
+import { isSuspendedAndActive, formatRestrictionRemaining } from '@/lib/account-restriction-helpers';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
@@ -36,10 +38,20 @@ interface Question {
   status: QuestionStatus;
   createdAt: string;
   userId?: string;
+  doctorUserId?: string | null;
   userEmail?: string;
   userAgeGroup?: string;
   userGender?: string;
+  isSpecified?: boolean;
+  specifiedDoctorName?: string | null;
+  specifiedDoctorSpecialty?: string | null;
   answers: QuestionAnswer[];
+}
+
+interface AssignableDoctor {
+  userId: string;
+  displayName: string;
+  specialty: string | null;
 }
 
 type FilterType = 'newest' | 'oldest' | 'recent';
@@ -94,6 +106,7 @@ export default function DoctorsHelpPage() {
   const [questionTitle, setQuestionTitle] = useState('');
   const [questionText, setQuestionText] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [selectedDoctorId, setSelectedDoctorId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,6 +120,7 @@ export default function DoctorsHelpPage() {
   const [isClosing, setIsClosing] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isGloballyAnonymous, setIsGloballyAnonymous] = useState(false);
   const [ratingDoctors, setRatingDoctors] = useState<RateableDoctor[]>([]);
   const [ratingPromptOpen, setRatingPromptOpen] = useState(false);
   const [pendingCloseId, setPendingCloseId] = useState<number | null>(null);
@@ -122,10 +136,18 @@ export default function DoctorsHelpPage() {
     activityCount: number;
     avgRating: number;
   }>>([]);
+  const [availableDoctors, setAvailableDoctors] = useState<AssignableDoctor[]>([]);
+
+  const { data: session } = useSession();
+  const interactionLocked = isSuspendedAndActive(
+    session?.user?.accountStatus,
+    session?.user?.restrictionEndsAt
+  );
 
   useEffect(() => {
     fetchQuestions();
     fetchTopDoctors();
+    fetchAssignableDoctors();
     fetchProfile();
   }, []);
 
@@ -163,6 +185,34 @@ export default function DoctorsHelpPage() {
     }
   };
 
+  const fetchAssignableDoctors = async () => {
+    try {
+      const response = await fetch('/api/doctors');
+      if (!response.ok) {
+        return;
+      }
+
+      const data = (await response.json()) as Array<{
+        userId?: string;
+        displayName?: string;
+        specialty?: string | null;
+      }>;
+      setAvailableDoctors(
+        data
+          .filter((doctor): doctor is { userId: string; displayName: string; specialty?: string | null } =>
+            Boolean(doctor.userId && doctor.displayName)
+          )
+          .map((doctor) => ({
+            userId: doctor.userId,
+            displayName: doctor.displayName,
+            specialty: doctor.specialty ?? null,
+          }))
+      );
+    } catch (error) {
+      console.error('Error fetching assignable doctors:', error);
+    }
+  };
+
   const fetchProfile = async () => {
     try {
       const response = await fetch('/api/profile');
@@ -170,6 +220,7 @@ export default function DoctorsHelpPage() {
         const userData = await response.json();
         setUserRole(userData.role ?? null);
         setUserId(userData.id ?? userData.userId ?? null);
+        setIsGloballyAnonymous(Boolean(userData.isAnonymous));
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -179,6 +230,13 @@ export default function DoctorsHelpPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!questionTitle.trim() || !questionText.trim()) return;
+
+    if (interactionLocked) {
+      toast.error(
+        'Your account is suspended. You can read questions and answers but cannot post new questions until the suspension lifts.'
+      );
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -190,7 +248,8 @@ export default function DoctorsHelpPage() {
         body: JSON.stringify({
           questionTitle: questionTitle.trim(),
           questionText: questionText.trim(),
-          isAnonymous,
+          isAnonymous: isGloballyAnonymous || isAnonymous,
+          selectedDoctorUserId: selectedDoctorId || undefined,
         }),
       });
 
@@ -198,10 +257,16 @@ export default function DoctorsHelpPage() {
         setQuestionTitle('');
         setQuestionText('');
         setIsAnonymous(false);
-        toast.success('Question posted successfully.');
+        setSelectedDoctorId('');
+        toast.success(
+          selectedDoctorId
+            ? 'Question sent to the selected doctor.'
+            : 'Question posted successfully.'
+        );
         fetchQuestions();
       } else {
-        toast.error('Failed to post question. Please try again.');
+        const data = await response.json().catch(() => null);
+        toast.error(data?.error ?? 'Failed to post question. Please try again.');
       }
     } catch (error) {
       console.error('Error posting question:', error);
@@ -214,6 +279,13 @@ export default function DoctorsHelpPage() {
   const handleAnswerSubmit = async (e: React.FormEvent, questionId: number) => {
     e.preventDefault();
     if (!answerText.trim()) return;
+
+    if (interactionLocked) {
+      toast.error(
+        'Your account is suspended. You cannot post answers until the suspension lifts.'
+      );
+      return;
+    }
 
     setIsSubmittingAnswer(true);
     try {
@@ -370,6 +442,7 @@ export default function DoctorsHelpPage() {
   const isOwnerOfOpenQuestion =
     !!openQuestion && !!userId && openQuestion.userId === userId;
   const isDoctor = userRole === 'doctor';
+  const selectedDoctor = availableDoctors.find((doctor) => doctor.userId === selectedDoctorId) ?? null;
 
   const feedHeading = isDoctor || userRole === 'admin'
     ? 'Community questions'
@@ -377,6 +450,9 @@ export default function DoctorsHelpPage() {
   const emptyFeedMessage = isDoctor || userRole === 'admin'
     ? 'No questions yet.'
     : 'You have not asked any doctor questions yet. Share one on the right to get started.';
+  const searchPlaceholder = isDoctor || userRole === 'admin'
+    ? 'Search community questions by keyword...'
+    : 'Search your questions by keyword...';
 
   return (
     <>
@@ -397,12 +473,22 @@ export default function DoctorsHelpPage() {
             : 'Get answers from verified medical professionals. Only you can see your own questions below.'}
         </p>
 
+        {interactionLocked ? (
+          <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+            <p className="font-medium">Account suspended — read-only</p>
+            <p className="mt-1 text-amber-900/90">
+              You can view questions and answers, but you cannot post questions, answer as a doctor, or rate doctors{' '}
+              {formatRestrictionRemaining(session?.user?.restrictionEndsAt ?? null)}
+            </p>
+          </div>
+        ) : null}
+
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="flex-1">
             <div className="relative">
               <input
                 type="text"
-                placeholder="Search your questions by keyword..."
+                placeholder={searchPlaceholder}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-10 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -514,6 +600,13 @@ export default function DoctorsHelpPage() {
                           {question.isAnonymous ? 'Anonymous' : question.userEmail}
                         </span>
                         <span>{formatDate(question.createdAt)}</span>
+                        {question.isSpecified && (
+                          <span className="inline-flex items-center rounded-full bg-secondary/10 px-2 py-1 font-medium text-secondary">
+                            {question.specifiedDoctorName
+                              ? `Specified: ${question.specifiedDoctorName}`
+                              : 'Specified'}
+                          </span>
+                        )}
                         <span className="inline-flex items-center gap-1">
                           <MessageSquare
                             className={`h-3.5 w-3.5 ${answersCount > 0 ? 'text-primary' : 'text-muted-foreground'}`}
@@ -622,7 +715,8 @@ export default function DoctorsHelpPage() {
                     onChange={(e) => setQuestionTitle(e.target.value.slice(0, QUESTION_TITLE_LIMIT))}
                     placeholder="Write a short summary of your question"
                     maxLength={QUESTION_TITLE_LIMIT}
-                    className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    disabled={interactionLocked}
+                    className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:cursor-not-allowed disabled:opacity-60"
                     required
                   />
                 </div>
@@ -636,36 +730,84 @@ export default function DoctorsHelpPage() {
                     value={questionText}
                     onChange={(e) => setQuestionText(e.target.value)}
                     placeholder="Add the details doctors should know"
-                    className="w-full min-h-[120px] px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                    disabled={interactionLocked}
+                    className="w-full min-h-[120px] px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none disabled:cursor-not-allowed disabled:opacity-60"
                     required
                   />
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="anonymous"
-                    checked={isAnonymous}
-                    onChange={(e) => setIsAnonymous(e.target.checked)}
-                    className="w-4 h-4 text-primary border-border rounded focus:ring-primary focus:ring-2"
-                  />
-                  <label htmlFor="anonymous" className="text-sm text-muted-foreground">
-                    Post anonymously
-                  </label>
+                {userRole !== 'doctor' && userRole !== 'admin' && (
+                  <div>
+                    <label htmlFor="selected-doctor" className="mb-2 block text-sm font-medium text-foreground">
+                      Ask a specific doctor <span className="text-muted-foreground">(optional)</span>
+                    </label>
+                    <select
+                      id="selected-doctor"
+                      value={selectedDoctorId}
+                      onChange={(e) => setSelectedDoctorId(e.target.value)}
+                      disabled={interactionLocked}
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <option value="">Any verified doctor can answer</option>
+                      {availableDoctors.map((doctor) => (
+                        <option key={doctor.userId} value={doctor.userId}>
+                          {doctor.displayName}
+                          {doctor.specialty ? ` • ${doctor.specialty}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1.5 text-xs text-muted-foreground">
+                      If you select a doctor, only that doctor and admins can see the question.
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="anonymous"
+                      checked={isGloballyAnonymous || isAnonymous}
+                      disabled={isGloballyAnonymous || interactionLocked}
+                      onChange={(e) => setIsAnonymous(e.target.checked)}
+                      onClick={(e) => {
+                        if (isGloballyAnonymous) {
+                          e.preventDefault();
+                          toast.info(
+                            'Anonymous posting is turned on in your profile settings. Turn it off from Profile → Privacy to post with your identity.'
+                          );
+                        }
+                      }}
+                      className="w-4 h-4 text-primary border-border rounded focus:ring-primary focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60"
+                    />
+                    <label
+                      htmlFor="anonymous"
+                      className={`text-sm ${isGloballyAnonymous ? 'text-muted-foreground/70' : 'text-muted-foreground'}`}
+                    >
+                      Post anonymously
+                    </label>
+                  </div>
+                  {isGloballyAnonymous && (
+                    <p className="mt-1.5 text-xs text-primary">
+                      Anonymous mode is on from your profile. All questions are posted anonymously.
+                    </p>
+                  )}
                 </div>
 
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={isSubmitting || !questionTitle.trim() || !questionText.trim()}
+                  disabled={interactionLocked || isSubmitting || !questionTitle.trim() || !questionText.trim()}
                 >
-                  {isSubmitting ? 'Posting...' : 'Post Question'}
+                  {interactionLocked ? 'Suspended' : isSubmitting ? 'Posting...' : 'Post Question'}
                 </Button>
               </form>
 
               <div className="mt-4 pt-4 border-t border-border">
                 <p className="text-xs text-muted-foreground">
-                  Your question stays private to you and is only visible to verified doctors who can answer it.
+                  {selectedDoctor
+                    ? `This question will only be visible to ${selectedDoctor.displayName} and admins.`
+                    : 'Your question stays private to you and is only visible to verified doctors who can answer it.'}
                 </p>
               </div>
             </div>
@@ -682,7 +824,11 @@ export default function DoctorsHelpPage() {
                 ) : (
                   <div className="space-y-4">
                     {topDoctors.map((doctor) => (
-                      <div key={doctor.userId} className="rounded-xl border border-border p-4">
+                      <Link
+                        key={doctor.userId}
+                        href={`/doctors-help/verified/${doctor.userId}`}
+                        className="block rounded-xl border border-border p-4 transition hover:border-primary hover:shadow-sm"
+                      >
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <p className="text-sm font-medium text-foreground">{doctor.displayName}</p>
@@ -693,7 +839,7 @@ export default function DoctorsHelpPage() {
                             <p className="text-xs text-muted-foreground">{doctor.activityCount} total answers</p>
                           </div>
                         </div>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 )}
@@ -740,6 +886,15 @@ export default function DoctorsHelpPage() {
               </SheetHeader>
 
               <div className="overflow-y-auto px-4 pb-6 pt-4 space-y-6">
+                {openQuestion.isSpecified && (
+                  <div className="rounded-2xl border border-secondary/20 bg-secondary/10 px-4 py-3 text-sm text-secondary">
+                    <span className="font-medium">(specified)</span>
+                    {' '}
+                    {openQuestion.specifiedDoctorName
+                      ? `Only ${openQuestion.specifiedDoctorName} and admins can view this question.`
+                      : 'Only the selected doctor and admins can view this question.'}
+                  </div>
+                )}
                 <div className="rounded-2xl border border-border bg-card p-5">
                   <p className="whitespace-pre-line text-sm leading-7 text-foreground/90">
                     {openQuestionParsed.details || openQuestionParsed.title}
@@ -769,9 +924,12 @@ export default function DoctorsHelpPage() {
                         >
                           <div className="flex flex-wrap items-center justify-between gap-3">
                             <div>
-                              <p className="text-sm font-semibold text-primary-foreground">
+                              <Link
+                                href={`/doctors-help/verified/${answer.doctorUserId}`}
+                                className="text-sm font-semibold text-primary-foreground hover:underline"
+                              >
                                 {answer.doctorDisplayName}
-                              </p>
+                              </Link>
                               <p className="text-xs text-primary-foreground/80">
                                 {answer.doctorSpecialty ?? 'Verified doctor'}
                               </p>
@@ -810,6 +968,11 @@ export default function DoctorsHelpPage() {
 
                 {isDoctor && openQuestion.status !== 'closed' && (
                   <div className="rounded-2xl border border-border bg-card p-5">
+                    {interactionLocked ? (
+                      <p className="text-sm text-muted-foreground">
+                        Your account is suspended. You cannot post answers until the suspension lifts.
+                      </p>
+                    ) : null}
                     <form onSubmit={(e) => handleAnswerSubmit(e, openQuestion.id)} className="space-y-3">
                       <div>
                         <label className="block text-sm font-medium text-foreground mb-2">
@@ -819,7 +982,8 @@ export default function DoctorsHelpPage() {
                           value={answerText}
                           onChange={(e) => setAnswerText(e.target.value)}
                           placeholder="Provide a helpful answer to this question..."
-                          className="w-full min-h-[120px] px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                          disabled={interactionLocked}
+                          className="w-full min-h-[120px] px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none disabled:cursor-not-allowed disabled:opacity-60"
                           required
                         />
                       </div>
@@ -827,7 +991,7 @@ export default function DoctorsHelpPage() {
                         <Button
                           type="submit"
                           size="sm"
-                          disabled={isSubmittingAnswer || !answerText.trim()}
+                          disabled={interactionLocked || isSubmittingAnswer || !answerText.trim()}
                         >
                           {isSubmittingAnswer ? 'Posting...' : 'Post answer'}
                         </Button>

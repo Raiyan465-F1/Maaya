@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { suspendedMutationBlockedResponse } from "@/lib/suspended-mutation";
 import {
   canAccessModeratedContent,
   ensureCommentExists,
-  getForumSnapshot,
+  getCommentVoteSnapshot,
   toggleVoteForComment,
 } from "@/lib/forum-server";
 import type { VoteType } from "@/src/schema/enums";
@@ -27,6 +28,9 @@ export async function POST(
     return NextResponse.json({ error: "You must be logged in to vote." }, { status: 401 });
   }
 
+  const blocked = suspendedMutationBlockedResponse(session, request.headers.get("origin"));
+  if (blocked) return blocked;
+
   if (!commentId) {
     return NextResponse.json({ error: "Invalid comment id." }, { status: 400 });
   }
@@ -38,6 +42,6 @@ export async function POST(
 
   await toggleVoteForComment(commentId, session.user.id, voteType);
 
-  const data = await getForumSnapshot(session.user.id, session.user.role);
+  const data = await getCommentVoteSnapshot(commentId, session.user.id);
   return NextResponse.json(data);
 }

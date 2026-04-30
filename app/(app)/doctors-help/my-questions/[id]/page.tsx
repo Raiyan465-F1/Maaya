@@ -9,6 +9,7 @@ interface QuestionAnswer {
   id: number;
   answerText: string;
   createdAt: string;
+  doctorUserId: string;
   doctorDisplayName: string;
   doctorSpecialty?: string | null;
 }
@@ -18,6 +19,8 @@ interface QuestionDetails {
   questionText: string;
   isAnonymous: boolean;
   createdAt: string;
+  isSpecified?: boolean;
+  specifiedDoctorName?: string | null;
   userEmail?: string;
   answers: QuestionAnswer[];
 }
@@ -115,6 +118,13 @@ export default function MyQuestionDetailsPage() {
           <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
             <span>{question.isAnonymous ? 'Posted anonymously' : question.userEmail}</span>
             <span>{formatDate(question.createdAt)}</span>
+            {question.isSpecified && (
+              <span className="inline-flex rounded-full bg-secondary/10 px-3 py-1 text-xs font-medium text-secondary">
+                {question.specifiedDoctorName
+                  ? `Specified: ${question.specifiedDoctorName}`
+                  : '(specified)'}
+              </span>
+            )}
             <span>{question.answers.length} answer{question.answers.length === 1 ? '' : 's'}</span>
           </div>
         </div>
@@ -126,6 +136,14 @@ export default function MyQuestionDetailsPage() {
       </div>
 
       <div className="rounded-2xl border border-border bg-card p-6">
+        {question.isSpecified && (
+          <p className="mb-4 text-sm text-secondary">
+            <span className="font-medium">(specified)</span>{' '}
+            {question.specifiedDoctorName
+              ? `This question was sent directly to ${question.specifiedDoctorName}.`
+              : 'This question was sent directly to a specific doctor.'}
+          </p>
+        )}
         <p className="whitespace-pre-line text-sm leading-7 text-foreground/90">
           {parsedQuestion.details || parsedQuestion.title}
         </p>
@@ -148,9 +166,12 @@ export default function MyQuestionDetailsPage() {
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-primary-foreground">
+                  <Link
+                    href={`/doctors-help/verified/${answer.doctorUserId}`}
+                    className="text-sm font-semibold text-primary-foreground hover:underline"
+                  >
                     {answer.doctorDisplayName}
-                  </p>
+                  </Link>
                   <p className="text-xs text-primary-foreground/80">
                     {answer.doctorSpecialty ?? 'Verified doctor'}
                   </p>

@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/src/db";
 import { users } from "@/src/schema";
 import type { UserRole } from "@/src/schema/enums";
+import { expireAccountRestrictionIfNeeded } from "@/lib/account-restrictions";
 
 declare module "next-auth" {
   interface User {
@@ -13,6 +14,9 @@ declare module "next-auth" {
     email: string;
     role: UserRole;
     accountStatus: string | null;
+    restrictionEndsAt?: string | null;
+    /** Set only inside authorize when login must be blocked; stripped before session */
+    loginBlocked?: boolean;
   }
 
   interface Session {
@@ -21,6 +25,7 @@ declare module "next-auth" {
       name: string | null;
       role: UserRole;
       accountStatus: string | null;
+      restrictionEndsAt: string | null;
     };
   }
 }
@@ -31,7 +36,14 @@ declare module "next-auth/jwt" {
     name: string | null;
     role: UserRole;
     accountStatus: string | null;
+    restrictionEndsAt: string | null;
   }
+}
+
+function restrictionToIso(value: Date | null | undefined): string | null {
+  if (!value) return null;
+  if (value instanceof Date) return value.toISOString();
+  return null;
 }
 
 export const authOptions: NextAuthOptions = {
@@ -45,45 +57,91 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        const [user] = await db
-          .select()
-          .from(users)
-          .where(eq(users.email, credentials.email))
-          .limit(1);
+        const email = credentials.email.trim().toLowerCase();
+
+        const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
 
         if (!user) return null;
-
-        const bannedOrSuspended =
-          user.accountStatus === "banned" || user.accountStatus === "suspended";
-        if (bannedOrSuspended) return null;
-
-        if (user.accountStatus === "pending") {
-          // Optional: block pending users from login until verified
-          // return null;
-        }
 
         const valid = await compare(credentials.password, user.passwordHash);
         if (!valid) return null;
 
+        await expireAccountRestrictionIfNeeded(user.id);
+
+        const [fresh] = await db.select().from(users).where(eq(users.id, user.id)).limit(1);
+        if (!fresh) return null;
+
+        if (fresh.accountStatus === "banned") {
+          return {
+            id: fresh.id,
+            name: fresh.name ?? null,
+            email: fresh.email,
+            role: fresh.role,
+            accountStatus: fresh.accountStatus,
+            restrictionEndsAt: restrictionToIso(fresh.restrictionEndsAt ?? undefined),
+            loginBlocked: true,
+          };
+        }
+
+        if (fresh.accountStatus === "pending") {
+          // Optional: block pending users from login until verified
+          // return null;
+        }
+
         return {
-          id: user.id,
-          name: user.name ?? null,
-          email: user.email,
-          role: user.role,
-          accountStatus: user.accountStatus,
+          id: fresh.id,
+          name: fresh.name ?? null,
+          email: fresh.email,
+          role: fresh.role,
+          accountStatus: fresh.accountStatus,
+          restrictionEndsAt: restrictionToIso(fresh.restrictionEndsAt ?? undefined),
         };
       },
     }),
   ],
   callbacks: {
+    async signIn({ user }) {
+      if (user && "loginBlocked" in user && user.loginBlocked) {
+        const ends =
+          user.restrictionEndsAt && typeof user.restrictionEndsAt === "string"
+            ? user.restrictionEndsAt
+            : "";
+        const qs = ends
+          ? `?error=banned&ends=${encodeURIComponent(ends)}`
+          : "?error=banned";
+        return `/login${qs}`;
+      }
+      return true;
+    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.name = user.name ?? null;
-        token.email = user.email;
+        token.email = user.email ?? token.email;
         token.role = user.role;
         token.accountStatus = user.accountStatus;
+        token.restrictionEndsAt = user.restrictionEndsAt ?? null;
       }
+
+      if (token.id && token.accountStatus === "suspended" && token.restrictionEndsAt) {
+        const end = new Date(token.restrictionEndsAt);
+        if (!Number.isNaN(end.getTime()) && end <= new Date()) {
+          await expireAccountRestrictionIfNeeded(token.id as string);
+          const [row] = await db
+            .select({
+              accountStatus: users.accountStatus,
+              restrictionEndsAt: users.restrictionEndsAt,
+            })
+            .from(users)
+            .where(eq(users.id, token.id as string))
+            .limit(1);
+          if (row) {
+            token.accountStatus = row.accountStatus;
+            token.restrictionEndsAt = restrictionToIso(row.restrictionEndsAt ?? undefined);
+          }
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
@@ -93,6 +151,7 @@ export const authOptions: NextAuthOptions = {
         session.user.email = token.email ?? "";
         session.user.role = token.role;
         session.user.accountStatus = token.accountStatus;
+        session.user.restrictionEndsAt = token.restrictionEndsAt ?? null;
       }
       return session;
     },

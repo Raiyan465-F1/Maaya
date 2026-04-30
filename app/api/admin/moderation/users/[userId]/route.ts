@@ -6,6 +6,40 @@ import {
   getModerationUser,
   updateUserModerationStatus,
 } from "@/lib/moderation-server";
+import type { AccountStatus } from "@/src/schema/enums";
+
+function parseRestrictionEndsAt(body: Record<string, unknown>): {
+  endsAt: Date | null;
+  error: string | null;
+} {
+  const indefinite = body.indefinite === true;
+
+  if (indefinite) {
+    return { endsAt: null, error: null };
+  }
+
+  const raw = body.restrictionEndsAt;
+  if (typeof raw !== "string" || !raw.trim()) {
+    return {
+      endsAt: null,
+      error: "restrictionEndsAt is required unless indefinite is true.",
+    };
+  }
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) {
+    return { endsAt: null, error: "Invalid restrictionEndsAt date." };
+  }
+
+  if (parsed <= new Date()) {
+    return {
+      endsAt: null,
+      error: "restrictionEndsAt must be in the future.",
+    };
+  }
+
+  return { endsAt: parsed, error: null };
+}
 
 export async function PATCH(
   request: NextRequest,
@@ -35,20 +69,30 @@ export async function PATCH(
     return NextResponse.json({ error: "Admin accounts cannot be changed from moderation." }, { status: 400 });
   }
 
-  const body = await request.json().catch(() => null);
+  const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   const status =
     body?.accountStatus === "pending" ||
     body?.accountStatus === "active" ||
     body?.accountStatus === "banned" ||
     body?.accountStatus === "suspended"
-      ? body.accountStatus
+      ? (body.accountStatus as AccountStatus)
       : null;
 
   if (!status) {
     return NextResponse.json({ error: "Invalid account status." }, { status: 400 });
   }
 
-  const updated = await updateUserModerationStatus(userId, status);
+  let restrictionEndsAt: Date | null = null;
+
+  if (status === "banned" || status === "suspended") {
+    const { endsAt, error } = parseRestrictionEndsAt(body ?? {});
+    if (error) {
+      return NextResponse.json({ error }, { status: 400 });
+    }
+    restrictionEndsAt = endsAt;
+  }
+
+  const updated = await updateUserModerationStatus(userId, status, restrictionEndsAt);
   if (!updated) {
     return NextResponse.json({ error: "User not found." }, { status: 404 });
   }

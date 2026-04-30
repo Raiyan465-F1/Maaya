@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -217,7 +218,14 @@ export default function DoctorRegisterPage() {
                 disabled={isLoading || !passwordValid || !passwordsMatch || doctorAccessCode.trim().length === 0}
                 className="w-full h-11 text-base font-semibold bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-xl hover:opacity-90 transition-opacity shadow-sm disabled:opacity-70"
               >
-                {isLoading ? "Creating doctor account..." : "Create doctor account"}
+                {isLoading ? (
+                  <span className="inline-flex items-center gap-2">
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                    Creating doctor account...
+                  </span>
+                ) : (
+                  "Create doctor account"
+                )}
               </Button>
             </form>
 

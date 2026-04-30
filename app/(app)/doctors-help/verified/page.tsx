@@ -1,10 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { Star } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { DoctorRatingDialog, type RateableDoctor } from '@/components/doctor-rating-dialog';
+import { isSuspendedAndActive } from '@/lib/account-restriction-helpers';
 
 interface Doctor {
   userId: string;
@@ -40,6 +43,11 @@ const buildDisplayName = (email?: string | null) => {
 };
 
 export default function VerifiedDoctorsPage() {
+  const { data: session } = useSession();
+  const ratingLocked = isSuspendedAndActive(
+    session?.user?.accountStatus,
+    session?.user?.restrictionEndsAt
+  );
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [doctorFilter, setDoctorFilter] = useState<DoctorFilterType>('all');
@@ -77,32 +85,58 @@ export default function VerifiedDoctorsPage() {
     fetchDoctors();
   }, []);
 
-  const filteredDoctors = doctors
-    .filter((doc) => {
-      if (!searchTerm.trim()) return true;
-      const term = searchTerm.toLowerCase();
+  const filteredDoctors = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    const matchingDoctors = doctors.filter((doc) => {
+      if (!normalizedSearch) return true;
+
       return (
-        doc.displayName.toLowerCase().includes(term) ||
-        doc.email.toLowerCase().includes(term) ||
-        (doc.specialty ?? '').toLowerCase().includes(term) ||
-        (doc.location ?? '').toLowerCase().includes(term)
+        doc.displayName.toLowerCase().includes(normalizedSearch) ||
+        doc.email.toLowerCase().includes(normalizedSearch) ||
+        (doc.specialty ?? '').toLowerCase().includes(normalizedSearch) ||
+        (doc.location ?? '').toLowerCase().includes(normalizedSearch)
       );
-    })
-    .filter((doc) => {
-      if (doctorFilter === 'top-rated') {
-        return doc.avgRating >= 4;
-      }
-
-      if (doctorFilter === 'most-replies') {
-        return doc.replyCount > 0;
-      }
-
-      if (doctorFilter === 'with-location') {
-        return Boolean(doc.location?.trim());
-      }
-
-      return true;
     });
+
+    const scopedDoctors =
+      doctorFilter === 'with-location'
+        ? matchingDoctors.filter((doc) => Boolean(doc.location?.trim()))
+        : matchingDoctors;
+
+    const sortedDoctors = [...scopedDoctors];
+
+    if (doctorFilter === 'top-rated') {
+      sortedDoctors.sort((left, right) => {
+        if (right.avgRating !== left.avgRating) {
+          return right.avgRating - left.avgRating;
+        }
+
+        if (right.replyCount !== left.replyCount) {
+          return right.replyCount - left.replyCount;
+        }
+
+        return left.displayName.localeCompare(right.displayName);
+      });
+      return sortedDoctors;
+    }
+
+    if (doctorFilter === 'most-replies') {
+      sortedDoctors.sort((left, right) => {
+        if (right.replyCount !== left.replyCount) {
+          return right.replyCount - left.replyCount;
+        }
+
+        if (right.avgRating !== left.avgRating) {
+          return right.avgRating - left.avgRating;
+        }
+
+        return left.displayName.localeCompare(right.displayName);
+      });
+      return sortedDoctors;
+    }
+
+    return sortedDoctors.sort((left, right) => left.displayName.localeCompare(right.displayName));
+  }, [doctorFilter, doctors, searchTerm]);
 
   return (
     <div className="space-y-6">
@@ -205,13 +239,18 @@ export default function VerifiedDoctorsPage() {
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={() =>
+                      disabled={ratingLocked}
+                      onClick={() => {
+                        if (ratingLocked) {
+                          toast.error('Suspended accounts cannot rate doctors.');
+                          return;
+                        }
                         setRatingDoctor({
                           userId: doctor.userId,
                           displayName: doctor.displayName,
                           specialty: doctor.specialty,
-                        })
-                      }
+                        });
+                      }}
                     >
                       Rate
                     </Button>

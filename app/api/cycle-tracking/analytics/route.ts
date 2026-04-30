@@ -66,6 +66,12 @@ export async function GET(request: NextRequest) {
     const start = new Date(latestCycle.startDate);
     start.setHours(0, 0, 0, 0);
 
+    const avgCycleLength = isOnboarded && onboardingData[0].averageCycleLength ? onboardingData[0].averageCycleLength : 28;
+    const avgPeriodLength = isOnboarded && onboardingData[0].averagePeriodLength ? onboardingData[0].averagePeriodLength : 5;
+
+    const nextPeriodStart = new Date(start.getTime() + avgCycleLength * 24 * 60 * 60 * 1000);
+    const nextPeriodEnd = new Date(nextPeriodStart.getTime() + avgPeriodLength * 24 * 60 * 60 * 1000);
+
     // Calculate strict calendar days since the start of the latest cycle
     const diffTime = today.getTime() - start.getTime();
     // Add 1 because the start day is Day 1
@@ -86,18 +92,55 @@ export async function GET(request: NextRequest) {
       .from(cycleStageTips)
       .where(eq(cycleStageTips.phase, currentPhase));
 
+    const daysUntilNextPeriod = Math.max(0, Math.ceil((nextPeriodStart.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
+    
+    const SYMPTOMS_PREDICTIONS: Record<string, string> = {
+      "Menstrual": "Fatigue, cramps, lower back pain, potential headaches.",
+      "Follicular": "Everything is fine! Energy is rising, skin might be clearer.",
+      "Ovulation": "High energy, possible mild pelvic twinges (mittelschmerz).",
+      "Luteal": "Cravings, bloating, mood swings, potential insomnia or fatigue."
+    };
+    const predictedSymptoms = SYMPTOMS_PREDICTIONS[currentPhase] || "No major symptoms predicted.";
+    
+    const userStats = isOnboarded ? { height: onboardingData[0].height, weight: onboardingData[0].weight } : null;
+    
+    // Evaluate health status based on cycle
+    let healthStatus = {
+      status: "Good",
+      message: "Reproductive system seems fine.",
+      details: "Everything appears to be within normal ranges."
+    };
+
+    if (dayOfCycle > 35) {
+      healthStatus = {
+        status: "Warning",
+        message: "Your period is late.",
+        details: "You might be pregnant. Consider taking a test or getting professional help and asking for consultation."
+      };
+    } else if (currentPhase === "Ovulation") {
+      healthStatus = {
+        status: "Excellent",
+        message: "Optimal Reproductive Window",
+        details: "Good reproduction phase. You are highly fertile right now."
+      };
+    }
+
     return NextResponse.json({
       hasData: true,
       currentPhase,
       dayOfCycle,
       expectedMood,
+      daysUntilNextPeriod,
+      predictedSymptoms,
+      healthStatus,
+      userStats,
       periodStartDates: logs.map(l => l.startDate),
       recommendations: tips.length > 0 ? tips : [{ tipTitle: "Rest and Hydrate", tipDescription: "Listen to your body today." }],
       latestCycle: {
         startDate: latestCycle.startDate,
         endDate: latestCycle.endDate,
-        predictedEndDate: latestCycle.predictedEndDate,
-        expectedPeriodEnd: new Date(start.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString()
+        predictedEndDate: nextPeriodStart.toISOString(),
+        expectedPeriodEnd: nextPeriodEnd.toISOString()
       }
     }, { status: 200 });
 

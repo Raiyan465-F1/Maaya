@@ -5,6 +5,15 @@ import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import type { ModerationSnapshot, ModerationUserRecord } from "@/lib/moderation-types";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 function formatDateTime(value: string) {
   const date = new Date(value);
@@ -68,17 +77,64 @@ function SummaryCard({
   );
 }
 
+type RestrictionPreset = "1d" | "7d" | "30d" | "90d" | "custom";
+
+function minDatetimeLocalValue() {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+}
+
 function UserCard({
   user,
   busy,
-  onStatusChange,
+  onApply,
 }: {
   user: ModerationUserRecord;
   busy: boolean;
-  onStatusChange: (userId: string, status: "active" | "suspended" | "banned") => void;
+  onApply: (userId: string, body: Record<string, unknown>) => void;
 }) {
   const displayName = user.name?.trim() || user.email;
-  const statusOptions: Array<"active" | "suspended" | "banned"> = ["active", "suspended", "banned"];
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<"suspended" | "banned" | null>(null);
+  const [indefinite, setIndefinite] = useState(false);
+  const [preset, setPreset] = useState<RestrictionPreset>("7d");
+  const [customEnds, setCustomEnds] = useState("");
+
+  function openRestrictionSheet(status: "suspended" | "banned") {
+    setPendingStatus(status);
+    setIndefinite(false);
+    setPreset("7d");
+    setCustomEnds(minDatetimeLocalValue());
+    setSheetOpen(true);
+  }
+
+  function computeRestrictionEndsIso(): string | null {
+    if (preset === "custom") {
+      if (!customEnds.trim()) return null;
+      const parsed = new Date(customEnds);
+      return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+    }
+    const hours =
+      preset === "1d" ? 24 : preset === "7d" ? 168 : preset === "30d" ? 720 : 2160;
+    return new Date(Date.now() + hours * 3600 * 1000).toISOString();
+  }
+
+  function confirmRestriction() {
+    if (!pendingStatus) return;
+    if (indefinite) {
+      onApply(user.id, { accountStatus: pendingStatus, indefinite: true });
+      setSheetOpen(false);
+      return;
+    }
+    const ends = computeRestrictionEndsIso();
+    if (!ends) {
+      window.alert("Choose a valid end date and time for this restriction.");
+      return;
+    }
+    onApply(user.id, { accountStatus: pendingStatus, restrictionEndsAt: ends });
+    setSheetOpen(false);
+  }
 
   return (
     <div id={`user-${user.id}`} className="min-w-0 scroll-mt-24 rounded-2xl border border-primary/10 bg-card p-5 shadow-sm">
@@ -122,28 +178,144 @@ function UserCard({
 
       <p className="mt-3 text-xs text-muted-foreground">Joined {formatDateTime(user.createdAt)}</p>
 
+      {(user.accountStatus === "suspended" || user.accountStatus === "banned") && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          {user.restrictionEndsAt
+            ? `Restriction until ${formatDateTime(user.restrictionEndsAt)}`
+            : "Indefinite restriction (until set to active by an admin)"}
+        </p>
+      )}
+
       {user.role === "admin" ? (
         <div className="mt-4 rounded-xl border border-border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
           Admin accounts are visible here for context, but their status is intentionally locked.
         </div>
       ) : (
         <div className="mt-4 flex flex-wrap gap-2">
-          {statusOptions.map((status) => (
-            <button
-              key={status}
-              type="button"
-              disabled={busy}
-              onClick={() => onStatusChange(user.id, status)}
-              className={cn(
-                "rounded-xl border px-3.5 py-2 text-sm font-medium capitalize transition disabled:cursor-not-allowed disabled:opacity-50",
-                actionButtonClass(user.accountStatus === status, status === "banned"),
-              )}
-            >
-              {status}
-            </button>
-          ))}
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => onApply(user.id, { accountStatus: "active" })}
+            className={cn(
+              "rounded-xl border px-3.5 py-2 text-sm font-medium capitalize transition disabled:cursor-not-allowed disabled:opacity-50",
+              actionButtonClass(user.accountStatus === "active", false),
+            )}
+          >
+            active
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => openRestrictionSheet("suspended")}
+            className={cn(
+              "rounded-xl border px-3.5 py-2 text-sm font-medium capitalize transition disabled:cursor-not-allowed disabled:opacity-50",
+              actionButtonClass(user.accountStatus === "suspended", false),
+            )}
+          >
+            suspended
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => openRestrictionSheet("banned")}
+            className={cn(
+              "rounded-xl border px-3.5 py-2 text-sm font-medium capitalize transition disabled:cursor-not-allowed disabled:opacity-50",
+              actionButtonClass(user.accountStatus === "banned", true),
+            )}
+          >
+            banned
+          </button>
         </div>
       )}
+
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle>
+              {pendingStatus === "banned" ? "Ban account" : "Suspend account"}
+            </SheetTitle>
+            <SheetDescription>
+              Choose how long this applies. Suspended users can sign in and read content but cannot post, comment, vote, or ask doctors.
+              Banned users cannot sign in until the ban ends or you set them back to active.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="mt-6 space-y-5 px-4">
+            <label className="flex cursor-pointer items-start gap-3 text-sm">
+              <input
+                type="checkbox"
+                checked={indefinite}
+                onChange={(e) => setIndefinite(e.target.checked)}
+                className="mt-1"
+              />
+              <span>
+                <span className="font-medium text-foreground">Indefinite</span>
+                <span className="mt-0.5 block text-muted-foreground">
+                  Until an admin sets the account to active (no automatic end date).
+                </span>
+              </span>
+            </label>
+
+            {!indefinite ? (
+              <div className="space-y-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Duration</p>
+                <div className="flex flex-wrap gap-2">
+                  {(
+                    [
+                      ["1d", "1 day"],
+                      ["7d", "7 days"],
+                      ["30d", "30 days"],
+                      ["90d", "90 days"],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setPreset(key)}
+                      className={cn(
+                        "rounded-lg border px-3 py-1.5 text-xs font-medium transition",
+                        preset === key
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border text-muted-foreground hover:border-primary/30",
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setPreset("custom")}
+                    className={cn(
+                      "rounded-lg border px-3 py-1.5 text-xs font-medium transition",
+                      preset === "custom"
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-muted-foreground hover:border-primary/30",
+                    )}
+                  >
+                    Custom
+                  </button>
+                </div>
+                {preset === "custom" ? (
+                  <input
+                    type="datetime-local"
+                    min={minDatetimeLocalValue()}
+                    value={customEnds}
+                    onChange={(e) => setCustomEnds(e.target.value)}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                  />
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+          <SheetFooter className="mt-8 flex-row justify-end gap-2 sm:space-x-0">
+            <Button type="button" variant="outline" onClick={() => setSheetOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={confirmRestriction} disabled={busy}>
+              Apply
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
@@ -182,7 +354,7 @@ export default function AdminUsersPage() {
     void fetchSnapshot();
   }, [session?.user?.role, status]);
 
-  async function updateUserStatus(userId: string, accountStatus: "active" | "suspended" | "banned") {
+  async function applyUserModeration(userId: string, body: Record<string, unknown>) {
     setBusyKey(`user-${userId}`);
     setError(null);
 
@@ -190,7 +362,7 @@ export default function AdminUsersPage() {
       const response = await fetch(`/api/admin/moderation/users/${userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accountStatus }),
+        body: JSON.stringify(body),
       });
       const data = await readJsonResponse<ModerationSnapshot>(response);
 
@@ -318,8 +490,8 @@ export default function AdminUsersPage() {
             key={user.id}
             user={user}
             busy={busyKey === `user-${user.id}`}
-            onStatusChange={(userId, accountStatus) => {
-              void updateUserStatus(userId, accountStatus);
+            onApply={(userId, body) => {
+              void applyUserModeration(userId, body);
             }}
           />
         ))}

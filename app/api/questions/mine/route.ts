@@ -49,6 +49,7 @@ export async function GET(request: NextRequest) {
         isAnonymous: doctorQuestions.isAnonymous,
         status: doctorQuestions.status,
         createdAt: doctorQuestions.createdAt,
+        doctorUserId: doctorQuestions.doctorUserId,
         userEmail: users.email,
       })
       .from(doctorQuestions)
@@ -97,8 +98,44 @@ export async function GET(request: NextRequest) {
       answersByQuestion.set(answer.questionId, questionAnswers);
     });
 
+    const assignedDoctorIds = Array.from(
+      new Set(
+        questions
+          .map((question) => question.doctorUserId)
+          .filter((doctorId): doctorId is string => Boolean(doctorId))
+      )
+    );
+    const assignedDoctors = assignedDoctorIds.length
+      ? await db
+          .select({
+            id: users.id,
+            email: users.email,
+            name: users.name,
+            specialty: doctorProfiles.specialty,
+          })
+          .from(users)
+          .leftJoin(doctorProfiles, eq(users.id, doctorProfiles.userId))
+          .where(inArray(users.id, assignedDoctorIds))
+      : [];
+    const assignedDoctorById = new Map(
+      assignedDoctors.map((doctor) => [
+        doctor.id,
+        {
+          displayName: buildDisplayName(doctor.name, doctor.email),
+          specialty: doctor.specialty,
+        },
+      ])
+    );
+
     const payload = questions.map((question) => ({
       ...question,
+      isSpecified: Boolean(question.doctorUserId),
+      specifiedDoctorName: question.doctorUserId
+        ? (assignedDoctorById.get(question.doctorUserId)?.displayName ?? null)
+        : null,
+      specifiedDoctorSpecialty: question.doctorUserId
+        ? (assignedDoctorById.get(question.doctorUserId)?.specialty ?? null)
+        : null,
       answers: answersByQuestion.get(question.id) ?? [],
     }));
 

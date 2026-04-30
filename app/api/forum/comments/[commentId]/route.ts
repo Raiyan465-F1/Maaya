@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { db } from "@/src/db";
 import { comments } from "@/src/schema/forum";
 import { authOptions } from "@/lib/auth";
+import { suspendedMutationBlockedResponse } from "@/lib/suspended-mutation";
 import {
   canAccessModeratedContent,
   canManageContent,
@@ -26,6 +27,9 @@ export async function PATCH(
   if (!session?.user?.id) {
     return NextResponse.json({ error: "You must be logged in to edit a comment." }, { status: 401 });
   }
+
+  const blockedPatch = suspendedMutationBlockedResponse(session, request.headers.get("origin"));
+  if (blockedPatch) return blockedPatch;
 
   if (!commentId) {
     return NextResponse.json({ error: "Invalid comment id." }, { status: 400 });
@@ -73,6 +77,9 @@ export async function DELETE(
   if (!session?.user?.id) {
     return NextResponse.json({ error: "You must be logged in to delete a comment." }, { status: 401 });
   }
+
+  const blockedDel = suspendedMutationBlockedResponse(session, _request.headers.get("origin"));
+  if (blockedDel) return blockedDel;
 
   if (!commentId) {
     return NextResponse.json({ error: "Invalid comment id." }, { status: 400 });

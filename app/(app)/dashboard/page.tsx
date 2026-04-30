@@ -1,5 +1,5 @@
 import { getServerSession } from "next-auth";
-import { desc, eq, inArray } from "drizzle-orm";
+import { desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import {
   DashboardShell,
@@ -9,6 +9,21 @@ import {
 import { authOptions } from "@/lib/auth";
 import { db } from "@/src/db";
 import { alerts, doctorAnswers, doctorQuestions, users } from "@/src/schema";
+
+function buildDisplayName(name: string | null, email: string) {
+  if (name?.trim()) {
+    return name.trim();
+  }
+
+  const emailPrefix = email.split("@")[0] ?? "doctor";
+  const formatted = emailPrefix
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
+  return formatted || "Doctor";
+}
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -27,10 +42,21 @@ export default async function DashboardPage() {
     .orderBy(desc(doctorQuestions.createdAt));
 
   const reviewQuestionsRaw = isDoctorView
-    ? await db
-        .select()
-        .from(doctorQuestions)
-        .orderBy(desc(doctorQuestions.createdAt))
+    ? session.user.role === "admin"
+      ? await db
+          .select()
+          .from(doctorQuestions)
+          .orderBy(desc(doctorQuestions.createdAt))
+      : await db
+          .select()
+          .from(doctorQuestions)
+          .where(
+            or(
+              isNull(doctorQuestions.doctorUserId),
+              eq(doctorQuestions.doctorUserId, session.user.id)
+            )
+          )
+          .orderBy(desc(doctorQuestions.createdAt))
     : personalQuestionsRaw;
 
   const allRelevantQuestions = isDoctorView
@@ -57,6 +83,9 @@ export default async function DashboardPage() {
   const userIds = Array.from(
     new Set([
       ...allRelevantQuestions.map((question) => question.userId),
+      ...allRelevantQuestions
+        .map((question) => question.doctorUserId)
+        .filter((doctorUserId): doctorUserId is string => Boolean(doctorUserId)),
       ...answers.map((answer) => answer.doctorUserId),
     ])
   );
@@ -67,6 +96,7 @@ export default async function DashboardPage() {
           .select({
             id: users.id,
             email: users.email,
+            name: users.name,
           })
           .from(users)
           .where(inArray(users.id, userIds))
@@ -78,6 +108,9 @@ export default async function DashboardPage() {
     .where(eq(alerts.userId, session.user.id))
     .orderBy(desc(alerts.createdAt));
 
+  const displayNameByUserId = new Map(
+    relatedUsers.map((user) => [user.id, buildDisplayName(user.name, user.email)])
+  );
   const emailByUserId = new Map(relatedUsers.map((user) => [user.id, user.email]));
 
   const toDashboardQuestions = (
@@ -100,7 +133,11 @@ export default async function DashboardPage() {
         answerText: answer?.answerText ?? null,
         answeredAt: answer?.createdAt ? answer.createdAt.toISOString() : null,
         answeredBy: answer?.doctorUserId
-          ? emailByUserId.get(answer.doctorUserId) ?? "Doctor"
+          ? displayNameByUserId.get(answer.doctorUserId) ?? "Doctor"
+          : null,
+        isSpecified: Boolean(question.doctorUserId),
+        specifiedDoctorName: question.doctorUserId
+          ? displayNameByUserId.get(question.doctorUserId) ?? null
           : null,
       };
     });

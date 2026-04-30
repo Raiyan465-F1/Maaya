@@ -5,6 +5,7 @@ import { db } from "@/src/db";
 import { doctorAnswers, doctorQuestions, users, doctorProfiles } from "@/src/schema";
 import { authOptions } from "@/lib/auth";
 import { withCorsHeaders } from "@/lib/cors";
+import { suspendedMutationBlockedResponse } from "@/lib/suspended-mutation";
 
 function jsonResponse(
   data: object,
@@ -68,6 +69,9 @@ export async function POST(
       return jsonResponse({ error: "Unauthorized" }, 401, origin);
     }
 
+    const suspendedBlock = suspendedMutationBlockedResponse(session, origin);
+    if (suspendedBlock) return suspendedBlock;
+
     if (isNaN(questionId)) {
       return jsonResponse({ error: "Invalid question ID" }, 400, origin);
     }
@@ -91,7 +95,11 @@ export async function POST(
     }
 
     const [existingQuestion] = await db
-      .select({ id: doctorQuestions.id, status: doctorQuestions.status })
+      .select({
+        id: doctorQuestions.id,
+        status: doctorQuestions.status,
+        doctorUserId: doctorQuestions.doctorUserId,
+      })
       .from(doctorQuestions)
       .where(eq(doctorQuestions.id, questionId))
       .limit(1);
@@ -103,6 +111,17 @@ export async function POST(
     if (existingQuestion.status === "closed") {
       return jsonResponse(
         { error: "This question has been closed and no longer accepts answers" },
+        403,
+        origin
+      );
+    }
+
+    if (
+      existingQuestion.doctorUserId &&
+      existingQuestion.doctorUserId !== session.user.id
+    ) {
+      return jsonResponse(
+        { error: "This question was assigned to another doctor" },
         403,
         origin
       );

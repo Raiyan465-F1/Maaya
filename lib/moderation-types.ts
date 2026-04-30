@@ -37,6 +37,7 @@ export type ModerationUserRecord = {
   name: string | null;
   role: UserRole;
   accountStatus: AccountStatus | null;
+  restrictionEndsAt: string | null;
   createdAt: string;
   postCount: number;
   anonymousPostCount: number;
