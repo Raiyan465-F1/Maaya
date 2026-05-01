@@ -171,6 +171,8 @@ export async function GET(request: NextRequest) {
     }
     const cycleHistory = history.reverse();
 
+    // Normalcy Analysis
+
     const isCycleNormal = avgCycleLength >= 21 && avgCycleLength <= 35;
     const isPeriodNormal = avgPeriodLength >= 2 && avgPeriodLength <= 7;
 
