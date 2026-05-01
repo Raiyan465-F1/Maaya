@@ -121,11 +121,7 @@ export async function GET(request: NextRequest) {
     const userRegularity = isOnboarded ? onboardingData[0].regularity : "mostly";
     
     // Evaluate health status based on cycle and regularity
-    let healthStatus = {
-      status: "Good",
-      message: "Great job taking care of your health!",
-      details: "Your consistent tracking helps you stay in tune with your body. Keep up the good work!"
-    };
+    let healthStatus = null;
 
     if (userRegularity === "irregular") {
       healthStatus = {
@@ -146,6 +142,7 @@ export async function GET(request: NextRequest) {
         details: "You are in your highly fertile phase right now. Great job monitoring your cycle!"
       };
     }
+
 
 
     // Pregnancy chance calculation
@@ -174,11 +171,9 @@ export async function GET(request: NextRequest) {
     }
     const cycleHistory = history.reverse();
 
-    const avgCycleLength = isOnboarded ? (onboardingData[0].averageCycleLength || 28) : 28;
-    const avgPeriodLength = isOnboarded ? (onboardingData[0].averagePeriodLength || 5) : 5;
-    
     const isCycleNormal = avgCycleLength >= 21 && avgCycleLength <= 35;
     const isPeriodNormal = avgPeriodLength >= 2 && avgPeriodLength <= 7;
+
 
     return NextResponse.json({
       hasData: true,
