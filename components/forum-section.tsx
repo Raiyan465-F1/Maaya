@@ -1021,8 +1021,9 @@ export function ForumSection() {
 
   return (
     <section className="mx-auto max-w-[90rem] space-y-7 px-3 py-8 pb-24 sm:px-4 lg:px-5">
-      <div className="max-w-[84rem] overflow-hidden rounded-[2rem] border border-primary/15 bg-gradient-to-br from-card via-card to-primary/5 shadow-sm">
-        <div className="grid gap-5 p-5 lg:grid-cols-[48rem_minmax(14rem,1fr)] lg:p-6">
+      <div className="relative max-w-[84rem] overflow-hidden rounded-[2.5rem] border border-emerald-200/60 bg-[radial-gradient(ellipse_at_top_right,_rgba(16,185,129,0.15),_transparent_50%),linear-gradient(145deg,rgba(240,253,244,0.95),rgba(255,255,255,1))] dark:border-emerald-900/30 dark:bg-[radial-gradient(ellipse_at_top_right,_rgba(16,185,129,0.15),_transparent_50%),linear-gradient(145deg,rgba(10,20,15,0.95),rgba(0,0,0,1))] shadow-2xl shadow-emerald-900/5 group">
+        <div className="pointer-events-none absolute right-0 top-0 h-96 w-96 rounded-full bg-emerald-400/20 blur-[100px] group-hover:bg-emerald-400/30 transition-all duration-700" />
+        <div className="relative grid gap-6 p-8 lg:grid-cols-[48rem_minmax(14rem,1fr)] lg:p-10 z-10">
           <div>
             <p className="font-mono text-lg tracking-[0.22em] text-primary uppercase sm:text-xl">Forum</p>
             <h1 className="mt-2 max-w-lg font-heading text-3xl font-bold leading-[0.95] tracking-tight text-foreground sm:text-[3.05rem]">
@@ -1052,12 +1053,13 @@ export function ForumSection() {
       ) : null}
 
       <div className="flex flex-col gap-8 lg:ml-32 lg:flex-row lg:items-start lg:gap-8">
-        <div className="min-w-0 flex-1 space-y-6 lg:max-w-[48rem]">
-          <div ref={filterPanelRef} className="rounded-[1.8rem] border border-primary/15 bg-card p-5 shadow-sm">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0 flex-1 space-y-8 lg:max-w-[48rem]">
+          <div ref={filterPanelRef} className="rounded-[2.5rem] border border-border/60 bg-card p-8 shadow-lg relative overflow-hidden">
+            <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-emerald-100 dark:bg-emerald-900/30 blur-3xl pointer-events-none" />
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between relative z-10">
               <div>
-                <p className="font-heading text-[1.85rem] font-semibold text-foreground">Find a discussion</p>
-                <p className="mt-1 text-sm text-muted-foreground">Search by title or tag, or click a tag chip to narrow the list.</p>
+                <p className="font-heading text-2xl font-extrabold text-foreground">Find a discussion</p>
+                <p className="mt-1 text-sm font-medium text-muted-foreground">Search by title or tag, or click a tag chip to narrow the list.</p>
               </div>
               {(searchTerm || activeTag) ? (
                 <button
@@ -1226,17 +1228,18 @@ export function ForumSection() {
         </div>
 
         <div className="w-full shrink-0 lg:w-80">
-          <div className="space-y-6 lg:sticky lg:top-8 lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto lg:overflow-x-hidden scrollbar-hidden">
+          <div className="space-y-8 lg:sticky lg:top-8 lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto lg:overflow-x-hidden scrollbar-hidden">
             {userLikedTags.length > 0 && (
-            <div className="overflow-hidden rounded-[2rem] border border-secondary/15 bg-gradient-to-br from-white via-card to-secondary/5 shadow-sm">
-              <div className="border-b border-secondary/10 px-5 py-4">
-                <p className="font-mono text-xs tracking-[0.22em] text-secondary uppercase">Your interests</p>
-                <h2 className="mt-2 font-heading text-xl font-semibold text-foreground">Liked tags</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
+            <div className="overflow-hidden rounded-[2.5rem] border border-border/60 bg-card shadow-lg relative group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-100 dark:bg-emerald-900/30 rounded-full blur-2xl pointer-events-none group-hover:scale-125 transition-transform duration-700" />
+              <div className="border-b border-border/50 px-6 py-5 relative z-10">
+                <p className="font-mono text-xs font-bold tracking-[0.22em] text-emerald-600 dark:text-emerald-400 uppercase">Your interests</p>
+                <h2 className="mt-2 font-heading text-xl font-extrabold text-foreground">Liked tags</h2>
+                <p className="mt-1 text-sm font-medium text-muted-foreground">
                   Click a tag to filter discussions matching your interests.
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2 p-5">
+              <div className="flex flex-wrap gap-2 p-6 relative z-10">
                 {userLikedTags.map((tag) => (
                   <button
                     key={tag}
@@ -1256,16 +1259,17 @@ export function ForumSection() {
             </div>
             )}
 
-            <div className="overflow-hidden rounded-[2rem] border border-primary/15 bg-gradient-to-br from-white via-card to-primary/5 shadow-sm">
-            <div className="border-b border-primary/10 px-5 py-4">
-              <p className="font-mono text-xs tracking-[0.22em] text-primary uppercase">Trending now</p>
-              <h2 className="mt-2 font-heading text-2xl font-semibold text-foreground">Topics and tags</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
+            <div className="overflow-hidden rounded-[2.5rem] border-2 border-emerald-200/50 bg-gradient-to-b from-emerald-50/50 to-emerald-100/10 dark:border-emerald-900/40 dark:from-emerald-950/40 dark:to-background shadow-xl relative group/trending">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-200/30 dark:bg-emerald-700/20 rounded-full blur-[40px] pointer-events-none transition-transform duration-700 group-hover/trending:scale-150" />
+            <div className="border-b border-emerald-200/30 dark:border-emerald-900/30 px-6 py-5 relative z-10">
+              <p className="font-mono text-xs font-bold tracking-[0.22em] text-emerald-600 dark:text-emerald-400 uppercase flex items-center gap-2"><Sparkles className="size-3.5" /> Trending now</p>
+              <h2 className="mt-2 font-heading text-2xl font-extrabold text-foreground">Topics & Tags</h2>
+              <p className="mt-1 text-sm font-medium text-muted-foreground">
                 Jump into the conversations people are engaging with the most.
               </p>
             </div>
 
-            <div className="grid gap-5 p-5">
+            <div className="grid gap-6 p-6 relative z-10">
               <div>
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-semibold text-foreground">Trending topics</p>
@@ -1714,12 +1718,14 @@ function ForumPostCard({
   return (
     <article
       className={[
-        "overflow-hidden rounded-[2rem] border border-primary/15 bg-card shadow-sm",
-        expanded ? "mx-auto" : "cursor-pointer transition hover:-translate-y-0.5 hover:shadow-md",
+        "overflow-hidden rounded-[2.5rem] border bg-card/80 backdrop-blur-sm transition-all duration-300",
+        expanded 
+          ? "mx-auto shadow-2xl border-emerald-200/60 dark:border-emerald-800/40 max-w-4xl" 
+          : "cursor-pointer border-border/60 shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:border-emerald-300/50 hover:bg-white dark:hover:bg-card group/card",
       ].join(" ")}
       onClick={handleCardClick}
     >
-      <div className="h-2 w-full bg-gradient-to-r from-primary via-accent to-secondary" />
+      <div className="h-1.5 w-full bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 opacity-80 group-hover/card:opacity-100 transition-opacity" />
       <div className={expanded ? "p-6 sm:p-7" : "p-3.5 sm:p-4"}>
         <div className={expanded ? "flex flex-wrap items-start justify-between gap-4" : "flex items-start justify-between gap-3"}>
           <div className="min-w-0 flex-1">
