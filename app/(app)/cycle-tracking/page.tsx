@@ -410,88 +410,8 @@ export default function CycleTrackingPage() {
 
 
 
-          {/* Mood Tracker Card */}
-          <Card className={`w-full shadow-lg border-indigo-200/50 bg-indigo-50/30 dark:bg-indigo-950/20 transition-opacity duration-300 ${isPending ? "opacity-60 pointer-events-none" : ""}`}>
-            <CardHeader className="pb-4">
-              <CardTitle className="text-xl flex items-center gap-2 text-indigo-900 dark:text-indigo-100">
-                <Smile className="w-5 h-5 text-indigo-500" />
-                How are you feeling today?
-              </CardTitle>
-              <CardDescription>Track your daily mood to see cycle trends</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-between items-center bg-muted/40 p-2 rounded-2xl border border-border/50">
-                {[
-                  { id: "terrible", emoji: "😫", label: "Terrible" },
-                  { id: "bad", emoji: "😕", label: "Bad" },
-                  { id: "okay", emoji: "😐", label: "Okay" },
-                  { id: "good", emoji: "🙂", label: "Good" },
-                  { id: "great", emoji: "😄", label: "Great" },
-                ].map((m) => {
-                  const isSelected = lockedMood === m.id;
-                  const isBlurred = lockedMood && lockedMood !== m.id;
-                  
-                  return (
-                    <button
-                      key={m.id}
-                      onClick={() => handleMoodSelect(m.id, m.label)}
-                      disabled={!!lockedMood || isPending}
-                      className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl transition-all duration-500 group w-full 
-                        ${isSelected ? 'bg-primary/20 ring-2 ring-primary scale-105 shadow-sm my-2' : ''} 
-                        ${isBlurred ? 'opacity-30 grayscale blur-[1px] hover:scale-100 hover:bg-transparent' : 'hover:bg-background hover:shadow-sm hover:scale-105'}
-                      `}
-                    >
-                      <span className={`text-3xl transition-all duration-300 ${isSelected ? 'grayscale-0 drop-shadow-md' : 'grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100'}`}>
-                        {m.emoji}
-                      </span>
-                      <span className={`text-[0.7rem] font-medium transition-colors ${isSelected ? 'text-primary drop-shadow-md' : 'text-muted-foreground group-hover:text-foreground'}`}>
-                        {m.label}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Secure 24-hr Lock Feedback Display */}
-              <div className="mt-3 flex flex-col sm:flex-row items-center justify-between min-h-[3rem] gap-2">
-                <div className="flex-1 text-center sm:text-left">
-                  {feedbackMsg && (
-                    <p className={`text-sm font-semibold animate-in slide-in-from-top-2 fade-in duration-500 ${feedbackMsg.type === 'error' ? "text-destructive" : "text-primary"}`}>
-                      {feedbackMsg.text}
-                    </p>
-                  )}
-                  {lockedMood && !feedbackMsg && (
-                    <p className="text-sm font-medium text-muted-foreground delay-500 animate-in fade-in">
-                      {MOOD_MESSAGES[lockedMood] || "Your mood is safely tracked for today."}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Doctor's Help Card */}
-          <Card className="w-full shadow-md border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors">
-            <CardHeader className="pb-3 text-center">
-              <div className="mx-auto bg-primary/10 p-3 rounded-full mb-2 w-fit">
-                <Stethoscope className="w-8 h-8 text-primary" />
-              </div>
-              <CardTitle className="text-xl">Facing a problem?</CardTitle>
-              <CardDescription className="text-sm">
-                Consult our verified doctors here.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex justify-center pb-6">
-              <Link href="/doctors-help" className="w-full sm:w-auto">
-                <Button className="w-full sm:min-w-[200px] rounded-xl text-md font-semibold transition-all hover:scale-105 shadow-md">
-                  Get Help
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-
-
         </div>
+
         {/* Right Column: Insights & Mood */}
         <div className="hidden lg:flex flex-col gap-6 w-full">
           {/* Insights Card */}
@@ -531,20 +451,23 @@ export default function CycleTrackingPage() {
                        <p className="text-sm text-muted-foreground leading-snug">{analytics.predictedSymptoms}</p>
                     </div>
 
-                    <div className={`mt-1 p-3 rounded-xl border ${
-                      analytics.healthStatus?.status === 'Warning' ? 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-900' :
-                      analytics.healthStatus?.status === 'Advice' ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900' :
-                      'bg-purple-50/50 border-purple-100 dark:bg-purple-950/10 dark:border-purple-900'
-                    }`}>
-                       <p className={`text-sm font-bold mb-1 flex items-center gap-2 ${
-                         analytics.healthStatus?.status === 'Warning' ? 'text-red-700 dark:text-red-400' :
-                         analytics.healthStatus?.status === 'Advice' ? 'text-amber-700 dark:text-amber-400' :
-                         'text-purple-700 dark:text-purple-300'
-                       }`}>
-                         <Heart className="w-4 h-4"/> {analytics.healthStatus?.message}
-                       </p>
-                       <p className="text-xs text-muted-foreground leading-relaxed">{analytics.healthStatus?.details}</p>
-                    </div>
+                    {analytics.healthStatus && (
+                      <div className={`mt-1 p-3 rounded-xl border ${
+                        analytics.healthStatus.status === 'Warning' ? 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-900' :
+                        analytics.healthStatus.status === 'Advice' ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900' :
+                        'bg-purple-50/50 border-purple-100 dark:bg-purple-950/10 dark:border-purple-900'
+                      }`}>
+                         <p className={`text-sm font-bold mb-1 flex items-center gap-2 ${
+                           analytics.healthStatus.status === 'Warning' ? 'text-red-700 dark:text-red-400' :
+                           analytics.healthStatus.status === 'Advice' ? 'text-amber-700 dark:text-amber-400' :
+                           'text-purple-700 dark:text-purple-300'
+                         }`}>
+                           <Heart className="w-4 h-4"/> {analytics.healthStatus.message}
+                         </p>
+                         <p className="text-xs text-muted-foreground leading-relaxed">{analytics.healthStatus.details}</p>
+                      </div>
+                    )}
+
                   </div>
 
                 )}
@@ -789,12 +712,86 @@ export default function CycleTrackingPage() {
               </div>
             </CardContent>
           </Card>
+          {/* Mood Tracker Card */}
+          <Card className={`w-full shadow-lg border-indigo-200/50 bg-indigo-50/30 dark:bg-indigo-950/20 transition-opacity duration-300 ${isPending ? "opacity-60 pointer-events-none" : ""}`}>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl flex items-center gap-2 text-indigo-900 dark:text-indigo-100">
+                <Smile className="w-5 h-5 text-indigo-500" />
+                Daily Check-up
+              </CardTitle>
+              <CardDescription>How are you feeling today?</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-between items-center bg-muted/40 p-2 rounded-2xl border border-border/50">
+                {[
+                  { id: "terrible", emoji: "😫", label: "Terrible" },
+                  { id: "bad", emoji: "😕", label: "Bad" },
+                  { id: "okay", emoji: "😐", label: "Okay" },
+                  { id: "good", emoji: "🙂", label: "Good" },
+                  { id: "great", emoji: "😄", label: "Great" },
+                ].map((m) => {
+                  const isSelected = lockedMood === m.id;
+                  const isBlurred = lockedMood && lockedMood !== m.id;
+                  
+                  return (
+                    <button
+                      key={m.id}
+                      onClick={() => handleMoodSelect(m.id, m.label)}
+                      disabled={!!lockedMood || isPending}
+                      className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl transition-all duration-500 group w-full 
+                        ${isSelected ? 'bg-primary/20 ring-2 ring-primary scale-105 shadow-sm my-2' : ''} 
+                        ${isBlurred ? 'opacity-30 grayscale blur-[1px] hover:scale-100 hover:bg-transparent' : 'hover:bg-background hover:shadow-sm hover:scale-105'}
+                      `}
+                    >
+                      <span className={`text-3xl transition-all duration-300 ${isSelected ? 'grayscale-0 drop-shadow-md' : 'grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100'}`}>
+                        {m.emoji}
+                      </span>
+                      <span className={`text-[0.7rem] font-medium transition-colors ${isSelected ? 'text-primary drop-shadow-md' : 'text-muted-foreground group-hover:text-foreground'}`}>
+                        {m.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
 
+              {/* Secure 24-hr Lock Feedback Display */}
+              <div className="mt-3 flex flex-col sm:flex-row items-center justify-between min-h-[3rem] gap-2">
+                <div className="flex-1 text-center sm:text-left">
+                  {feedbackMsg && (
+                    <p className={`text-sm font-semibold animate-in slide-in-from-top-2 fade-in duration-500 ${feedbackMsg.type === 'error' ? "text-destructive" : "text-primary"}`}>
+                      {feedbackMsg.text}
+                    </p>
+                  )}
+                  {lockedMood && !feedbackMsg && (
+                    <p className="text-sm font-medium text-muted-foreground delay-500 animate-in fade-in">
+                      {MOOD_MESSAGES[lockedMood] || "Your mood is safely tracked for today."}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
+          {/* Doctor's Help Card */}
+          <Card className="w-full shadow-md border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors">
+            <CardHeader className="pb-3 text-center">
+              <div className="mx-auto bg-primary/10 p-3 rounded-full mb-2 w-fit">
+                <Stethoscope className="w-8 h-8 text-primary" />
+              </div>
+              <CardTitle className="text-xl font-bold">Facing a problem?</CardTitle>
+              <CardDescription className="text-sm">
+                Consult our verified doctors here.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-center pb-6">
+              <Link href="/doctors-help" className="w-full sm:w-auto">
+                <Button className="w-full sm:min-w-[200px] rounded-xl text-md font-semibold transition-all hover:scale-105 shadow-md">
+                  Get Help
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
 
-
-
-        </div>
       </div>
     </div>
   );
