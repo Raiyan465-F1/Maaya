@@ -136,7 +136,8 @@ export default function CycleTrackingPage() {
         const newAnalytics = await fetch("/api/cycle-tracking/analytics").then(res => res.json());
         setAnalytics(newAnalytics);
       } else {
-        setCalFeedback({ type: "error", text: "Failed to log cycle." });
+        const errorData = await resp.json().catch(() => ({}));
+        setCalFeedback({ type: "error", text: errorData.error || "Failed to log cycle." });
       }
     } catch(err) {
       setCalFeedback({ type: "error", text: "Error logging cycle." });

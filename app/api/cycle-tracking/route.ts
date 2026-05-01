@@ -43,8 +43,9 @@ export async function POST(request: NextRequest) {
     const start = new Date(startDate);
     const end = endDate ? new Date(endDate) : null;
     const now = new Date();
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
-    if (start > now || (end && end > now)) {
+    if (start > tomorrow || (end && end > tomorrow)) {
       return NextResponse.json({ error: "Dates cannot be in the future." }, { status: 400 });
     }
 
@@ -101,8 +102,9 @@ export async function PUT(request: NextRequest) {
 
     const end = new Date(endDate);
     const now = new Date();
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
-    if (end > now) {
+    if (end > tomorrow) {
       return NextResponse.json({ error: "Date cannot be in the future." }, { status: 400 });
     }
 
