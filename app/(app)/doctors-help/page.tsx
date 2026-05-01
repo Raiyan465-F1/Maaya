@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
@@ -103,7 +103,7 @@ const STATUS_BADGE_CLASSES: Record<QuestionStatus, string> = {
     'bg-muted text-muted-foreground',
 };
 
-export default function DoctorsHelpPage() {
+function DoctorsHelpPageContent() {
   const searchParams = useSearchParams();
   const [questionTitle, setQuestionTitle] = useState('');
   const [questionText, setQuestionText] = useState('');
@@ -1116,5 +1116,17 @@ export default function DoctorsHelpPage() {
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+}
+
+export default function DoctorsHelpPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="text-sm text-muted-foreground">Loading Doctor&apos;s Help...</div>
+      }
+    >
+      <DoctorsHelpPageContent />
+    </Suspense>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import type { ModerationReportRecord, ModerationSnapshot } from "@/lib/moderation-types";
@@ -244,7 +244,7 @@ function ReportCard({
   );
 }
 
-export default function ModerationPage() {
+function ModerationPageContent() {
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
   const [snapshot, setSnapshot] = useState<ModerationSnapshot | null>(null);
@@ -463,5 +463,28 @@ export default function ModerationPage() {
         </section>
       </div>
     </div>
+  );
+}
+
+export default function ModerationPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-w-0">
+          <p className="font-mono text-xs tracking-widest text-accent uppercase">Admin</p>
+          <h1 className="mt-2 font-heading text-3xl font-bold tracking-tight text-foreground">
+            Content{" "}
+            <span className="bg-gradient-to-r from-primary to-accent bg-clip-text italic text-transparent">
+              moderation
+            </span>
+          </h1>
+          <div className="mt-8 rounded-2xl border border-dashed border-border bg-card px-6 py-16 text-center text-sm text-muted-foreground">
+            Loading moderation tools...
+          </div>
+        </div>
+      }
+    >
+      <ModerationPageContent />
+    </Suspense>
   );
 }
