@@ -11,6 +11,7 @@ export default function AppLayout({
 }) {
   const pathname = usePathname();
   const isForumRoute = pathname === "/forum" || pathname.startsWith("/forum/");
+  const isWideKnowledgeRoute = pathname === "/education" || pathname.startsWith("/sti-awareness");
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -24,7 +25,7 @@ export default function AppLayout({
         <div
           className={[
             "mx-auto w-full flex-1 px-4 py-8 sm:px-6 lg:py-12",
-            isForumRoute ? "max-w-[108rem] lg:px-6" : "max-w-4xl",
+            isForumRoute ? "max-w-[108rem] lg:px-6" : isWideKnowledgeRoute ? "max-w-7xl lg:px-8" : "max-w-4xl",
           ].join(" ")}
         >
           {children}
