@@ -291,7 +291,25 @@ export default function CycleTrackingPage() {
                   height: 6px;
                   border-radius: 50%;
                   background-color: #ef4444 !important;
-                  box-shadow: 0 0 4px rgba(255,0,0,0.6);
+                  box-shadow: 0 0 4px rgba(239, 68, 68, 0.6);
+                  z-index: 50;
+                }
+                .logged-period-end-day {
+                  outline: 2px solid #3b82f6 !important;
+                  border-radius: 8px;
+                  background-color: rgba(59, 130, 246, 0.1) !important;
+                }
+                .logged-period-end-day .rdp-day_button::after {
+                  content: '';
+                  position: absolute;
+                  bottom: 2px;
+                  left: 50%;
+                  transform: translateX(-50%);
+                  width: 6px;
+                  height: 6px;
+                  border-radius: 50%;
+                  background-color: #3b82f6 !important;
+                  box-shadow: 0 0 4px rgba(59, 130, 246, 0.6);
                   z-index: 50;
                 }
                 .active-cycle-start .rdp-day_button {
@@ -324,6 +342,10 @@ export default function CycleTrackingPage() {
                         const [year, month, day] = d.split('T')[0].split('-').map(Number);
                         return new Date(year, month - 1, day);
                       }),
+                      periodEnd: (analytics?.periodEndDates || []).map((d: string) => {
+                        const [year, month, day] = d.split('T')[0].split('-').map(Number);
+                        return new Date(year, month - 1, day);
+                      }),
                       activeStart: isActiveCycle ? [
                         new Date(
                           Number(analytics.latestCycle.startDate.split('-')[0]),
@@ -334,6 +356,7 @@ export default function CycleTrackingPage() {
                     }}
                     modifiersClassNames={{
                       periodStart: "logged-period-day",
+                      periodEnd: "logged-period-end-day",
                       activeStart: "active-cycle-start"
                     }}
                   />
@@ -350,7 +373,11 @@ export default function CycleTrackingPage() {
                            className="w-full bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white shadow-lg shadow-red-500/30 font-bold py-6 text-lg rounded-xl transition-all active:scale-95"
                         >
                           <Heart className="w-5 h-5 mr-2 fill-white/20" />
-                          {isLogging ? "Saving..." : "Log End Date"}
+                          {isLogging ? "Saving..." : `Log End Date (Started: ${new Date(
+                            Number(analytics.latestCycle.startDate.split('-')[0]),
+                            Number(analytics.latestCycle.startDate.split('-')[1]) - 1,
+                            Number(analytics.latestCycle.startDate.split('-')[2].substring(0, 2))
+                          ).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })})`}
                         </Button>
                       ) : (
                         <Button 

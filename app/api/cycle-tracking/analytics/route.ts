@@ -160,6 +160,7 @@ export async function GET(request: NextRequest) {
       pregnancyChance,
       userStats,
       periodStartDates: logs.map(l => l.startDate),
+      periodEndDates: logs.filter(l => l.endDate).map(l => l.endDate),
       recommendations: tips.length > 0 ? tips : [{ tipTitle: "Rest and Hydrate", tipDescription: "Listen to your body today." }],
       latestCycle: {
         startDate: latestCycle.startDate,
