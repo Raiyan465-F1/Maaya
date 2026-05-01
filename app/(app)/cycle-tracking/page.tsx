@@ -311,8 +311,10 @@ export default function CycleTrackingPage() {
             <CardHeader className="pb-2">
               <CardTitle className="text-lg flex items-center gap-2 text-primary">
                 <BarChart3 className="w-5 h-5" />
-                6-Month Cycle Analysis
+                Bar Chart Analysis of Cycle
               </CardTitle>
+
+
               <CardDescription>Historical study of your cycle lengths</CardDescription>
             </CardHeader>
             <CardContent className="pt-4 pb-8 px-6">
