@@ -52,10 +52,12 @@ export async function GET(request: NextRequest) {
           primaryGoal: config.primaryGoal
         },
         periodStartDates: [],
+        pregnancyChance: { label: "Unknown", color: "text-muted-foreground", bg: "bg-muted/10" },
         recommendations: [{ 
           tipTitle: "Ready to start?", 
           tipDescription: "Click a date on the calendar to log your first period and unlock full phase predictions!" 
         }]
+
       }, { status: 200 });
     }
 
@@ -94,13 +96,25 @@ export async function GET(request: NextRequest) {
 
     const daysUntilNextPeriod = Math.max(0, Math.ceil((nextPeriodStart.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
     
+    const userPeriodSymptoms = isOnboarded && onboardingData[0].periodSymptoms ? onboardingData[0].periodSymptoms : [];
+    const formattedSymptoms = userPeriodSymptoms.length > 0 
+      ? (userPeriodSymptoms.length > 1 
+          ? `${userPeriodSymptoms.slice(0, -1).join(", ")} and ${userPeriodSymptoms.slice(-1)}` 
+          : userPeriodSymptoms[0])
+      : null;
+
     const SYMPTOMS_PREDICTIONS: Record<string, string> = {
-      "Menstrual": "Fatigue, cramps, lower back pain, potential headaches.",
+      "Menstrual": formattedSymptoms 
+        ? `You may be experiencing ${formattedSymptoms} today. Rest and take care of yourself.` 
+        : "Fatigue, cramps, lower back pain, potential headaches.",
       "Follicular": "Everything is fine! Energy is rising, skin might be clearer.",
       "Ovulation": "High energy, possible mild pelvic twinges (mittelschmerz).",
-      "Luteal": "Cravings, bloating, mood swings, potential insomnia or fatigue."
+      "Luteal": formattedSymptoms 
+        ? `Heads up! You might start feeling ${formattedSymptoms} as your period approaches.`
+        : "Cravings, bloating, mood swings, potential insomnia or fatigue."
     };
     const predictedSymptoms = SYMPTOMS_PREDICTIONS[currentPhase] || "No major symptoms predicted.";
+
     
     const userStats = isOnboarded ? { height: onboardingData[0].height, weight: onboardingData[0].weight } : null;
     
@@ -125,6 +139,15 @@ export async function GET(request: NextRequest) {
       };
     }
 
+    // Pregnancy chance calculation
+    let pregnancyChance = { label: "LOW CHANCE of getting pregnant", color: "text-green-500", bg: "bg-green-500/10" };
+    if (dayOfCycle >= 12 && dayOfCycle <= 16) {
+      pregnancyChance = { label: "HIGH CHANCE of getting pregnant", color: "text-red-500", bg: "bg-red-500/10" };
+    } else if ((dayOfCycle >= 10 && dayOfCycle <= 11) || (dayOfCycle >= 17 && dayOfCycle <= 18)) {
+      pregnancyChance = { label: "MODERATE CHANCE of getting pregnant", color: "text-yellow-600", bg: "bg-yellow-500/10" };
+    }
+
+
     return NextResponse.json({
       hasData: true,
       currentPhase,
@@ -133,6 +156,7 @@ export async function GET(request: NextRequest) {
       daysUntilNextPeriod,
       predictedSymptoms,
       healthStatus,
+      pregnancyChance,
       userStats,
       periodStartDates: logs.map(l => l.startDate),
       recommendations: tips.length > 0 ? tips : [{ tipTitle: "Rest and Hydrate", tipDescription: "Listen to your body today." }],
@@ -143,6 +167,7 @@ export async function GET(request: NextRequest) {
         expectedPeriodEnd: nextPeriodEnd.toISOString()
       }
     }, { status: 200 });
+
 
   } catch (error) {
     console.error("GET cycle analytics error:", error);
