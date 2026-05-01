@@ -171,8 +171,11 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               </div>
             </div>
 
+          </div>
+
+          <aside className="space-y-8">
             {/* Myth vs Fact */}
-            <div className="grid gap-8 md:grid-cols-2">
+            <div className="grid gap-6">
               <div className="rounded-[2.5rem] border border-rose-200/60 bg-rose-50/50 dark:border-rose-900/40 dark:bg-rose-950/20 p-8 shadow-sm">
                 <p className="mb-3 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-rose-600 flex items-center gap-2"><span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 dark:bg-rose-900 text-xs">✕</span> Myth</p>
                 <p className="text-base font-medium leading-relaxed text-foreground/80">{resource.myth}</p>
@@ -182,9 +185,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                 <p className="text-base font-medium leading-relaxed text-foreground/80">{resource.fact}</p>
               </div>
             </div>
-          </div>
 
-          <aside className="space-y-8">
             <div className="rounded-[2.5rem] border border-border/60 bg-card p-8 shadow-lg relative overflow-hidden group">
               <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-emerald-100 dark:bg-emerald-900/30 blur-2xl pointer-events-none transition-transform group-hover:scale-150" />
               <div className="mb-6 flex items-center gap-3 relative z-10">
