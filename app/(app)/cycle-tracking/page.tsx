@@ -794,5 +794,7 @@ export default function CycleTrackingPage() {
 
       </div>
     </div>
+  </div>
   );
 }
+
