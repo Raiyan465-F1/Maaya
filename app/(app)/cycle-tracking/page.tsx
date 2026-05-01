@@ -34,10 +34,59 @@ type CycleHistoryItem = {
   startDate: string;
 };
 
+type PeriodHistoryItem = CycleHistoryItem & {
+  endDate: string;
+};
+
+type CycleAnalytics = {
+  hasData: boolean;
+  isOnboarded?: boolean;
+  message?: string;
+  latestCycle?: {
+    startDate: string;
+    endDate: string | null;
+    predictedEndDate: string;
+    expectedPeriodEnd: string;
+  };
+  userStats?: {
+    height: string | null;
+    weight: string | null;
+  } | null;
+  periodStartDates?: string[];
+  cycleHistory?: CycleHistoryItem[];
+  periodHistory?: PeriodHistoryItem[];
+  cycleAverageDays?: number | null;
+  periodAverageDays?: number | null;
+  cycleVarianceDays?: number | null;
+  cycleTrend?: "consistent" | "variable" | null;
+  usesOnboardingFallback?: boolean;
+  isCycleNormal?: boolean | null;
+  isPeriodNormal?: boolean | null;
+  currentPhase?: string;
+  dayOfCycle?: number;
+  expectedMood?: string;
+  daysUntilNextPeriod?: number;
+  predictedSymptoms?: string;
+  healthStatus?: {
+    status: string;
+    message: string;
+    details: string;
+  } | null;
+  pregnancyChance?: {
+    label: string;
+    color: string;
+    bg: string;
+  };
+  recommendations?: Array<{
+    tipTitle?: string;
+    tipDescription?: string;
+  }>;
+};
+
 export default function CycleTrackingPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [isLogging, setIsLogging] = useState(false);
-  const [analytics, setAnalytics] = useState<any>(null);
+  const [analytics, setAnalytics] = useState<CycleAnalytics | null>(null);
   const [dailyMessage, setDailyMessage] = useState({ title: "Loading...", body: "" });
   const [flyingHearts, setFlyingHearts] = useState<{ id: number; tx: number; ty: number }[]>([]);
   
@@ -59,11 +108,12 @@ export default function CycleTrackingPage() {
 
 
   useEffect(() => {
-    if (analytics?.userStats) {
+    const userStats = analytics?.userStats;
+    if (userStats) {
       setInsightForm(prev => ({
         ...prev,
-        weight: analytics.userStats.weight || "",
-        height: analytics.userStats.height || ""
+        weight: userStats.weight || "",
+        height: userStats.height || ""
       }));
     }
   }, [analytics]);
@@ -183,6 +233,13 @@ export default function CycleTrackingPage() {
   };
 
   const isActiveCycle = analytics?.latestCycle && !analytics.latestCycle.endDate;
+  const activeCycleStartDate =
+    isActiveCycle && analytics?.latestCycle?.startDate
+      ? (() => {
+          const [year, month, day] = analytics.latestCycle.startDate.split("T")[0].split("-").map(Number);
+          return new Date(year, month - 1, day);
+        })()
+      : null;
 
   useEffect(() => {
     // Mount algorithm hook to prevent SSR hydration mismatch
@@ -321,13 +378,7 @@ export default function CycleTrackingPage() {
                         const [year, month, day] = d.split('T')[0].split('-').map(Number);
                         return new Date(year, month - 1, day);
                       }),
-                      activeStart: isActiveCycle ? [
-                        new Date(
-                          Number(analytics.latestCycle.startDate.split('-')[0]),
-                          Number(analytics.latestCycle.startDate.split('-')[1]) - 1,
-                          Number(analytics.latestCycle.startDate.split('-')[2].substring(0, 2))
-                        )
-                      ] : []
+                      activeStart: activeCycleStartDate ? [activeCycleStartDate] : []
                     }}
                     modifiersClassNames={{
                       periodStart: "logged-period-day",
@@ -444,17 +495,16 @@ export default function CycleTrackingPage() {
                     <div className="space-y-1">
                       <p className="text-[10px] uppercase text-muted-foreground font-bold">Average Length</p>
                       <p className="text-xl font-black text-primary">
-                        {Math.round(analytics.cycleHistory.reduce((acc: number, c: CycleHistoryItem) => acc + c.length, 0) / analytics.cycleHistory.length)} Days
+                        {analytics.cycleAverageDays ?? "--"} Days
                       </p>
                     </div>
                     <div className="text-right space-y-1">
                        <p className="text-[10px] uppercase text-muted-foreground font-bold">Trend</p>
                        <p className={`text-sm font-bold ${
-                         Math.max(...analytics.cycleHistory.map((c: CycleHistoryItem) => c.length)) - Math.min(...analytics.cycleHistory.map((c: CycleHistoryItem) => c.length)) <= 3 
+                         analytics.cycleTrend === "consistent"
                          ? 'text-green-600' : 'text-amber-600'
                        }`}>
-                         {Math.max(...analytics.cycleHistory.map((c: CycleHistoryItem) => c.length)) - Math.min(...analytics.cycleHistory.map((c: CycleHistoryItem) => c.length)) <= 3 
-                           ? 'Consistent' : 'Variable'}
+                         {analytics.cycleTrend === "consistent" ? "Consistent" : "Variable"}
                        </p>
                     </div>
                   </div>
@@ -467,6 +517,9 @@ export default function CycleTrackingPage() {
                         : 'bg-red-50/50 border-red-100 dark:bg-red-950/10 dark:border-red-900'
                     }`}>
                        <p className="text-[10px] font-bold uppercase text-muted-foreground">Cycle Average</p>
+                       <p className="text-lg font-black text-foreground">
+                         {analytics.cycleAverageDays ?? "--"}d
+                       </p>
                        <p className={`text-sm font-black flex items-center gap-1 ${
                          analytics.isCycleNormal ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'
                        }`}>
@@ -475,19 +528,40 @@ export default function CycleTrackingPage() {
                        </p>
                     </div>
                     <div className={`p-3 rounded-xl border flex flex-col gap-1 ${
-                      analytics.isPeriodNormal 
-                        ? 'bg-green-50/50 border-green-100 dark:bg-green-950/10 dark:border-green-900' 
-                        : 'bg-red-50/50 border-red-100 dark:bg-red-950/10 dark:border-red-900'
+                      analytics.periodHistory && analytics.periodHistory.length > 0
+                        ? analytics.isPeriodNormal
+                          ? 'bg-green-50/50 border-green-100 dark:bg-green-950/10 dark:border-green-900'
+                          : 'bg-red-50/50 border-red-100 dark:bg-red-950/10 dark:border-red-900'
+                        : 'bg-muted/20 border-border/60'
                     }`}>
                        <p className="text-[10px] font-bold uppercase text-muted-foreground">Period Average</p>
-                       <p className={`text-sm font-black flex items-center gap-1 ${
-                         analytics.isPeriodNormal ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'
-                       }`}>
-                         {analytics.isPeriodNormal ? 'Normal' : 'Abnormal'}
-                         <span className="text-[10px] font-medium opacity-70">(2-7d)</span>
-                       </p>
+                       {analytics.periodHistory && analytics.periodHistory.length > 0 ? (
+                         <>
+                           <p className="text-lg font-black text-foreground">
+                             {analytics.periodAverageDays ?? "--"}d
+                           </p>
+                           <p className={`text-sm font-black flex items-center gap-1 ${
+                             analytics.isPeriodNormal ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'
+                           }`}>
+                             {analytics.isPeriodNormal ? 'Normal' : 'Abnormal'}
+                             <span className="text-[10px] font-medium opacity-70">(2-7d)</span>
+                           </p>
+                         </>
+                       ) : (
+                         <>
+                           <p className="text-lg font-black text-foreground">--</p>
+                           <p className="text-sm font-bold text-muted-foreground">
+                             Not enough data
+                           </p>
+                         </>
+                       )}
                     </div>
                   </div>
+                  {analytics.usesOnboardingFallback && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      Some predictions may still use your onboarding estimates until more completed cycle logs are available.
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -585,7 +659,7 @@ export default function CycleTrackingPage() {
                     <div className="grid grid-cols-2 gap-3">
                       <div className="bg-white/50 dark:bg-black/20 p-3 rounded-xl border border-purple-100 dark:border-purple-900 flex flex-col gap-1">
                          <p className="text-xs uppercase text-purple-600 dark:text-purple-400 font-bold mb-1 flex items-center gap-1"><CalendarClock className="w-3 h-3"/> Period In</p>
-                         <p className={`text-2xl ${getDaysColor(analytics.daysUntilNextPeriod)}`}>{analytics.daysUntilNextPeriod} <span className="text-sm font-medium text-muted-foreground">Days</span></p>
+                         <p className={`text-2xl ${getDaysColor(analytics.daysUntilNextPeriod ?? 0)}`}>{analytics.daysUntilNextPeriod ?? "--"} <span className="text-sm font-medium text-muted-foreground">Days</span></p>
                       </div>
                       <div className="bg-white/50 dark:bg-black/20 p-3 rounded-xl border border-purple-100 dark:border-purple-900 flex flex-col gap-1">
                          <p className="text-xs uppercase text-purple-600 dark:text-purple-400 font-bold mb-1 flex items-center gap-1"><Sparkles className="w-3 h-3"/> Phase</p>
