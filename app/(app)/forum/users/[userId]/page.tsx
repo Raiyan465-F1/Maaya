@@ -85,7 +85,11 @@ export default async function ForumUserPage({
         {posts.length ? (
           <div className="grid gap-8">
             {posts.map((post) => (
-              <article key={post.id} className="group relative overflow-hidden rounded-[2.5rem] border border-border/60 bg-white shadow-[0_4px_20px_rgb(0,0,0,0.02)] transition-all hover:-translate-y-1 hover:shadow-[0_12px_40px_rgb(0,0,0,0.06)] hover:border-violet-200">
+              <Link
+                key={post.id}
+                href={`/forum?post=${post.id}`}
+                className="group relative block overflow-hidden rounded-[2.5rem] border border-border/60 bg-white shadow-[0_4px_20px_rgb(0,0,0,0.02)] transition-all hover:-translate-y-1 hover:shadow-[0_12px_40px_rgb(0,0,0,0.06)] hover:border-violet-200"
+              >
                 <div className="h-1.5 w-full bg-gradient-to-r from-violet-400 to-indigo-400 opacity-60 group-hover:opacity-100 transition-opacity" />
                 <div className="p-8">
                   <div className="flex flex-wrap items-center gap-3">
@@ -107,12 +111,12 @@ export default async function ForumUserPage({
                         day: "numeric",
                       })}
                     </p>
-                    <Link href={`/forum?post=${post.id}`} className="text-sm font-bold text-violet-600 hover:underline">
+                    <span className="text-sm font-bold text-violet-600 group-hover:underline">
                       View discussion →
-                    </Link>
+                    </span>
                   </div>
                 </div>
-              </article>
+              </Link>
             ))}
           </div>
         ) : (
