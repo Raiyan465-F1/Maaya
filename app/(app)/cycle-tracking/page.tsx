@@ -374,46 +374,53 @@ export default function CycleTrackingPage() {
         <div className="hidden lg:flex flex-col gap-6 w-full">
           {/* Insights Card */}
           <Dialog>
-            <DialogTrigger asChild>
-              <Card className="w-full shadow-md border-purple-200/50 bg-purple-50/40 dark:bg-purple-950/20 cursor-pointer hover:bg-purple-100/50 transition-colors">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2 text-purple-900 dark:text-purple-100">
-                    <Activity className="w-5 h-5 text-purple-500" />
-                    Cycle Insights
-                  </CardTitle>
-                  <CardDescription>Click to view and update your health data</CardDescription>
-                </CardHeader>
-                <CardContent className="px-6 pb-6">
-                  {!analytics ? (
-                    <div className="h-[100px] flex items-center justify-center rounded-xl border border-dashed border-purple-200 bg-muted/10">
-                      <p className="text-muted-foreground text-sm font-medium animate-pulse">Loading insights...</p>
-                    </div>
-                  ) : !analytics.hasData ? (
-                    <div className="h-[100px] flex items-center justify-center rounded-xl border border-dashed border-purple-200 bg-muted/10">
-                      <p className="text-muted-foreground text-sm font-medium">{analytics.message}</p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-4">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-white/50 dark:bg-black/20 p-3 rounded-xl border border-purple-100 dark:border-purple-900 flex flex-col gap-1">
-                           <p className="text-xs uppercase text-purple-600 dark:text-purple-400 font-bold mb-1 flex items-center gap-1"><CalendarClock className="w-3 h-3"/> Period In</p>
-                           <p className={`text-2xl ${getDaysColor(analytics.daysUntilNextPeriod)}`}>{analytics.daysUntilNextPeriod} <span className="text-sm font-medium text-muted-foreground">Days</span></p>
-                        </div>
-                        <div className="bg-white/50 dark:bg-black/20 p-3 rounded-xl border border-purple-100 dark:border-purple-900 flex flex-col gap-1">
-                           <p className="text-xs uppercase text-purple-600 dark:text-purple-400 font-bold mb-1 flex items-center gap-1"><Sparkles className="w-3 h-3"/> Phase</p>
-                           <p className="text-lg font-bold text-purple-700 dark:text-purple-300 truncate">{analytics.currentPhase}</p>
-                           <p className="text-xs text-muted-foreground">Day {analytics.dayOfCycle}</p>
-                        </div>
+            <Card className="w-full shadow-md border-purple-200/50 bg-purple-50/40 dark:bg-purple-950/20">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2 text-purple-900 dark:text-purple-100">
+                  <Activity className="w-5 h-5 text-purple-500" />
+                  Cycle Insights
+                </CardTitle>
+                <CardDescription>View and update your health data</CardDescription>
+              </CardHeader>
+              <CardContent className="px-6 pb-6">
+                {!analytics ? (
+                  <div className="h-[100px] flex items-center justify-center rounded-xl border border-dashed border-purple-200 bg-muted/10">
+                    <p className="text-muted-foreground text-sm font-medium animate-pulse">Loading insights...</p>
+                  </div>
+                ) : !analytics.hasData ? (
+                  <div className="h-[100px] flex items-center justify-center rounded-xl border border-dashed border-purple-200 bg-muted/10">
+                    <p className="text-muted-foreground text-sm font-medium">{analytics.message}</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-white/50 dark:bg-black/20 p-3 rounded-xl border border-purple-100 dark:border-purple-900 flex flex-col gap-1">
+                         <p className="text-xs uppercase text-purple-600 dark:text-purple-400 font-bold mb-1 flex items-center gap-1"><CalendarClock className="w-3 h-3"/> Period In</p>
+                         <p className={`text-2xl ${getDaysColor(analytics.daysUntilNextPeriod)}`}>{analytics.daysUntilNextPeriod} <span className="text-sm font-medium text-muted-foreground">Days</span></p>
                       </div>
-                      <div className="mt-1 bg-white/50 dark:bg-black/20 p-3 rounded-xl border border-purple-100 dark:border-purple-900">
-                         <p className="text-sm font-semibold mb-1 text-purple-700 dark:text-purple-300 flex items-center gap-2"><Activity className="w-4 h-4"/> Symptoms You Might Feel</p>
-                         <p className="text-sm text-muted-foreground leading-snug">{analytics.predictedSymptoms}</p>
+                      <div className="bg-white/50 dark:bg-black/20 p-3 rounded-xl border border-purple-100 dark:border-purple-900 flex flex-col gap-1">
+                         <p className="text-xs uppercase text-purple-600 dark:text-purple-400 font-bold mb-1 flex items-center gap-1"><Sparkles className="w-3 h-3"/> Phase</p>
+                         <p className="text-lg font-bold text-purple-700 dark:text-purple-300 truncate">{analytics.currentPhase}</p>
+                         <p className="text-xs text-muted-foreground">Day {analytics.dayOfCycle}</p>
                       </div>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            </DialogTrigger>
+                    <div className="mt-1 bg-white/50 dark:bg-black/20 p-3 rounded-xl border border-purple-100 dark:border-purple-900">
+                       <p className="text-sm font-semibold mb-1 text-purple-700 dark:text-purple-300 flex items-center gap-2"><Activity className="w-4 h-4"/> Symptoms You Might Feel</p>
+                       <p className="text-sm text-muted-foreground leading-snug">{analytics.predictedSymptoms}</p>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="mt-6">
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full border-purple-200 text-purple-700 hover:bg-purple-100/50 hover:text-purple-800 dark:border-purple-800 dark:text-purple-300 dark:hover:bg-purple-900/30 font-bold rounded-xl transition-all active:scale-[0.98]">
+                      View & Update Insights
+                    </Button>
+                  </DialogTrigger>
+                </div>
+              </CardContent>
+            </Card>
+
             {analytics?.hasData && (
               <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
