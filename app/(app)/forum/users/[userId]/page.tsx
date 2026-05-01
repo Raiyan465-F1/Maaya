@@ -107,7 +107,7 @@ export default async function ForumUserPage({
                         day: "numeric",
                       })}
                     </p>
-                    <Link href={`/forum`} className="text-sm font-bold text-violet-600 hover:underline">
+                    <Link href={`/forum?post=${post.id}`} className="text-sm font-bold text-violet-600 hover:underline">
                       View discussion →
                     </Link>
                   </div>

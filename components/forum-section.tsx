@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import { AlertTriangle, ArrowDown, ArrowUp, ImagePlus, MessageSquare, MoreHorizontal, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { isSuspendedAndActive, formatRestrictionRemaining } from "@/lib/account-restriction-helpers";
@@ -730,8 +731,11 @@ function CommentTree({
   );
 }
 
-export function ForumSection() {
+function ForumSectionContent() {
   const { confirm, ConfirmDialog } = useConfirm();
+  const searchParams = useSearchParams();
+  const initialPostId = searchParams.get("post");
+  
   const [forum, setForum] = useState<ForumResponse>(EMPTY_FORUM);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -750,6 +754,17 @@ export function ForumSection() {
   const [isGloballyAnonymous, setIsGloballyAnonymous] = useState(false);
   const [media, setMedia] = useState<MediaDraft[]>([{ key: 1, kind: "image", url: "" }]);
   const [userLikedTags, setUserLikedTags] = useState<string[]>([]);
+  
+  useEffect(() => {
+    if (initialPostId && !isLoading && forum.posts.length > 0) {
+      const postId = Number(initialPostId);
+      if (!Number.isNaN(postId)) {
+        setFocusedPostId(postId);
+        // We'll let the render logic handle the scroll since the element needs to be in the DOM
+      }
+    }
+  }, [initialPostId, isLoading, forum.posts.length]);
+
   const deferredSearchTerm = useDeferredValue(searchTerm);
   const filterPanelRef = useRef<HTMLDivElement | null>(null);
   const { data: session } = useSession();
@@ -1627,6 +1642,25 @@ export function ForumSection() {
       </div>
       <ConfirmDialog />
     </section>
+  );
+}
+
+export function ForumSection() {
+  return (
+    <Suspense fallback={
+      <section className="mx-auto max-w-[96rem] space-y-8 px-4 py-10 sm:px-6 lg:px-8">
+        <div className="h-64 animate-pulse rounded-[2rem] border border-primary/10 bg-card/70" />
+        <div className="grid gap-8 xl:grid-cols-[0.95fr_1.35fr]">
+          <div className="h-[32rem] animate-pulse rounded-[2rem] border border-primary/10 bg-card/70" />
+          <div className="space-y-6">
+            <div className="h-64 animate-pulse rounded-[2rem] border border-primary/10 bg-card/70" />
+            <div className="h-64 animate-pulse rounded-[2rem] border border-primary/10 bg-card/70" />
+          </div>
+        </div>
+      </section>
+    }>
+      <ForumSectionContent />
+    </Suspense>
   );
 }
 
