@@ -41,7 +41,7 @@ export function STIDashboard({
   const preventionGuide = guides.find((g) => g.slug === "safer-sex-playbook");
 
   const sidebarUpdates = updates.slice(0, 4);
-  const updateStrip = updates.slice(0, 3);
+  const mainUpdates = updates.slice(0, 6);
 
   return (
     <div className="mx-auto max-w-none flex-1 space-y-12 px-2 pb-6">
@@ -187,20 +187,20 @@ export function STIDashboard({
           <div className="rounded-[2.5rem] border border-border/60 bg-card p-8 md:p-10 shadow-lg">
             <div className="mb-6 flex items-center justify-between">
               <div>
-                <p className="mb-2 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-cyan-600 dark:text-cyan-400">Research Watch</p>
-                <h2 className="font-heading text-3xl font-extrabold tracking-tight text-foreground">Featured Updates</h2>
+                <p className="mb-2 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-pink-600 dark:text-pink-400">Knowledge Hub</p>
+                <h2 className="font-heading text-3xl font-extrabold tracking-tight text-foreground">All Research Updates</h2>
               </div>
-              <span className="rounded-full bg-cyan-100 dark:bg-cyan-900/40 px-4 py-1.5 text-xs font-bold text-cyan-700 dark:text-cyan-300">{updateStrip.length} latest</span>
+              <span className="rounded-full bg-pink-100 dark:bg-pink-900/40 px-4 py-1.5 text-xs font-bold text-pink-700 dark:text-pink-300">{mainUpdates.length} articles</span>
             </div>
             <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {updateStrip.map((article) => (
+              {mainUpdates.map((article) => (
                 <Link
                   key={article.slug}
                   href={article.url}
-                  className="group overflow-hidden rounded-[1.75rem] border-2 border-border/50 bg-background/50 transition-all duration-300 hover:border-cyan-400/50 hover:shadow-xl hover:-translate-y-1"
+                  className="group flex flex-col overflow-hidden rounded-[1.75rem] border border-border/50 bg-card shadow-sm transition-all duration-300 hover:border-cyan-400/50 hover:shadow-xl hover:-translate-y-1"
                 >
                   <div className="relative aspect-[4/3] w-full overflow-hidden">
-                    <div className="absolute inset-0 bg-cyan-900/20 group-hover:bg-transparent transition-colors duration-500 z-10" />
+                    <div className="absolute inset-0 bg-cyan-900/10 group-hover:bg-transparent transition-colors duration-500 z-10" />
                     <Image
                       src={article.image}
                       alt={article.title}
@@ -209,7 +209,7 @@ export function STIDashboard({
                       className="object-cover transition-transform duration-700 group-hover:scale-110"
                     />
                   </div>
-                  <div className="p-6">
+                  <div className="flex flex-col flex-1 p-6">
                     <p className="mb-3 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-cyan-600 dark:text-cyan-400">{article.topic}</p>
                     <h3 className="line-clamp-2 font-heading text-xl font-bold tracking-tight text-foreground transition-colors group-hover:text-cyan-600 dark:group-hover:text-cyan-400">{article.title}</h3>
                     <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-muted-foreground">{article.description}</p>
@@ -286,15 +286,15 @@ export function STIDashboard({
 
           <div className="rounded-[2.5rem] border border-border/60 bg-card p-8 md:p-10 shadow-lg">
             <div className="mb-6 flex items-center justify-between">
-              <h3 className="font-heading text-xl font-extrabold text-foreground">All Research Updates</h3>
-              <span className="rounded-full bg-secondary/10 px-3 py-1 text-xs font-bold text-secondary">{sidebarUpdates.length} articles</span>
+              <h3 className="font-heading text-xl font-extrabold text-foreground">Featured Updates</h3>
+              <span className="rounded-full bg-cyan-100 dark:bg-cyan-900/40 px-3 py-1 text-xs font-bold text-cyan-700 dark:text-cyan-300">{sidebarUpdates.length} latest</span>
             </div>
             <div className="space-y-4">
               {sidebarUpdates.map((article) => (
                 <Link
                   key={article.slug}
                   href={article.url}
-                  className="group block rounded-[1.5rem] border-2 border-border/50 bg-background/50 p-5 transition-all hover:border-cyan-300/50 hover:bg-cyan-50/30 dark:hover:bg-cyan-900/10 hover:shadow-md"
+                  className="group block rounded-[1.5rem] border border-border/50 bg-card p-5 shadow-sm transition-all hover:border-cyan-300/50 hover:shadow-md"
                 >
                   <p className="mb-2 text-[0.6rem] font-bold uppercase tracking-[0.2em] text-cyan-600 dark:text-cyan-400">{article.topic}</p>
                   <h4 className="font-bold text-foreground transition-colors group-hover:text-cyan-600 dark:group-hover:text-cyan-400">{article.title}</h4>
