@@ -4,6 +4,10 @@ import { desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { db } from "@/src/db";
 import { doctorAnswers, doctorProfiles, doctorQuestions, users } from "@/src/schema";
 import { authOptions } from "@/lib/auth";
+import {
+  getUserDisplayLabel,
+  notifyDoctorQuestionAssigned,
+} from "@/lib/notifications";
 import { withCorsHeaders } from "@/lib/cors";
 import { suspendedMutationBlockedResponse } from "@/lib/suspended-mutation";
 
@@ -280,6 +284,17 @@ export async function POST(request: NextRequest) {
         isAnonymous: effectiveAnonymous,
       })
       .returning();
+
+    if (selectedDoctor) {
+      const actorLabel = await getUserDisplayLabel(session.user.id);
+      await notifyDoctorQuestionAssigned({
+        doctorUserId: selectedDoctor.id,
+        actorUserId: session.user.id,
+        questionId: newQuestion[0].id,
+        questionTitle: trimmedTitle,
+        actorLabel,
+      });
+    }
 
     return jsonResponse(
       {

@@ -538,6 +538,7 @@ function CommentTree({
   onEdit,
   onReport,
   depth = 0,
+  highlightedCommentId = null,
 }: {
   comments: ForumCommentRecord[];
   canInteract: boolean;
@@ -549,6 +550,7 @@ function CommentTree({
   onEdit: (commentId: number, content: string) => void;
   onReport: (commentId: number, reason: string) => void;
   depth?: number;
+  highlightedCommentId?: number | null;
 }) {
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -568,7 +570,12 @@ function CommentTree({
         return (
           <div
             key={comment.id}
-            className="rounded-[1.6rem] border border-primary/12 bg-white/85 p-4 shadow-sm"
+            id={`forum-comment-${comment.id}`}
+            className={`rounded-[1.6rem] border p-4 shadow-sm ${
+              highlightedCommentId === comment.id
+                ? "border-primary/40 bg-primary/10 ring-2 ring-primary/20"
+                : "border-primary/12 bg-white/85"
+            }`}
           >
             <div className="flex items-start gap-3">
               <Link
@@ -721,6 +728,7 @@ function CommentTree({
                   onEdit={onEdit}
                   onReport={onReport}
                   depth={depth + 1}
+                  highlightedCommentId={highlightedCommentId}
                 />
               </div>
             ) : null}
@@ -736,6 +744,7 @@ function ForumSectionContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialPostId = searchParams.get("post");
+  const initialCommentId = searchParams.get("comment");
   
   const [forum, setForum] = useState<ForumResponse>(EMPTY_FORUM);
   const [isLoading, setIsLoading] = useState(true);
@@ -761,10 +770,27 @@ function ForumSectionContent() {
       const postId = Number(initialPostId);
       if (!Number.isNaN(postId)) {
         setFocusedPostId(postId);
+        if (initialCommentId) {
+          setCommentTargetPostId(postId);
+        }
         // We'll let the render logic handle the scroll since the element needs to be in the DOM
       }
     }
-  }, [initialPostId, isLoading, forum.posts.length]);
+  }, [initialCommentId, initialPostId, isLoading, forum.posts.length]);
+
+  useEffect(() => {
+    if (!focusedPostId || !initialCommentId) return;
+
+    const commentId = Number(initialCommentId);
+    if (Number.isNaN(commentId)) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      const element = document.getElementById(`forum-comment-${commentId}`);
+      element?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [focusedPostId, initialCommentId, commentTargetPostId]);
 
   const deferredSearchTerm = useDeferredValue(searchTerm);
   const filterPanelRef = useRef<HTMLDivElement | null>(null);
@@ -1172,6 +1198,11 @@ function ForumSectionContent() {
               interactionLocked={interactionLocked}
               activeTag={activeTag}
               availableTags={availableTags}
+              highlightedCommentId={
+                initialCommentId && !Number.isNaN(Number(initialCommentId))
+                  ? Number(initialCommentId)
+                  : null
+              }
               onOpen={(postId) => {
                 setFocusedPostId(postId);
                 setCommentTargetPostId(null);
@@ -1394,6 +1425,11 @@ function ForumSectionContent() {
               activeTag={activeTag}
               availableTags={availableTags}
               autoOpenComments={commentTargetPostId === focusedPost.id}
+              highlightedCommentId={
+                initialCommentId && !Number.isNaN(Number(initialCommentId))
+                  ? Number(initialCommentId)
+                  : null
+              }
               onOpen={() => undefined}
               onOpenComments={() => undefined}
               onClose={() => {
@@ -1686,6 +1722,7 @@ function ForumPostCard({
   activeTag,
   availableTags,
   autoOpenComments = false,
+  highlightedCommentId = null,
   onOpen,
   onOpenComments,
   onClose,
@@ -1710,6 +1747,7 @@ function ForumPostCard({
   activeTag: string | null;
   availableTags: string[];
   autoOpenComments?: boolean;
+  highlightedCommentId?: number | null;
   onOpen: (postId: number) => void;
   onOpenComments: (postId: number) => void;
   onClose: () => void;
@@ -2068,6 +2106,7 @@ function ForumPostCard({
               onReply={(commentId, nextContent) => onComment(post.id, commentId, nextContent)}
               onEdit={onCommentEdit}
               onReport={onCommentReport}
+              highlightedCommentId={highlightedCommentId}
             />
           </div>
         ) : null}

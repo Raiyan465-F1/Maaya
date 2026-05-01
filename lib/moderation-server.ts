@@ -1,4 +1,10 @@
 import { desc, eq } from "drizzle-orm";
+import {
+  notifyAccountStatusChanged,
+  notifyCommentModerated,
+  notifyPostModerated,
+  resolveUserIdFromAuthorOrAnonymous,
+} from "@/lib/notifications";
 import { db } from "@/src/db";
 import { comments, forumPosts } from "@/src/schema/forum";
 import { reports } from "@/src/schema/reports";
@@ -236,9 +242,18 @@ export async function updateReportStatus(reportId: number, status: ReportStatus)
   return true;
 }
 
-export async function updatePostModerationStatus(postId: number, status: ContentStatus) {
+export async function updatePostModerationStatus(
+  postId: number,
+  status: ContentStatus,
+  actorUserId?: string | null,
+) {
   const [existing] = await db
-    .select({ id: forumPosts.id })
+    .select({
+      id: forumPosts.id,
+      title: forumPosts.title,
+      authorId: forumPosts.authorId,
+      anonymousOwnerHash: forumPosts.anonymousOwnerHash,
+    })
     .from(forumPosts)
     .where(eq(forumPosts.id, postId))
     .limit(1);
@@ -254,12 +269,33 @@ export async function updatePostModerationStatus(postId: number, status: Content
     .where(eq(forumPosts.id, postId));
 
   await db.update(reports).set({ status: "reviewed" }).where(eq(reports.postId, postId));
+
+  const ownerUserId = await resolveUserIdFromAuthorOrAnonymous(
+    existing.authorId,
+    existing.anonymousOwnerHash,
+  );
+  await notifyPostModerated({
+    recipientUserId: ownerUserId,
+    actorUserId,
+    postId,
+    postTitle: existing.title,
+    status,
+  });
+
   return true;
 }
 
-export async function updateCommentModerationStatus(commentId: number, status: ContentStatus) {
+export async function updateCommentModerationStatus(
+  commentId: number,
+  status: ContentStatus,
+  actorUserId?: string | null,
+) {
   const [existing] = await db
-    .select({ id: comments.id })
+    .select({
+      id: comments.id,
+      authorId: comments.authorId,
+      postId: comments.postId,
+    })
     .from(comments)
     .where(eq(comments.id, commentId))
     .limit(1);
@@ -275,6 +311,15 @@ export async function updateCommentModerationStatus(commentId: number, status: C
     .where(eq(comments.id, commentId));
 
   await db.update(reports).set({ status: "reviewed" }).where(eq(reports.commentId, commentId));
+
+  await notifyCommentModerated({
+    recipientUserId: existing.authorId,
+    actorUserId,
+    postId: existing.postId,
+    commentId,
+    status,
+  });
+
   return true;
 }
 
@@ -295,7 +340,8 @@ export async function getModerationUser(userId: string) {
 export async function updateUserModerationStatus(
   userId: string,
   status: AccountStatus,
-  restrictionEndsAt: Date | null
+  restrictionEndsAt: Date | null,
+  actorUserId?: string | null,
 ) {
   const [existing] = await db
     .select({ id: users.id })
@@ -316,6 +362,13 @@ export async function updateUserModerationStatus(
       updatedAt: new Date(),
     })
     .where(eq(users.id, userId));
+
+  await notifyAccountStatusChanged({
+    recipientUserId: userId,
+    actorUserId,
+    status,
+    endsAt: ends,
+  });
 
   return true;
 }

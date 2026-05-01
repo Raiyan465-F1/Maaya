@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
 import { MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { isSuspendedAndActive, formatRestrictionRemaining } from '@/lib/account-restriction-helpers';
@@ -102,7 +103,8 @@ const STATUS_BADGE_CLASSES: Record<QuestionStatus, string> = {
     'bg-muted text-muted-foreground',
 };
 
-export default function DoctorsHelpPage() {
+function DoctorsHelpPageContent() {
+  const searchParams = useSearchParams();
   const [questionTitle, setQuestionTitle] = useState('');
   const [questionText, setQuestionText] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
@@ -150,6 +152,19 @@ export default function DoctorsHelpPage() {
     fetchAssignableDoctors();
     fetchProfile();
   }, []);
+
+  useEffect(() => {
+    const queryQuestionId = searchParams.get('question');
+    if (!queryQuestionId || questions.length === 0) return;
+
+    const parsed = Number(queryQuestionId);
+    if (Number.isNaN(parsed)) return;
+
+    const matchingQuestion = questions.find((question) => question.id === parsed);
+    if (matchingQuestion) {
+      setOpenQuestionId(parsed);
+    }
+  }, [questions, searchParams]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -1101,5 +1116,17 @@ export default function DoctorsHelpPage() {
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+}
+
+export default function DoctorsHelpPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="text-sm text-muted-foreground">Loading Doctor&apos;s Help...</div>
+      }
+    >
+      <DoctorsHelpPageContent />
+    </Suspense>
   );
 }

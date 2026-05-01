@@ -27,6 +27,13 @@ const getDaysColor = (days: number) => {
   return "text-green-500 font-bold";
 };
 
+type CycleHistoryItem = {
+  month: string;
+  year: number;
+  length: number;
+  startDate: string;
+};
+
 export default function CycleTrackingPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [isLogging, setIsLogging] = useState(false);
@@ -412,7 +419,7 @@ export default function CycleTrackingPage() {
                        <span>10d</span>
                     </div>
 
-                    {analytics.cycleHistory.map((cycle, idx) => {
+                    {analytics.cycleHistory.map((cycle: CycleHistoryItem, idx: number) => {
                       const heightPercent = Math.min(100, (cycle.length / 45) * 100);
                       const isIrregular = Math.abs(cycle.length - 28) > 4;
                       return (
@@ -437,16 +444,16 @@ export default function CycleTrackingPage() {
                     <div className="space-y-1">
                       <p className="text-[10px] uppercase text-muted-foreground font-bold">Average Length</p>
                       <p className="text-xl font-black text-primary">
-                        {Math.round(analytics.cycleHistory.reduce((acc, c) => acc + c.length, 0) / analytics.cycleHistory.length)} Days
+                        {Math.round(analytics.cycleHistory.reduce((acc: number, c: CycleHistoryItem) => acc + c.length, 0) / analytics.cycleHistory.length)} Days
                       </p>
                     </div>
                     <div className="text-right space-y-1">
                        <p className="text-[10px] uppercase text-muted-foreground font-bold">Trend</p>
                        <p className={`text-sm font-bold ${
-                         Math.max(...analytics.cycleHistory.map(c => c.length)) - Math.min(...analytics.cycleHistory.map(c => c.length)) <= 3 
+                         Math.max(...analytics.cycleHistory.map((c: CycleHistoryItem) => c.length)) - Math.min(...analytics.cycleHistory.map((c: CycleHistoryItem) => c.length)) <= 3 
                          ? 'text-green-600' : 'text-amber-600'
                        }`}>
-                         {Math.max(...analytics.cycleHistory.map(c => c.length)) - Math.min(...analytics.cycleHistory.map(c => c.length)) <= 3 
+                         {Math.max(...analytics.cycleHistory.map((c: CycleHistoryItem) => c.length)) - Math.min(...analytics.cycleHistory.map((c: CycleHistoryItem) => c.length)) <= 3 
                            ? 'Consistent' : 'Variable'}
                        </p>
                     </div>
@@ -880,4 +887,3 @@ export default function CycleTrackingPage() {
   </div>
   );
 }
-
