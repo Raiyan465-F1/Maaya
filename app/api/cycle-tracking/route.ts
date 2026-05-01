@@ -5,6 +5,18 @@ import { cycleLogs } from "@/src/schema";
 import { authOptions } from "@/lib/auth";
 import { eq, desc } from "drizzle-orm";
 
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+function getInclusiveDayCount(start: Date, end: Date) {
+  const startAtMidnight = new Date(start);
+  startAtMidnight.setHours(0, 0, 0, 0);
+
+  const endAtMidnight = new Date(end);
+  endAtMidnight.setHours(0, 0, 0, 0);
+
+  return Math.floor((endAtMidnight.getTime() - startAtMidnight.getTime()) / MS_PER_DAY) + 1;
+}
+
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
@@ -51,13 +63,12 @@ export async function POST(request: NextRequest) {
     const pLength = predictedCycleLength ? parseInt(predictedCycleLength) : 28;
 
     // Calculate actual difference if we have both start and end dates
+    // Legacy column name: this stores period duration until a schema cleanup renames it.
     let actualCycleLength = null;
     let predictedDifference = null;
     
     if (end) {
-      const diffTime = Math.abs(end.getTime() - start.getTime());
-      actualCycleLength = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      predictedDifference = actualCycleLength - pLength;
+      actualCycleLength = getInclusiveDayCount(start, end);
     }
 
     // Theoretical end date based on predicted cycle length (assuming bleeding length + full cycle length)
@@ -125,10 +136,9 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "End date cannot be before start date." }, { status: 400 });
     }
 
-    const pLength = activeCycle.predictedCycleLength || 28;
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const actualCycleLength = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    const predictedDifference = actualCycleLength - pLength;
+    // Legacy column name: this stores period duration until a schema cleanup renames it.
+    const actualCycleLength = getInclusiveDayCount(start, end);
+    const predictedDifference = null;
 
     const [updated] = await db
       .update(cycleLogs)
