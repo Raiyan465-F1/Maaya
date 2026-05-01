@@ -530,30 +530,32 @@ export default function CycleTrackingPage() {
                 <div className="h-[100px] flex items-center justify-center rounded-xl border border-dashed border-primary/20 bg-muted/10">
                   <p className="text-muted-foreground text-sm font-medium animate-pulse">Loading predictions...</p>
                 </div>
-              ) : !analytics.hasData ? (
-                <div className="h-[100px] flex items-center justify-center rounded-xl border border-dashed border-primary/20 bg-muted/10">
-                  <p className="text-muted-foreground text-sm font-medium">Log a period to see predictions.</p>
-                </div>
               ) : (
                   <div className="flex flex-col gap-3">
-                    <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 flex justify-between items-center">
-                      <div>
-                        <p className="text-xs uppercase text-primary font-bold mb-1">Next Period Starts</p>
-                        <p className="text-sm font-semibold">
-                          {analytics.latestCycle?.predictedEndDate && !isNaN(new Date(analytics.latestCycle.predictedEndDate).getTime())
-                            ? new Date(analytics.latestCycle.predictedEndDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
-                            : 'Pending'}
-                        </p>
+                    {!analytics.hasData ? (
+                      <div className="bg-muted/5 p-4 rounded-xl border border-dashed border-border flex items-center justify-center min-h-[80px]">
+                        <p className="text-muted-foreground text-xs font-medium text-center italic">Log your first period to unlock predictions.</p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-xs uppercase text-primary font-bold mb-1">Next Period Ends</p>
-                        <p className="text-sm font-semibold">
-                          {analytics.latestCycle?.expectedPeriodEnd && !isNaN(new Date(analytics.latestCycle.expectedPeriodEnd).getTime()) 
-                            ? new Date(analytics.latestCycle.expectedPeriodEnd).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
-                            : 'Pending'}
-                        </p>
+                    ) : (
+                      <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 flex justify-between items-center">
+                        <div>
+                          <p className="text-xs uppercase text-primary font-bold mb-1">Next Period Starts</p>
+                          <p className="text-sm font-semibold">
+                            {analytics.latestCycle?.predictedEndDate && !isNaN(new Date(analytics.latestCycle.predictedEndDate).getTime())
+                              ? new Date(analytics.latestCycle.predictedEndDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+                              : 'Pending'}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs uppercase text-primary font-bold mb-1">Next Period Ends</p>
+                          <p className="text-sm font-semibold">
+                            {analytics.latestCycle?.expectedPeriodEnd && !isNaN(new Date(analytics.latestCycle.expectedPeriodEnd).getTime()) 
+                              ? new Date(analytics.latestCycle.expectedPeriodEnd).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+                              : 'Pending'}
+                          </p>
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     <div className={`p-4 rounded-xl border ${analytics.pregnancyChance?.bg || 'bg-muted/10'} border-opacity-20 flex items-center justify-between transition-all duration-500`}>
                       <div className="flex items-center gap-2">
@@ -565,8 +567,8 @@ export default function CycleTrackingPage() {
                       </span>
                     </div>
                   </div>
-
               )}
+
             </CardContent>
           </Card>
 

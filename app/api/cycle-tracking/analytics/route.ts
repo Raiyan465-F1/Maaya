@@ -52,10 +52,12 @@ export async function GET(request: NextRequest) {
           primaryGoal: config.primaryGoal
         },
         periodStartDates: [],
+        pregnancyChance: { label: "Unknown", color: "text-muted-foreground", bg: "bg-muted/10" },
         recommendations: [{ 
           tipTitle: "Ready to start?", 
           tipDescription: "Click a date on the calendar to log your first period and unlock full phase predictions!" 
         }]
+
       }, { status: 200 });
     }
 
@@ -125,6 +127,14 @@ export async function GET(request: NextRequest) {
       };
     }
 
+    // Pregnancy chance calculation
+    let pregnancyChance = { label: "No chance", color: "text-green-500", bg: "bg-green-500/10" };
+    if (dayOfCycle >= 12 && dayOfCycle <= 16) {
+      pregnancyChance = { label: "High chance", color: "text-red-500", bg: "bg-red-500/10" };
+    } else if ((dayOfCycle >= 10 && dayOfCycle <= 11) || (dayOfCycle >= 17 && dayOfCycle <= 18)) {
+      pregnancyChance = { label: "Middle", color: "text-yellow-600", bg: "bg-yellow-500/10" };
+    }
+
     return NextResponse.json({
       hasData: true,
       currentPhase,
@@ -133,6 +143,7 @@ export async function GET(request: NextRequest) {
       daysUntilNextPeriod,
       predictedSymptoms,
       healthStatus,
+      pregnancyChance,
       userStats,
       periodStartDates: logs.map(l => l.startDate),
       recommendations: tips.length > 0 ? tips : [{ tipTitle: "Rest and Hydrate", tipDescription: "Listen to your body today." }],
@@ -143,6 +154,7 @@ export async function GET(request: NextRequest) {
         expectedPeriodEnd: nextPeriodEnd.toISOString()
       }
     }, { status: 200 });
+
 
   } catch (error) {
     console.error("GET cycle analytics error:", error);
