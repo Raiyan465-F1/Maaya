@@ -307,7 +307,10 @@ export default function CycleTrackingPage() {
                     mode="single"
                     selected={selectedDate}
                     onSelect={setSelectedDate}
-                    disabled={{ after: new Date() }}
+                    disabled={[
+                      { after: new Date() },
+                      ...(isActiveCycle && analytics?.latestCycle?.startDate ? [{ before: new Date(analytics.latestCycle.startDate) }] : [])
+                    ]}
                     className="rounded-xl border-none p-3 sm:p-5 w-full bg-transparent"
                     modifiers={{
                       periodStart: (analytics?.periodStartDates || []).map((d: string) => {
@@ -340,7 +343,7 @@ export default function CycleTrackingPage() {
                            className="w-full bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white shadow-lg shadow-red-500/30 font-bold py-6 text-lg rounded-xl transition-all active:scale-95"
                         >
                           <Heart className="w-5 h-5 mr-2 fill-white/20" />
-                          {isLogging ? "Saving..." : `Log End Date (${selectedDate.toLocaleDateString()})`}
+                          {isLogging ? "Saving..." : "Log End Date"}
                         </Button>
                       ) : (
                         <Button 
@@ -349,7 +352,7 @@ export default function CycleTrackingPage() {
                            className="w-full bg-gradient-to-r from-rose-400 to-pink-500 hover:from-rose-500 hover:to-pink-600 text-white shadow-lg shadow-pink-500/20 font-bold py-6 text-lg rounded-xl transition-all active:scale-95"
                         >
                           <Droplets className="w-5 h-5 mr-2" />
-                          {isLogging ? "Saving..." : `Log Period Start (${selectedDate.toLocaleDateString()})`}
+                          {isLogging ? "Saving..." : "Log Period Start"}
                         </Button>
                       )}
                     </div>
