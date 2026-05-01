@@ -122,7 +122,7 @@ export default function CycleTrackingPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          startDate: selectedDate
+          startDate: format(selectedDate, 'yyyy-MM-dd')
         })
       });
       if (resp.ok) {
@@ -157,7 +157,7 @@ export default function CycleTrackingPage() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          endDate: selectedDate
+          endDate: format(selectedDate, 'yyyy-MM-dd')
         })
       });
       if (resp.ok) {
@@ -309,7 +309,13 @@ export default function CycleTrackingPage() {
                     onSelect={setSelectedDate}
                     disabled={[
                       { after: new Date() },
-                      ...(isActiveCycle && analytics?.latestCycle?.startDate ? [{ before: new Date(analytics.latestCycle.startDate) }] : [])
+                      ...(isActiveCycle && analytics?.latestCycle?.startDate ? [{ 
+                        before: new Date(
+                          Number(analytics.latestCycle.startDate.split('-')[0]),
+                          Number(analytics.latestCycle.startDate.split('-')[1]) - 1,
+                          Number(analytics.latestCycle.startDate.split('-')[2].substring(0, 2))
+                        )
+                      }] : [])
                     ]}
                     className="rounded-xl border-none p-3 sm:p-5 w-full bg-transparent"
                     modifiers={{
