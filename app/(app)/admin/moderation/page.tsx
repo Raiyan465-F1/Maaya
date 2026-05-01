@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import type { ModerationReportRecord, ModerationSnapshot } from "@/lib/moderation-types";
 import { cn } from "@/lib/utils";
@@ -88,11 +89,13 @@ function SummaryCard({
 function ReportCard({
   report,
   busy,
+  highlighted,
   onReviewToggle,
   onContentStatusChange,
 }: {
   report: ModerationReportRecord;
   busy: boolean;
+  highlighted?: boolean;
   onReviewToggle: (reportId: number, status: "pending" | "reviewed") => void;
   onContentStatusChange: (report: ModerationReportRecord, status: "active" | "hidden" | "removed") => void;
 }) {
@@ -102,7 +105,15 @@ function ReportCard({
   const reporterLabel = report.reporter?.name?.trim() || report.reporter?.email || "Unknown reporter";
 
   return (
-    <div className="min-w-0 rounded-2xl border border-primary/10 bg-card p-5 shadow-sm">
+    <div
+      id={`report-${report.id}`}
+      className={cn(
+        "min-w-0 rounded-2xl border bg-card p-5 shadow-sm",
+        highlighted
+          ? "border-primary/40 ring-2 ring-primary/20"
+          : "border-primary/10",
+      )}
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -234,6 +245,7 @@ function ReportCard({
 }
 
 export default function ModerationPage() {
+  const searchParams = useSearchParams();
   const { data: session, status } = useSession();
   const [snapshot, setSnapshot] = useState<ModerationSnapshot | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -313,6 +325,25 @@ export default function ModerationPage() {
     if (reportFilter === "all") return reports;
     return reports.filter((report) => (reportFilter === "reviewed" ? report.status === "reviewed" : report.status !== "reviewed"));
   }, [reportFilter, snapshot]);
+
+  const highlightedReportId = useMemo(() => {
+    const raw = searchParams.get("report");
+    if (!raw) return null;
+    const parsed = Number(raw);
+    return Number.isNaN(parsed) ? null : parsed;
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!highlightedReportId || !snapshot) return;
+
+    setReportFilter("all");
+    const frame = window.requestAnimationFrame(() => {
+      const element = document.getElementById(`report-${highlightedReportId}`);
+      element?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [highlightedReportId, snapshot]);
 
   if (status === "authenticated" && session?.user?.role !== "admin") {
     return (
@@ -412,6 +443,7 @@ export default function ModerationPage() {
               key={report.id}
               report={report}
               busy={busyKey === `report-${report.id}` || busyKey === `${report.targetType}-${report.target?.id ?? report.id}`}
+              highlighted={highlightedReportId === report.id}
               onReviewToggle={(reportId, nextStatus) => {
                 void mutateSnapshot(`report-${reportId}`, `/api/admin/moderation/reports/${reportId}`, { status: nextStatus });
               }}

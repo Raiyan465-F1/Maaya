@@ -298,9 +298,13 @@ export async function getForumSnapshot(viewerId: string | null, viewerRole: stri
       const resolvedAnonymousAuthor =
         post.isAnonymous &&
         reportedPostIds.has(post.id) &&
-        post.anonymousOwnerHash &&
         adminResolvedAuthors
-          ? adminResolvedAuthors.get(post.anonymousOwnerHash) ?? null
+          ? (post.authorId
+              ? adminResolvedAuthors.get(buildAnonymousOwnerHash(post.authorId)) ?? null
+              : null) ??
+            (post.anonymousOwnerHash
+              ? adminResolvedAuthors.get(post.anonymousOwnerHash) ?? null
+              : null)
           : null;
 
       const threadComments = commentsByPostId.get(post.id) ?? [];
@@ -344,6 +348,7 @@ export async function ensurePostExists(postId: number) {
   const [post] = await db
     .select({
       id: forumPosts.id,
+      title: forumPosts.title,
       authorId: forumPosts.authorId,
       anonymousOwnerHash: forumPosts.anonymousOwnerHash,
       status: forumPosts.status,

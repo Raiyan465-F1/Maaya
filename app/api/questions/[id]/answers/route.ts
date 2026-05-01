@@ -4,6 +4,10 @@ import { eq, and, ne } from "drizzle-orm";
 import { db } from "@/src/db";
 import { doctorAnswers, doctorQuestions, users, doctorProfiles } from "@/src/schema";
 import { authOptions } from "@/lib/auth";
+import {
+  getUserDisplayLabel,
+  notifyDoctorResponse,
+} from "@/lib/notifications";
 import { withCorsHeaders } from "@/lib/cors";
 import { suspendedMutationBlockedResponse } from "@/lib/suspended-mutation";
 
@@ -99,6 +103,8 @@ export async function POST(
         id: doctorQuestions.id,
         status: doctorQuestions.status,
         doctorUserId: doctorQuestions.doctorUserId,
+        userId: doctorQuestions.userId,
+        questionText: doctorQuestions.questionText,
       })
       .from(doctorQuestions)
       .where(eq(doctorQuestions.id, questionId))
@@ -145,6 +151,17 @@ export async function POST(
           ne(doctorQuestions.status, "closed")
         )
       );
+
+    const actorLabel = await getUserDisplayLabel(session.user.id);
+    const questionTitle =
+      existingQuestion.questionText.split("\n\n")[0]?.trim() || "your question";
+    await notifyDoctorResponse({
+      recipientUserId: existingQuestion.userId,
+      actorUserId: session.user.id,
+      questionId,
+      questionTitle,
+      actorLabel,
+    });
 
     return jsonResponse(newAnswer[0], 201, origin);
   } catch (error) {

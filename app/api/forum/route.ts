@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     }
 
     const anonymousOwnerHash = isAnonymous ? buildAnonymousOwnerHash(session.user.id) : null;
-    const authorId = isAnonymous ? null : session.user.id;
+    const authorId = session.user.id;
     const createdRows = await sql`
       insert into forum_posts (author_id, anonymous_owner_hash, title, content, tags, is_anonymous)
       values (${authorId}, ${anonymousOwnerHash}, ${title}, ${content}, ${tags}, ${isAnonymous})

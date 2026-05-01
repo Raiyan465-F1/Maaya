@@ -31,6 +31,10 @@ const PROFILE_SELECT = {
   ageGroup: users.ageGroup,
   gender: users.gender,
   location: users.location,
+  notifyDoctorHelp: users.notifyDoctorHelp,
+  notifyForumActivity: users.notifyForumActivity,
+  notifyModeration: users.notifyModeration,
+  notifySystem: users.notifySystem,
   createdAt: users.createdAt,
   updatedAt: users.updatedAt,
 } as const;
@@ -131,6 +135,10 @@ export async function PATCH(request: NextRequest) {
       ageGroup?: string | null;
       gender?: string | null;
       location?: string | null;
+      notifyDoctorHelp?: boolean;
+      notifyForumActivity?: boolean;
+      notifyModeration?: boolean;
+      notifySystem?: boolean;
       updatedAt: Date;
     } = { updatedAt: new Date() };
 
@@ -157,6 +165,18 @@ export async function PATCH(request: NextRequest) {
     if (typeof body.location === "string") {
       const v = body.location.trim().slice(0, 100);
       updates.location = v || null;
+    }
+    if (typeof body.notifyDoctorHelp === "boolean") {
+      updates.notifyDoctorHelp = body.notifyDoctorHelp;
+    }
+    if (typeof body.notifyForumActivity === "boolean") {
+      updates.notifyForumActivity = body.notifyForumActivity;
+    }
+    if (typeof body.notifyModeration === "boolean") {
+      updates.notifyModeration = body.notifyModeration;
+    }
+    if (typeof body.notifySystem === "boolean") {
+      updates.notifySystem = body.notifySystem;
     }
 
     const hasUserUpdates = Object.keys(updates).length > 1;
