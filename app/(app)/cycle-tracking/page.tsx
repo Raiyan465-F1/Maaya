@@ -416,7 +416,7 @@ export default function CycleTrackingPage() {
             <CardHeader className="pb-4">
               <CardTitle className="text-xl flex items-center gap-2 text-indigo-900 dark:text-indigo-100">
                 <Smile className="w-5 h-5 text-indigo-500" />
-                Daily Check-up
+                Daily Mood-Board
               </CardTitle>
               <CardDescription>How are you feeling today?</CardDescription>
             </CardHeader>
