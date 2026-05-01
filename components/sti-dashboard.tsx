@@ -5,10 +5,10 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { StiGuide, StiQuickAction, StiUpdate } from "@/lib/sti-content";
 import { cn } from "@/lib/utils";
-import {
   Activity,
   AlertTriangle,
   ArrowRight,
+  ChevronDown,
   ShieldCheck,
   Sparkles,
   Stethoscope,
@@ -34,34 +34,11 @@ export function STIDashboard({
   updates: StiUpdate[];
   quickActions: StiQuickAction[];
 }) {
-  const [activeFilter, setActiveFilter] = useState<(typeof FILTERS)[number]>("All");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [expandedSti, setExpandedSti] = useState<string | null>(null);
 
-  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const commonStis = guides.filter((g) => g.category === "Common STI");
+  const preventionGuide = guides.find((g) => g.slug === "safer-sex-playbook");
 
-  const filteredGuides = useMemo(() => {
-    const byFilter = activeFilter === "All" ? guides : guides.filter((guide) => guide.category === activeFilter);
-    if (!normalizedSearch) return byFilter;
-
-    return byFilter.filter((guide) => {
-      const haystack = [
-        guide.title,
-        guide.summary,
-        guide.category,
-        guide.asymptomaticNote,
-        ...guide.symptomSignals,
-        ...guide.testingGuide,
-        ...guide.preventionMoves,
-        ...guide.urgentCareFlags,
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      return haystack.includes(normalizedSearch);
-    });
-  }, [activeFilter, guides, normalizedSearch]);
-
-  const featuredGuide = filteredGuides[0];
   const sidebarUpdates = updates.slice(0, 4);
   const updateStrip = updates.slice(0, 3);
 
@@ -146,176 +123,64 @@ export function STIDashboard({
           <div className="rounded-[2.5rem] border border-border/60 bg-card p-8 md:p-10 shadow-lg shadow-emerald-900/5 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-100/50 dark:bg-emerald-900/10 rounded-full blur-[60px] pointer-events-none" />
             
-            <div className="mb-8 flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between relative z-10">
-              <div>
-                <p className="mb-3 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400">Knowledge Base</p>
-                <h2 className="font-heading text-4xl font-extrabold tracking-tight text-foreground">Explore Conditions</h2>
-                <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground">
-                  Quickly find actionable guides by searching symptoms, testing, or prevention terms. Skip the research feed when you need to know "what's next".
-                </p>
-              </div>
-              <div className="flex w-full max-w-md items-center gap-2">
-                <div className="relative w-full group">
-                  <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                     <Sparkles className="w-4 h-4 text-emerald-400 group-focus-within:text-emerald-600 transition-colors" />
-                  </div>
-                  <input
-                    value={searchQuery}
-                    onChange={(event) => setSearchQuery(event.target.value)}
-                    placeholder="Search symptoms, conditions..."
-                    className="w-full rounded-2xl border-2 border-border/50 bg-background/50 pl-11 pr-4 py-3.5 text-sm outline-none transition-all focus:border-emerald-500/50 focus:bg-background focus:ring-4 focus:ring-emerald-500/10"
-                  />
-                </div>
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery("")}
-                    className="rounded-2xl border-2 border-border/50 px-4 py-3.5 text-sm font-semibold text-muted-foreground transition hover:border-emerald-500/30 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/20 hover:text-foreground active:scale-95"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
+            <div className="mb-8 relative z-10">
+              <p className="mb-3 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400">Knowledge Base</p>
+              <h2 className="font-heading text-4xl font-extrabold tracking-tight text-foreground">Common Conditions</h2>
+              <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground">
+                Review the signs and essential facts for the most common STIs. Remember, many infections can be entirely silent—which is why screening matters even if you feel fine.
+              </p>
             </div>
 
-            <div className="mb-10 flex flex-wrap gap-2.5 relative z-10">
-              {FILTERS.map((filter) => (
-                <button
-                  key={filter}
-                  type="button"
-                  onClick={() => setActiveFilter(filter)}
-                  className={cn(
-                    "rounded-full border-2 px-5 py-2.5 text-sm font-bold transition-all active:scale-95",
-                    activeFilter === filter
-                      ? "border-emerald-500 bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
-                      : "border-border/50 bg-background/50 text-muted-foreground hover:border-emerald-500/30 hover:bg-emerald-50 dark:hover:bg-emerald-950 hover:text-foreground"
+            <div className="space-y-4 relative z-10">
+              {commonStis.map((sti) => (
+                <div key={sti.slug} className="rounded-[2rem] border-2 border-border/50 bg-background/50 overflow-hidden transition-all duration-300 hover:border-emerald-300/50">
+                  <button 
+                    type="button"
+                    onClick={() => setExpandedSti(expandedSti === sti.slug ? null : sti.slug)}
+                    className="flex w-full items-center justify-between p-6 text-left"
+                  >
+                     <div className="flex items-center gap-5">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400">
+                          <Activity className="size-6" />
+                        </div>
+                        <div>
+                          <h3 className="font-heading text-2xl font-bold tracking-tight text-foreground">{sti.title}</h3>
+                          <p className="mt-1 text-sm font-medium text-muted-foreground line-clamp-1">{sti.summary}</p>
+                        </div>
+                     </div>
+                     <div className={cn("transition-transform duration-300", expandedSti === sti.slug ? "rotate-180" : "")}>
+                        <ChevronDown className="size-6 text-muted-foreground" />
+                     </div>
+                  </button>
+                  {expandedSti === sti.slug && (
+                    <div className="px-6 pb-6 pt-2 border-t border-border/50 bg-white/50 dark:bg-black/20">
+                       <div className="grid gap-6 md:grid-cols-2 mt-4">
+                          <div>
+                             <p className="mb-3 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-emerald-600 flex items-center gap-2"><AlertTriangle className="w-3.5 h-3.5"/> Watch For</p>
+                             <ul className="space-y-2.5 text-sm font-medium text-foreground/80">
+                              {sti.symptomSignals.map(sig => (
+                                <li key={sig} className="flex items-start gap-2">
+                                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
+                                  <span className="leading-snug">{sig}</span>
+                                </li>
+                              ))}
+                             </ul>
+                          </div>
+                          <div className="flex flex-col justify-between space-y-4">
+                             <div className="rounded-[1.5rem] bg-amber-50 dark:bg-amber-950/20 p-5 border border-amber-100 dark:border-amber-900/30">
+                                <p className="text-sm font-bold text-amber-900 dark:text-amber-300 mb-1">Important Reminder</p>
+                                <p className="text-sm leading-relaxed text-amber-800/80 dark:text-amber-200/70">{sti.asymptomaticNote}</p>
+                             </div>
+                             <Link href={`/sti-awareness/${sti.slug}`} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-500/25">
+                               Read Full Guide <ArrowRight className="size-4" />
+                             </Link>
+                          </div>
+                       </div>
+                    </div>
                   )}
-                >
-                  {filter}
-                </button>
+                </div>
               ))}
             </div>
-
-            {featuredGuide ? (
-              <div className="relative z-10">
-                <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-                  <Link
-                    href={`/sti-awareness/${featuredGuide.slug}`}
-                    className="group relative overflow-hidden rounded-[2rem] border-2 border-emerald-200/50 bg-gradient-to-b from-emerald-50/80 to-white dark:border-emerald-900/30 dark:from-emerald-950/40 dark:to-background p-8 shadow-md transition-all duration-300 hover:border-emerald-400/50 hover:shadow-xl hover:-translate-y-1"
-                  >
-                    <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-white dark:bg-black/40 px-3 py-1.5 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-400 shadow-sm border border-emerald-100 dark:border-emerald-800">
-                      <Activity className="size-3.5" />
-                      Featured Guide
-                    </div>
-                    <h3 className="font-heading text-3xl font-extrabold tracking-tight text-foreground transition-colors group-hover:text-emerald-700 dark:group-hover:text-emerald-400">{featuredGuide.title}</h3>
-                    <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground">{featuredGuide.summary}</p>
-
-                    <div className="mt-8 grid gap-4 sm:grid-cols-2">
-                      <div className="rounded-[1.5rem] bg-white/60 dark:bg-black/30 backdrop-blur border border-white/40 dark:border-white/5 p-5">
-                        <p className="mb-3 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400 flex items-center gap-2"><AlertTriangle className="w-3.5 h-3.5"/> Watch For</p>
-                        <ul className="space-y-2.5 text-sm font-medium text-foreground/80">
-                          {featuredGuide.symptomSignals.slice(0, 3).map((signal) => (
-                            <li key={signal} className="flex items-start gap-2">
-                              <span className="mt-1.5 w-1 h-1 rounded-full bg-emerald-400 flex-shrink-0" />
-                              <span className="leading-snug">{signal}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div className="rounded-[1.5rem] bg-white/60 dark:bg-black/30 backdrop-blur border border-white/40 dark:border-white/5 p-5">
-                        <p className="mb-3 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-cyan-600 dark:text-cyan-400 flex items-center gap-2"><ArrowRight className="w-3.5 h-3.5"/> Next Steps</p>
-                        <ul className="space-y-2.5 text-sm font-medium text-foreground/80">
-                          {featuredGuide.nextSteps.slice(0, 3).map((step) => (
-                            <li key={step} className="flex items-start gap-2">
-                              <span className="mt-1.5 w-1 h-1 rounded-full bg-cyan-400 flex-shrink-0" />
-                              <span className="leading-snug">{step}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  </Link>
-
-                  <div className="rounded-[2rem] border-2 border-amber-200/50 bg-gradient-to-b from-amber-50/50 to-white dark:border-amber-900/30 dark:from-amber-950/20 dark:to-background p-8 shadow-sm">
-                    <p className="mb-5 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-amber-600 dark:text-amber-500 flex items-center gap-2">
-                       <AlertTriangle className="w-4 h-4"/> Urgent Care Protocol
-                    </p>
-                    <div className="space-y-5">
-                      <div className="rounded-[1.5rem] border border-amber-200 bg-amber-100/50 dark:border-amber-900/50 dark:bg-amber-900/20 p-5">
-                        <p className="font-bold text-amber-900 dark:text-amber-300">Seek Immediate Support</p>
-                        <p className="mt-2 text-sm leading-relaxed text-amber-800/80 dark:text-amber-200/70">
-                          Go to urgent care for severe pelvic pain, fever, post-assault care, pregnancy with new symptoms, or rapidly worsening discomfort.
-                        </p>
-                      </div>
-                      <div className="rounded-[1.5rem] border border-border/60 bg-background/50 p-5">
-                        <p className="font-bold text-foreground">Avoid Self-Diagnosis</p>
-                        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                          If symptoms are confusing or persistent, don't rely solely on reading. Use Doctor's Help for professional guidance.
-                        </p>
-                      </div>
-                      <Link
-                        href="/doctors-help"
-                        className="inline-flex items-center gap-2 mt-2 rounded-xl bg-amber-500/10 px-5 py-3 text-sm font-bold text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 transition-colors"
-                      >
-                        Ask a doctor privately
-                        <ArrowRight className="size-4" />
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                  {filteredGuides.slice(1).map((guide) => (
-                    <Link
-                      key={guide.slug}
-                      href={`/sti-awareness/${guide.slug}`}
-                      className="group flex flex-col justify-between rounded-[2rem] border-2 border-border/50 bg-background/50 p-7 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-400/40 hover:bg-emerald-50/30 dark:hover:bg-emerald-900/10 hover:shadow-lg"
-                    >
-                      <div>
-                        <div className="mb-4 flex items-center justify-between gap-3">
-                          <span className="rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-3 py-1.5 text-[0.65rem] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
-                            {guide.category}
-                          </span>
-                          <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                             <ShieldCheck className="w-3.5 h-3.5 opacity-70"/> {guide.reviewStatus}
-                          </span>
-                        </div>
-                        <h3 className="font-heading text-2xl font-bold tracking-tight text-foreground transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{guide.title}</h3>
-                        <p className="mt-3 text-sm leading-relaxed text-muted-foreground line-clamp-3">{guide.summary}</p>
-                      </div>
-                      <div className="mt-5 pt-5 border-t border-border/50">
-                        <p className="text-sm font-semibold text-foreground/90 flex items-start gap-2">
-                          <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-cyan-400 flex-shrink-0" />
-                          <span className="leading-snug">{guide.asymptomaticNote}</span>
-                        </p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-[2rem] border-2 border-dashed border-emerald-200/50 bg-emerald-50/20 dark:border-emerald-900/30 dark:bg-emerald-900/10 p-12 text-center relative z-10">
-                <p className="font-heading text-3xl font-bold tracking-tight text-foreground">No matching guides found</p>
-                <p className="mt-4 text-base leading-relaxed text-muted-foreground max-w-md mx-auto">
-                  Try a broader symptom term, remove a filter, or go straight to Doctor's Help if the concern feels urgent or personal.
-                </p>
-                <div className="mt-8 flex flex-wrap justify-center gap-4">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveFilter("All");
-                      setSearchQuery("");
-                    }}
-                    className="rounded-2xl border-2 border-border/50 px-6 py-3 text-sm font-bold text-foreground transition hover:border-emerald-400 hover:text-emerald-600 active:scale-95"
-                  >
-                    Reset search
-                  </button>
-                  <Link href="/doctors-help" className="rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-500/25 transition-all hover:shadow-emerald-500/40 hover:-translate-y-0.5 active:scale-95">
-                    Consult Doctor
-                  </Link>
-                </div>
-              </div>
-            )}
           </div>
 
           <div className="rounded-[2.5rem] border border-border/60 bg-card p-8 md:p-10 shadow-lg">
@@ -355,27 +220,68 @@ export function STIDashboard({
         </div>
 
         <aside className="space-y-8">
-          <div className="rounded-[2.5rem] border border-border/60 bg-card p-8 md:p-10 shadow-lg relative overflow-hidden">
-             <div className="absolute top-0 right-0 w-32 h-32 bg-amber-100/40 dark:bg-amber-900/10 rounded-full blur-[40px] pointer-events-none" />
-            <h3 className="mb-6 font-heading text-2xl font-extrabold text-foreground relative z-10">How to use this hub</h3>
-            <div className="space-y-4 relative z-10">
-              <div className="rounded-[1.5rem] border border-border/60 bg-background/50 p-5 transition-colors hover:border-emerald-200 dark:hover:border-emerald-800">
-                <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-700 dark:text-emerald-300 font-bold mb-3">1</div>
-                <p className="font-bold text-foreground">Start with the concern</p>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Symptoms, testing timing, or prevention planning should drive your first click.</p>
-              </div>
-              <div className="rounded-[1.5rem] border border-border/60 bg-background/50 p-5 transition-colors hover:border-emerald-200 dark:hover:border-emerald-800">
-                <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-700 dark:text-emerald-300 font-bold mb-3">2</div>
-                <p className="font-bold text-foreground">Read the guide</p>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Understand common signs, what silence means, and the right questions to ask.</p>
-              </div>
-              <div className="rounded-[1.5rem] border border-border/60 bg-background/50 p-5 transition-colors hover:border-emerald-200 dark:hover:border-emerald-800">
-                <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-700 dark:text-emerald-300 font-bold mb-3">3</div>
-                <p className="font-bold text-foreground">Escalate when needed</p>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Use Doctor's Help when symptoms are personal, urgent, or difficult to sort through.</p>
-              </div>
-            </div>
+          {/* Urgent Care Protocol */}
+          <div className="rounded-[2.5rem] border-2 border-amber-200/50 bg-gradient-to-b from-amber-50/50 to-amber-100/10 dark:border-amber-900/30 dark:from-amber-950/20 dark:to-background p-8 md:p-10 shadow-sm relative overflow-hidden group hover:border-amber-300/50 transition-all">
+             <div className="absolute top-0 right-0 w-32 h-32 bg-amber-200/30 dark:bg-amber-700/20 rounded-full blur-[40px] pointer-events-none group-hover:scale-150 transition-transform duration-700" />
+             <div className="flex items-center gap-4 mb-6 relative z-10">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-500 shadow-inner">
+                  <AlertTriangle className="size-6" />
+                </div>
+                <h3 className="font-heading text-2xl font-extrabold text-amber-950 dark:text-amber-100">Urgent Care<br/>Protocol</h3>
+             </div>
+             
+             <div className="space-y-4 relative z-10">
+                <div className="rounded-[1.5rem] border border-amber-200/60 bg-amber-100/50 dark:border-amber-900/50 dark:bg-amber-900/20 p-5 shadow-sm">
+                  <p className="font-bold text-amber-900 dark:text-amber-300 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Seek Immediate Support
+                  </p>
+                  <p className="mt-2 text-sm leading-relaxed text-amber-800/80 dark:text-amber-200/70">
+                    Go to urgent care for severe pelvic pain, fever, post-assault care, pregnancy with new symptoms, or rapidly worsening discomfort.
+                  </p>
+                </div>
+                <div className="rounded-[1.5rem] border border-border/60 bg-background/50 p-5 shadow-sm">
+                  <p className="font-bold text-foreground flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" /> Avoid Self-Diagnosis
+                  </p>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    If symptoms are confusing or persistent, don't rely solely on reading. Talk to a clinician.
+                  </p>
+                </div>
+                <Link
+                  href="/doctors-help"
+                  className="flex items-center justify-center gap-2 w-full rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-4 text-sm font-bold text-white shadow-lg shadow-amber-500/25 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-amber-500/40 active:scale-95"
+                >
+                  Consult a Doctor Now
+                  <ArrowRight className="size-5" />
+                </Link>
+             </div>
           </div>
+
+          {/* Safer Sex Playbook (Prevention) */}
+          {preventionGuide && (
+            <div className="rounded-[2.5rem] border-2 border-cyan-200/50 bg-gradient-to-b from-cyan-50/80 to-cyan-100/10 dark:border-cyan-900/30 dark:from-cyan-950/30 dark:to-background p-8 md:p-10 shadow-sm relative overflow-hidden group hover:border-cyan-300/50 transition-all">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-200/30 dark:bg-cyan-700/20 rounded-full blur-[40px] pointer-events-none group-hover:scale-150 transition-transform duration-700" />
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-cyan-100/50 dark:bg-cyan-900/30 px-3 py-1.5 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-cyan-700 dark:text-cyan-400 relative z-10">
+                <ShieldCheck className="size-3.5" />
+                Prevention Plan
+              </div>
+              <h3 className="mb-3 font-heading text-3xl font-extrabold text-foreground relative z-10">{preventionGuide.title}</h3>
+              <p className="mb-6 text-sm leading-relaxed text-muted-foreground relative z-10">{preventionGuide.summary}</p>
+              
+              <ul className="mb-6 space-y-3 relative z-10">
+                {preventionGuide.preventionMoves.slice(0, 3).map(move => (
+                  <li key={move} className="flex items-start gap-3 rounded-[1.25rem] border border-cyan-100 dark:border-cyan-900/40 bg-white/50 dark:bg-black/20 p-4 text-sm font-medium text-foreground/80 shadow-sm transition-colors hover:border-cyan-300 dark:hover:border-cyan-700">
+                    <ShieldCheck className="mt-0.5 size-4 text-cyan-500 shrink-0" />
+                    <span className="leading-snug">{move}</span>
+                  </li>
+                ))}
+              </ul>
+              
+              <Link href={`/sti-awareness/${preventionGuide.slug}`} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-600 to-cyan-500 px-5 py-4 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-cyan-500/40 active:scale-95 relative z-10">
+                Explore Full Playbook <ArrowRight className="size-5" />
+              </Link>
+            </div>
+          )}
 
           <div className="rounded-[2.5rem] border border-border/60 bg-card p-8 md:p-10 shadow-lg">
             <div className="mb-6 flex items-center justify-between">
