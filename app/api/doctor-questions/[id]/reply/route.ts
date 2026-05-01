@@ -2,8 +2,9 @@ import { getServerSession } from "next-auth";
 import { and, desc, eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
+import { getUserDisplayLabel, notifyDoctorResponse } from "@/lib/notifications";
 import { db } from "@/src/db";
-import { alerts, doctorAnswers, doctorQuestions } from "@/src/schema";
+import { doctorAnswers, doctorQuestions } from "@/src/schema";
 
 const MIN_REPLY_LENGTH = 5;
 
@@ -149,11 +150,13 @@ export async function POST(
     )
     .returning();
 
-  await db.insert(alerts).values({
-    userId: question.userId,
-    type: "doctor_response",
-    title: "Doctor replied to your post",
-    message: "A doctor has reviewed your post and sent feedback. Open your dashboard to read the reply.",
+  const actorLabel = await getUserDisplayLabel(session.user.id);
+  await notifyDoctorResponse({
+    recipientUserId: question.userId,
+    actorUserId: session.user.id,
+    questionId,
+    questionTitle: question.questionText.split("\n\n")[0]?.trim() || "your question",
+    actorLabel,
   });
 
   return NextResponse.json({ answer, question: updatedQuestion });

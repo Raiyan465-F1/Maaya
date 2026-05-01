@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
@@ -21,6 +22,7 @@ export type DashboardAlert = {
   id: number;
   title: string;
   message: string;
+  linkHref: string | null;
   isRead: boolean;
   createdAt: string;
   type: string;
@@ -205,6 +207,16 @@ function FeedbackFeed({ alerts }: { alerts: DashboardAlert[] }) {
               </span>
             </div>
             <p className="mt-3 text-sm leading-7 text-foreground">{alert.message}</p>
+            {alert.linkHref ? (
+              <div className="mt-4">
+                <Link
+                  href={alert.linkHref}
+                  className="inline-flex items-center rounded-lg text-sm font-medium text-primary hover:underline"
+                >
+                  Open thread
+                </Link>
+              </div>
+            ) : null}
             <p className="mt-3 text-xs text-muted-foreground">{formatDate(alert.createdAt)}</p>
           </article>
         ))}

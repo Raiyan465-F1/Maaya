@@ -92,7 +92,12 @@ export async function PATCH(
     restrictionEndsAt = endsAt;
   }
 
-  const updated = await updateUserModerationStatus(userId, status, restrictionEndsAt);
+  const updated = await updateUserModerationStatus(
+    userId,
+    status,
+    restrictionEndsAt,
+    session.user.id,
+  );
   if (!updated) {
     return NextResponse.json({ error: "User not found." }, { status: 404 });
   }

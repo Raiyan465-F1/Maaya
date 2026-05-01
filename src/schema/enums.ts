@@ -15,8 +15,22 @@ export type ContentStatus = (typeof contentStatus)[number];
 export const reportStatus = ["pending", "reviewed"] as const;
 export type ReportStatus = (typeof reportStatus)[number];
 
-export const alertType = ["reminder", "reply", "doctor_response", "article_update", "system"] as const;
+export const alertType = [
+  "reminder",
+  "reply",
+  "doctor_response",
+  "article_update",
+  "system",
+  "question_assigned",
+  "forum_comment",
+  "forum_reply",
+  "moderation_update",
+  "account_update",
+] as const;
 export type AlertType = (typeof alertType)[number];
+
+export const notificationPriority = ["low", "normal", "high"] as const;
+export type NotificationPriority = (typeof notificationPriority)[number];
 
 export const forumMediaKind = ["image", "video"] as const;
 export type ForumMediaKind = (typeof forumMediaKind)[number];

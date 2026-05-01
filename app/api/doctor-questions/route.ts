@@ -4,6 +4,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/src/db";
 import { doctorQuestions, users } from "@/src/schema";
+import {
+  getUserDisplayLabel,
+  notifyDoctorQuestionAssigned,
+} from "@/lib/notifications";
 
 const MIN_QUESTION_LENGTH = 10;
 
@@ -100,6 +104,17 @@ export async function POST(request: NextRequest) {
       isAnonymous,
     })
     .returning();
+
+  if (assignedDoctorId) {
+    const actorLabel = await getUserDisplayLabel(session.user.id);
+    await notifyDoctorQuestionAssigned({
+      doctorUserId: assignedDoctorId,
+      actorUserId: session.user.id,
+      questionId: createdQuestion.id,
+      questionTitle: questionText.split("\n\n")[0]?.trim() || "New question",
+      actorLabel,
+    });
+  }
 
   return NextResponse.json({ question: createdQuestion }, { status: 201 });
 }

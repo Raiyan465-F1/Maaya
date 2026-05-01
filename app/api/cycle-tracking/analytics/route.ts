@@ -5,12 +5,44 @@ import { cycleLogs, cycleStageTips, userCycleOnboarding } from "@/src/schema";
 import { authOptions } from "@/lib/auth";
 import { eq, desc } from "drizzle-orm";
 
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
 const MOOD_PREDICTIONS: Record<string, string> = {
   "Menstrual": "You might feel tired, introspective, or experience mild discomfort. Rest and be gentle with yourself.",
   "Follicular": "Your energy levels and mood are likely rising. You might feel more creative, upbeat, and outgoing.",
   "Ovulation": "You're likely at your most energetic and confident. Great time for socializing and intense workouts.",
   "Luteal": "You might experience a dip in energy, potential PMS symptoms, and crave nesting or quiet time."
 };
+
+type HistoryItem = {
+  month: string;
+  year: number;
+  length: number;
+  startDate: string;
+};
+
+type PeriodHistoryItem = HistoryItem & {
+  endDate: string;
+};
+
+function startOfDay(date: Date) {
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized;
+}
+
+function getDayDifference(start: Date, end: Date) {
+  return Math.round((end.getTime() - start.getTime()) / MS_PER_DAY);
+}
+
+function getInclusiveDayCount(start: Date, end: Date) {
+  return getDayDifference(start, end) + 1;
+}
+
+function getAverage(values: number[]) {
+  if (values.length === 0) return null;
+  return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
+}
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -51,6 +83,15 @@ export async function GET(request: NextRequest) {
           weight: config.weight,
           primaryGoal: config.primaryGoal
         },
+        cycleAverageDays: null,
+        periodAverageDays: null,
+        cycleVarianceDays: null,
+        cycleTrend: null,
+        cycleHistory: [],
+        periodHistory: [],
+        usesOnboardingFallback: false,
+        isCycleNormal: null,
+        isPeriodNormal: null,
         periodStartDates: [],
         pregnancyChance: { label: "Unknown", color: "text-muted-foreground", bg: "bg-muted/10" },
         recommendations: [{ 
@@ -64,16 +105,64 @@ export async function GET(request: NextRequest) {
     let latestCycle = logs[0];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
-    const avgCycleLength = isOnboarded && onboardingData[0].averageCycleLength ? onboardingData[0].averageCycleLength : 28;
-    const avgPeriodLength = isOnboarded && onboardingData[0].averagePeriodLength ? onboardingData[0].averagePeriodLength : 5;
-    today.setHours(0, 0, 0, 0);
-    
-    const start = new Date(latestCycle.startDate);
-    start.setHours(0, 0, 0, 0);
 
-    const nextPeriodStart = new Date(start.getTime() + avgCycleLength * 24 * 60 * 60 * 1000);
-    const nextPeriodEnd = new Date(nextPeriodStart.getTime() + avgPeriodLength * 24 * 60 * 60 * 1000);
+    const parseDate = (d: string) => {
+      const [year, month, day] = d.split('T')[0].split('-').map(Number);
+      return new Date(year, month - 1, day);
+    };
+
+    const onboardingCycleAverage = isOnboarded ? onboardingData[0].averageCycleLength ?? null : null;
+    const onboardingPeriodAverage = isOnboarded ? onboardingData[0].averagePeriodLength ?? null : null;
+
+    const cycleHistory: HistoryItem[] = [];
+    if (logs.length > 1) {
+      for (let i = 0; i < Math.min(logs.length - 1, 6); i++) {
+        const currentStart = parseDate(logs[i].startDate);
+        const previousStart = parseDate(logs[i + 1].startDate);
+        cycleHistory.push({
+          month: previousStart.toLocaleString("default", { month: "short" }),
+          year: previousStart.getFullYear(),
+          length: getDayDifference(previousStart, currentStart),
+          startDate: logs[i + 1].startDate,
+        });
+      }
+    }
+
+    const periodHistory: PeriodHistoryItem[] = logs
+      .filter((log) => !!log.endDate)
+      .slice(0, 6)
+      .map((log) => {
+        const startDate = parseDate(log.startDate);
+        const endDate = parseDate(log.endDate!);
+        return {
+          month: startDate.toLocaleString("default", { month: "short" }),
+          year: startDate.getFullYear(),
+          length: getInclusiveDayCount(startDate, endDate),
+          startDate: log.startDate,
+          endDate: log.endDate!,
+        };
+      })
+      .reverse();
+
+    const orderedCycleHistory = cycleHistory.reverse();
+    const cycleAverageFromLogs = getAverage(orderedCycleHistory.map((cycle) => cycle.length));
+    const periodAverageFromLogs = getAverage(periodHistory.map((period) => period.length));
+    const cycleAverageDays = cycleAverageFromLogs ?? onboardingCycleAverage ?? 28;
+    const periodAverageDays = periodAverageFromLogs ?? onboardingPeriodAverage ?? 5;
+    const usesOnboardingFallback =
+      cycleAverageFromLogs === null || periodAverageFromLogs === null;
+    const cycleVarianceDays =
+      orderedCycleHistory.length > 0
+        ? Math.max(...orderedCycleHistory.map((cycle) => cycle.length)) -
+          Math.min(...orderedCycleHistory.map((cycle) => cycle.length))
+        : null;
+    const cycleTrend =
+      cycleVarianceDays === null ? null : cycleVarianceDays <= 3 ? "consistent" : "variable";
+
+    const start = parseDate(latestCycle.startDate);
+
+    const nextPeriodStart = new Date(start.getTime() + cycleAverageDays * MS_PER_DAY);
+    const nextPeriodEnd = new Date(nextPeriodStart.getTime() + (periodAverageDays - 1) * MS_PER_DAY);
 
     // Calculate strict calendar days since the start of the latest cycle
     const diffTime = today.getTime() - start.getTime();
@@ -95,7 +184,7 @@ export async function GET(request: NextRequest) {
       .from(cycleStageTips)
       .where(eq(cycleStageTips.phase, currentPhase));
 
-    const daysUntilNextPeriod = Math.max(0, Math.ceil((nextPeriodStart.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
+    const daysUntilNextPeriod = Math.max(0, Math.ceil((nextPeriodStart.getTime() - today.getTime()) / MS_PER_DAY));
     
     const userPeriodSymptoms = isOnboarded && onboardingData[0].periodSymptoms ? onboardingData[0].periodSymptoms : [];
     const formattedSymptoms = userPeriodSymptoms.length > 0 
@@ -119,26 +208,32 @@ export async function GET(request: NextRequest) {
     
     const userStats = isOnboarded ? { height: onboardingData[0].height, weight: onboardingData[0].weight } : null;
     
-    // Evaluate health status based on cycle
-    let healthStatus = {
-      status: "Good",
-      message: "Reproductive system seems fine.",
-      details: "Everything appears to be within normal ranges."
-    };
+    const userRegularity = isOnboarded ? onboardingData[0].regularity : "mostly";
+    
+    // Evaluate health status based on cycle and regularity
+    let healthStatus = null;
 
-    if (dayOfCycle > 35) {
+    if (userRegularity === "irregular") {
+      healthStatus = {
+        status: "Advice",
+        message: "Irregular Cycle Noted",
+        details: "Since your cycle is irregular, we suggest consulting our medical professionals for personalized guidance."
+      };
+    } else if (dayOfCycle > 35) {
       healthStatus = {
         status: "Warning",
         message: "Your period is late.",
-        details: "You might be pregnant. Consider taking a test or getting professional help and asking for consultation."
+        details: "Consider taking a pregnancy test or consulting a professional if your cycle is usually regular."
       };
     } else if (currentPhase === "Ovulation") {
       healthStatus = {
         status: "Excellent",
         message: "Optimal Reproductive Window",
-        details: "Good reproduction phase. You are highly fertile right now."
+        details: "You are in your highly fertile phase right now. Great job monitoring your cycle!"
       };
     }
+
+
 
     // Pregnancy chance calculation
     let pregnancyChance = { label: "LOW CHANCE of getting pregnant", color: "text-green-500", bg: "bg-green-500/10" };
@@ -147,6 +242,10 @@ export async function GET(request: NextRequest) {
     } else if ((dayOfCycle >= 10 && dayOfCycle <= 11) || (dayOfCycle >= 17 && dayOfCycle <= 18)) {
       pregnancyChance = { label: "MODERATE CHANCE of getting pregnant", color: "text-yellow-600", bg: "bg-yellow-500/10" };
     }
+
+    // Normalcy Analysis
+    const isCycleNormal = cycleAverageDays >= 21 && cycleAverageDays <= 35;
+    const isPeriodNormal = periodAverageDays >= 2 && periodAverageDays <= 7;
 
 
     return NextResponse.json({
@@ -159,6 +258,17 @@ export async function GET(request: NextRequest) {
       healthStatus,
       pregnancyChance,
       userStats,
+      cycleHistory: orderedCycleHistory,
+      periodHistory,
+      cycleAverageDays,
+      periodAverageDays,
+      cycleVarianceDays,
+      cycleTrend,
+      usesOnboardingFallback,
+      isCycleNormal,
+      isPeriodNormal,
+
+
       periodStartDates: logs.map(l => l.startDate),
       periodEndDates: logs.filter(l => l.endDate).map(l => l.endDate),
       recommendations: tips.length > 0 ? tips : [{ tipTitle: "Rest and Hydrate", tipDescription: "Listen to your body today." }],

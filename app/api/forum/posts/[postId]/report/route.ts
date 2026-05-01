@@ -3,6 +3,10 @@ import { getServerSession } from "next-auth";
 import { db } from "@/src/db";
 import { reports } from "@/src/schema/reports";
 import { authOptions } from "@/lib/auth";
+import {
+  getUserDisplayLabel,
+  notifyAdminReportCreated,
+} from "@/lib/notifications";
 import { suspendedMutationBlockedResponse } from "@/lib/suspended-mutation";
 import {
   canAccessModeratedContent,
@@ -51,10 +55,18 @@ export async function POST(
       return NextResponse.json({ error: "Please provide a short reason for the report." }, { status: 400 });
     }
 
-    await db.insert(reports).values({
+    const [createdReport] = await db.insert(reports).values({
       reporterId: session.user.id,
       postId,
       reason,
+    }).returning({ id: reports.id });
+
+    const actorLabel = await getUserDisplayLabel(session.user.id);
+    await notifyAdminReportCreated({
+      actorUserId: session.user.id,
+      actorLabel,
+      targetType: "post",
+      reportId: createdReport?.id ?? null,
     });
 
     const data = await getForumSnapshot(session.user.id, session.user.role);

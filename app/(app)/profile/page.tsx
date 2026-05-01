@@ -24,6 +24,47 @@ interface DoctorProfileFragment {
   availabilityInfo: string | null;
 }
 
+function PreferenceSwitch({
+  checked,
+  onChange,
+  label,
+  description,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label: string;
+  description: string;
+}) {
+  return (
+    <div className="flex items-start gap-4">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className={cn(
+          "relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+          checked ? "border-primary/30 bg-primary" : "border-border bg-input",
+        )}
+      >
+        <span
+          className={cn(
+            "pointer-events-none inline-block h-5 w-5 rounded-full bg-card shadow ring-0 transition-transform",
+            checked ? "translate-x-5" : "translate-x-0.5",
+          )}
+          style={{ marginTop: 2 }}
+        />
+      </button>
+      <div>
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+          {description}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 interface UserProfile {
   id: string;
   name: string | null;
@@ -36,6 +77,10 @@ interface UserProfile {
   ageGroup: string | null;
   gender: string | null;
   location: string | null;
+  notifyDoctorHelp: boolean;
+  notifyForumActivity: boolean;
+  notifyModeration: boolean;
+  notifySystem: boolean;
   createdAt: string;
   updatedAt: string;
   doctorProfile?: DoctorProfileFragment | null;
@@ -179,6 +224,10 @@ export default function ProfilePage() {
   const [ageGroup, setAgeGroup] = useState("");
   const [gender, setGender] = useState("");
   const [location, setLocation] = useState("");
+  const [notifyDoctorHelp, setNotifyDoctorHelp] = useState(true);
+  const [notifyForumActivity, setNotifyForumActivity] = useState(true);
+  const [notifyModeration, setNotifyModeration] = useState(true);
+  const [notifySystem, setNotifySystem] = useState(true);
   const [specialty, setSpecialty] = useState("");
   const [bio, setBio] = useState("");
   const [qualifications, setQualifications] = useState("");
@@ -214,6 +263,10 @@ export default function ProfilePage() {
       setAgeGroup(data.ageGroup ?? "");
       setGender(data.gender ?? "");
       setLocation(data.location ?? "");
+      setNotifyDoctorHelp(Boolean(data.notifyDoctorHelp));
+      setNotifyForumActivity(Boolean(data.notifyForumActivity));
+      setNotifyModeration(Boolean(data.notifyModeration));
+      setNotifySystem(Boolean(data.notifySystem));
       setSpecialty(data.doctorProfile?.specialty ?? "");
       setBio(data.doctorProfile?.bio ?? "");
       setQualifications(data.doctorProfile?.qualifications ?? "");
@@ -290,6 +343,10 @@ export default function ProfilePage() {
         ageGroup: ageGroup || null,
         gender: gender || null,
         location: location || null,
+        notifyDoctorHelp,
+        notifyForumActivity,
+        notifyModeration,
+        notifySystem,
       };
       if (profile?.role === "doctor") {
         body.specialty = specialty.trim() || null;
@@ -301,6 +358,10 @@ export default function ProfilePage() {
       const updated = await patchProfile(body);
       setProfile(updated);
       setDisplayName(updated.name ?? "");
+      setNotifyDoctorHelp(Boolean(updated.notifyDoctorHelp));
+      setNotifyForumActivity(Boolean(updated.notifyForumActivity));
+      setNotifyModeration(Boolean(updated.notifyModeration));
+      setNotifySystem(Boolean(updated.notifySystem));
       setSpecialty(updated.doctorProfile?.specialty ?? "");
       setBio(updated.doctorProfile?.bio ?? "");
       setQualifications(updated.doctorProfile?.qualifications ?? "");
@@ -363,6 +424,10 @@ export default function ProfilePage() {
       ageGroup !== (profile.ageGroup ?? "") ||
       gender !== (profile.gender ?? "") ||
       location !== (profile.location ?? "") ||
+      notifyDoctorHelp !== Boolean(profile.notifyDoctorHelp) ||
+      notifyForumActivity !== Boolean(profile.notifyForumActivity) ||
+      notifyModeration !== Boolean(profile.notifyModeration) ||
+      notifySystem !== Boolean(profile.notifySystem) ||
       (profile.role === "doctor" &&
         (specialty !== (profile.doctorProfile?.specialty ?? "") ||
           bio !== (profile.doctorProfile?.bio ?? "") ||
@@ -591,6 +656,38 @@ export default function ProfilePage() {
               </div>
             </section>
           )}
+
+          <section className="rounded-2xl border border-border bg-card p-6">
+            <h2 className="mb-5 font-heading text-base font-semibold tracking-tight text-foreground">
+              Notification preferences
+            </h2>
+            <div className="space-y-5">
+              <PreferenceSwitch
+                checked={notifyDoctorHelp}
+                onChange={setNotifyDoctorHelp}
+                label="Doctor's Help updates"
+                description="Question assignments and doctor replies."
+              />
+              <PreferenceSwitch
+                checked={notifyForumActivity}
+                onChange={setNotifyForumActivity}
+                label="Forum activity"
+                description="New comments and replies on your discussions."
+              />
+              <PreferenceSwitch
+                checked={notifyModeration}
+                onChange={setNotifyModeration}
+                label="Moderation and account notices"
+                description="Content actions and account access changes."
+              />
+              <PreferenceSwitch
+                checked={notifySystem}
+                onChange={setNotifySystem}
+                label="System and admin queue updates"
+                description="Platform notices and admin report queue alerts."
+              />
+            </div>
+          </section>
 
           {/* Privacy */}
           <section className="rounded-2xl border border-border bg-card p-6">
