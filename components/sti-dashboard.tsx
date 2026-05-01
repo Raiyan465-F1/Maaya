@@ -97,13 +97,6 @@ export function STIDashboard({
                 Consult a Doctor
                 <ArrowRight className="size-5" />
               </Link>
-              <Link
-                href="/sti-awareness/testing-playbook"
-                className="inline-flex items-center gap-2 rounded-2xl border-2 border-emerald-200/60 dark:border-emerald-800/60 bg-white/50 dark:bg-black/30 backdrop-blur-md px-7 py-3.5 text-base font-bold text-foreground transition-all hover:-translate-y-1 hover:border-emerald-400/60 hover:bg-white/80 dark:hover:bg-black/60 shadow-sm active:scale-95"
-              >
-                Start with Testing
-                <Sparkles className="size-5 text-emerald-500" />
-              </Link>
             </div>
           </div>
 
@@ -130,7 +123,7 @@ export function STIDashboard({
       </section>
 
       {/* Quick Actions */}
-      <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {quickActions.map((action, i) => (
           <Link
             key={action.title}
