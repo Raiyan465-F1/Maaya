@@ -157,12 +157,13 @@ export default function CycleTrackingPage() {
       }
     });
 
-    // Fetch cycle analytics
-    fetch("/api/cycle-tracking/analytics")
+    // Fetch cycle analytics with cache busting
+    fetch(`/api/cycle-tracking/analytics?t=${Date.now()}`)
       .then(res => res.json())
       .then(data => setAnalytics(data))
       .catch(err => console.error(err));
   }, []);
+
 
   return (
     <div className="flex flex-col h-full items-center pt-10">
@@ -534,26 +535,37 @@ export default function CycleTrackingPage() {
                   <p className="text-muted-foreground text-sm font-medium">Log a period to see predictions.</p>
                 </div>
               ) : (
-                <div className="flex flex-col gap-4">
-                  <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 flex justify-between items-center">
-                    <div>
-                      <p className="text-xs uppercase text-primary font-bold mb-1">Next Period Starts</p>
-                      <p className="text-sm font-semibold">
-                        {analytics.latestCycle?.predictedEndDate && !isNaN(new Date(analytics.latestCycle.predictedEndDate).getTime())
-                          ? new Date(analytics.latestCycle.predictedEndDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
-                          : 'Pending'}
-                      </p>
+                  <div className="flex flex-col gap-3">
+                    <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 flex justify-between items-center">
+                      <div>
+                        <p className="text-xs uppercase text-primary font-bold mb-1">Next Period Starts</p>
+                        <p className="text-sm font-semibold">
+                          {analytics.latestCycle?.predictedEndDate && !isNaN(new Date(analytics.latestCycle.predictedEndDate).getTime())
+                            ? new Date(analytics.latestCycle.predictedEndDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+                            : 'Pending'}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs uppercase text-primary font-bold mb-1">Next Period Ends</p>
+                        <p className="text-sm font-semibold">
+                          {analytics.latestCycle?.expectedPeriodEnd && !isNaN(new Date(analytics.latestCycle.expectedPeriodEnd).getTime()) 
+                            ? new Date(analytics.latestCycle.expectedPeriodEnd).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+                            : 'Pending'}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xs uppercase text-primary font-bold mb-1">Next Period Ends</p>
-                      <p className="text-sm font-semibold">
-                        {analytics.latestCycle?.expectedPeriodEnd && !isNaN(new Date(analytics.latestCycle.expectedPeriodEnd).getTime()) 
-                          ? new Date(analytics.latestCycle.expectedPeriodEnd).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
-                          : 'Pending'}
-                      </p>
+
+                    <div className={`p-4 rounded-xl border ${analytics.pregnancyChance?.bg || 'bg-muted/10'} border-opacity-20 flex items-center justify-between transition-all duration-500`}>
+                      <div className="flex items-center gap-2">
+                         <Baby className={`w-5 h-5 ${analytics.pregnancyChance?.color || 'text-muted-foreground'}`} />
+                         <span className="text-sm font-bold text-foreground/80">Pregnancy Chance</span>
+                      </div>
+                      <span className={`text-sm font-black uppercase tracking-wider ${analytics.pregnancyChance?.color || 'text-muted-foreground'}`}>
+                        {analytics.pregnancyChance?.label || 'Unknown'}
+                      </span>
                     </div>
                   </div>
-                </div>
+
               )}
             </CardContent>
           </Card>
