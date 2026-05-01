@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getStiResourceBySlug } from "@/lib/sti-content";
-import { ArrowLeft, Calendar, ShieldCheck, Sparkles, Stethoscope, User } from "lucide-react";
+import { ArrowLeft, Calendar, ShieldCheck, Sparkles, Stethoscope, User, Activity, AlertTriangle, ArrowRight } from "lucide-react";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
