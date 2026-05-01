@@ -135,9 +135,9 @@ function TagSelector({
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
           disabled={disabled}
-          className="w-full rounded-[1.5rem] border border-rose-200/60 bg-white/50 backdrop-blur-sm px-5 py-3.5 text-sm outline-none transition-all focus:border-rose-400 focus:bg-white focus:shadow-lg focus:shadow-rose-500/5 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-[1.5rem] border border-violet-200/60 bg-white/50 backdrop-blur-sm px-5 py-3.5 text-sm outline-none transition-all focus:border-violet-400 focus:bg-white focus:shadow-lg focus:shadow-violet-500/5 disabled:cursor-not-allowed disabled:opacity-60"
         />
-        <div className="absolute inset-0 rounded-[1.5rem] bg-gradient-to-r from-rose-400/10 to-violet-400/10 opacity-0 group-focus-within:opacity-100 pointer-events-none transition-opacity" />
+        <div className="absolute inset-0 rounded-[1.5rem] bg-gradient-to-r from-violet-400/10 to-violet-400/10 opacity-0 group-focus-within:opacity-100 pointer-events-none transition-opacity" />
       </div>
 
       {selectedTags.length ? (
@@ -148,7 +148,7 @@ function TagSelector({
               type="button"
               disabled={disabled}
               onClick={() => onChange(stringifyTags(selectedTags.filter((item) => item !== tag)))}
-              className="group flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-3.5 py-1.5 text-xs font-bold text-rose-700 transition-all hover:bg-rose-100 hover:border-rose-300 disabled:cursor-not-allowed disabled:opacity-50"
+              className="group flex items-center gap-1.5 rounded-full border border-rose-200 bg-violet-50 px-3.5 py-1.5 text-xs font-bold text-violet-700 transition-all hover:bg-violet-100 hover:border-violet-300 disabled:cursor-not-allowed disabled:opacity-50"
             >
               #{tag}
               <span className="text-[10px] opacity-60 group-hover:opacity-100">✕</span>
@@ -170,7 +170,7 @@ function TagSelector({
                 type="button"
                 disabled={disabled}
                 onClick={() => onChange(stringifyTags(toggleTag(selectedTags, tag)))}
-                className="rounded-full border border-border/60 bg-white/80 px-3.5 py-1.5 text-xs font-semibold text-foreground transition-all hover:border-rose-300 hover:text-rose-600 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-full border border-border/60 bg-white/80 px-3.5 py-1.5 text-xs font-semibold text-foreground transition-all hover:border-violet-300 hover:text-violet-600 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 #{tag}
               </button>
@@ -1028,13 +1028,13 @@ export function ForumSection() {
 
   return (
     <section className="mx-auto max-w-[90rem] space-y-7 px-3 py-8 pb-24 sm:px-4 lg:px-5">
-      <div className="relative max-w-[84rem] overflow-hidden rounded-[2.5rem] border border-rose-200/60 bg-[radial-gradient(ellipse_at_top_right,_rgba(244,63,94,0.15),_transparent_50%),linear-gradient(145deg,rgba(255,241,242,0.95),rgba(255,255,255,1))] dark:border-rose-900/30 dark:bg-[radial-gradient(ellipse_at_top_right,_rgba(244,63,94,0.15),_transparent_50%),linear-gradient(145deg,rgba(20,10,15,0.95),rgba(0,0,0,1))] shadow-2xl shadow-rose-900/5 group">
-        <div className="pointer-events-none absolute right-0 top-0 h-96 w-96 rounded-full bg-rose-400/20 blur-[100px] group-hover:bg-rose-400/30 transition-all duration-700" />
+      <div className="relative max-w-[84rem] overflow-hidden rounded-[2.5rem] border border-violet-200/60 bg-[radial-gradient(ellipse_at_top_right,_rgba(139,92,246,0.15),_transparent_50%),linear-gradient(145deg,rgba(245,243,255,0.95),rgba(255,255,255,1))] dark:border-violet-900/30 dark:bg-[radial-gradient(ellipse_at_top_right,_rgba(139,92,246,0.15),_transparent_50%),linear-gradient(145deg,rgba(20,10,15,0.95),rgba(0,0,0,1))] shadow-2xl shadow-violet-900/5 group">
+        <div className="pointer-events-none absolute right-0 top-0 h-96 w-96 rounded-full bg-violet-400/20 blur-[100px] group-hover:bg-violet-400/30 transition-all duration-700" />
         <div className="relative grid gap-6 p-8 lg:grid-cols-[48rem_minmax(14rem,1fr)] lg:p-10 z-10">
           <div>
-            <p className="font-mono text-lg tracking-[0.22em] text-rose-600 dark:text-rose-400 uppercase sm:text-xl">Community Hub</p>
+            <p className="font-mono text-lg tracking-[0.22em] text-violet-600 dark:text-violet-400 uppercase sm:text-xl">Community Hub</p>
             <h1 className="mt-2 max-w-lg font-heading text-3xl font-bold leading-[0.95] tracking-tight text-foreground sm:text-[3.05rem]">
-              Open <span className="text-rose-600 italic">Discussions</span>
+              Open <span className="text-violet-600 italic">Discussions</span>
             </h1>
             <p className="mt-3 max-w-lg text-sm font-medium leading-6 text-muted-foreground">
               Ask questions, share experiences, and build practical support around health and wellness in one inclusive space.
@@ -1062,7 +1062,7 @@ export function ForumSection() {
       <div className="flex flex-col gap-8 lg:ml-32 lg:flex-row lg:items-start lg:gap-8">
         <div className="min-w-0 flex-1 space-y-8 lg:max-w-[48rem]">
           <div ref={filterPanelRef} className="rounded-[2.5rem] border border-border/60 bg-card p-8 shadow-lg relative overflow-hidden">
-            <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-rose-100 dark:bg-rose-900/30 blur-3xl pointer-events-none" />
+            <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-violet-100 dark:bg-rose-900/30 blur-3xl pointer-events-none" />
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between relative z-10">
               <div>
                 <p className="font-heading text-2xl font-extrabold text-foreground">Find a discussion</p>
@@ -1266,10 +1266,10 @@ export function ForumSection() {
             </div>
             )}
 
-            <div className="overflow-hidden rounded-[2.5rem] border-2 border-rose-200/50 bg-gradient-to-b from-rose-50/50 to-rose-100/10 dark:border-rose-900/40 dark:from-rose-950/40 dark:to-background shadow-xl relative group/trending">
-              <div className="absolute top-0 right-0 w-40 h-40 bg-rose-200/30 dark:bg-rose-700/20 rounded-full blur-[40px] pointer-events-none transition-transform duration-700 group-hover/trending:scale-150" />
-            <div className="border-b border-rose-200/30 dark:border-rose-900/30 px-6 py-5 relative z-10">
-              <p className="font-mono text-xs font-bold tracking-[0.22em] text-rose-600 dark:text-rose-400 uppercase flex items-center gap-2"><Sparkles className="size-3.5" /> Trending now</p>
+            <div className="overflow-hidden rounded-[2.5rem] border-2 border-violet-200/50 bg-gradient-to-b from-violet-50/50 to-violet-100/10 dark:border-violet-900/40 dark:from-violet-950/40 dark:to-background shadow-xl relative group/trending">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-violet-200/30 dark:bg-violet-700/20 rounded-full blur-[40px] pointer-events-none transition-transform duration-700 group-hover/trending:scale-150" />
+            <div className="border-b border-violet-200/30 dark:border-violet-900/30 px-6 py-5 relative z-10">
+              <p className="font-mono text-xs font-bold tracking-[0.22em] text-violet-600 dark:text-violet-400 uppercase flex items-center gap-2"><Sparkles className="size-3.5" /> Trending now</p>
               <h2 className="mt-2 font-heading text-2xl font-extrabold text-foreground">Topics & Tags</h2>
               <p className="mt-1 text-sm font-medium text-muted-foreground">
                 Jump into the conversations people are engaging with the most.
@@ -1450,8 +1450,8 @@ export function ForumSection() {
 
       <div className="fixed right-4 bottom-4 z-50 sm:right-6 sm:bottom-6 lg:right-8 flex flex-col items-end max-w-full">
         {isComposerOpen ? (
-          <div className="mb-4 w-[min(94vw,32rem)] max-h-[calc(100vh-8rem)] overflow-y-auto rounded-[2.5rem] border border-rose-200/60 bg-white/95 backdrop-blur-2xl p-6 sm:p-10 shadow-[0_20px_50px_rgba(244,63,94,0.15)] relative scrollbar-hidden">
-            <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-rose-400/10 blur-[60px] pointer-events-none" />
+          <div className="mb-4 w-[min(94vw,32rem)] max-h-[calc(100vh-8rem)] overflow-y-auto rounded-[2.5rem] border border-violet-200/60 bg-white/95 backdrop-blur-2xl p-6 sm:p-10 shadow-[0_20px_50px_rgba(139,92,246,0.15)] relative scrollbar-hidden">
+            <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-violet-400/10 blur-[60px] pointer-events-none" />
             <div className="absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-violet-400/10 blur-[60px] pointer-events-none" />
             
             <div className="relative z-10 flex items-start justify-between gap-6 mb-8">
@@ -1459,7 +1459,7 @@ export function ForumSection() {
                 <h2 className="font-heading text-2xl font-extrabold text-foreground leading-tight">Start a discussion</h2>
                 <p className="mt-2 text-sm font-medium text-muted-foreground leading-relaxed">Clear titles and a little context make replies much faster.</p>
               </div>
-              <div className="shrink-0 rounded-2xl bg-rose-50 border border-rose-100 px-3.5 py-2 text-[10px] font-bold uppercase tracking-wider text-rose-600">
+              <div className="shrink-0 rounded-2xl bg-violet-50 border border-violet-100 px-3.5 py-2 text-[10px] font-bold uppercase tracking-wider text-violet-600">
                 {FORUM_TAG_LIMIT} tags max
               </div>
             </div>
@@ -1478,7 +1478,7 @@ export function ForumSection() {
                   onChange={(event) => setTitle(event.target.value)}
                   placeholder="What's on your mind?"
                   disabled={interactionLocked}
-                  className="w-full rounded-[1.5rem] border border-rose-100 bg-rose-50/30 px-5 py-4 text-sm font-medium outline-none transition-all focus:border-rose-400 focus:bg-white focus:shadow-lg focus:shadow-rose-500/5 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="w-full rounded-[1.5rem] border border-violet-100 bg-violet-50/30 px-5 py-4 text-sm font-medium outline-none transition-all focus:border-violet-400 focus:bg-white focus:shadow-lg focus:shadow-violet-500/5 disabled:cursor-not-allowed disabled:opacity-60"
                 />
               </div>
 
@@ -1489,7 +1489,7 @@ export function ForumSection() {
                   rows={5}
                   placeholder="Provide some details or context..."
                   disabled={interactionLocked}
-                  className="w-full rounded-[2rem] border border-rose-100 bg-rose-50/30 px-5 py-4 text-sm font-medium outline-none transition-all focus:border-rose-400 focus:bg-white focus:shadow-lg focus:shadow-rose-500/5 disabled:cursor-not-allowed disabled:opacity-60 resize-none"
+                  className="w-full rounded-[2rem] border border-violet-100 bg-violet-50/30 px-5 py-4 text-sm font-medium outline-none transition-all focus:border-violet-400 focus:bg-white focus:shadow-lg focus:shadow-violet-500/5 disabled:cursor-not-allowed disabled:opacity-60 resize-none"
                 />
               </div>
 
@@ -1501,10 +1501,10 @@ export function ForumSection() {
                 disabled={interactionLocked}
               />
 
-              <div className="rounded-[2rem] border border-rose-100/60 bg-rose-50/40 p-6 shadow-inner">
+              <div className="rounded-[2rem] border border-violet-100/60 bg-violet-50/40 p-6 shadow-inner">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-sm border border-rose-100 text-rose-500">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-sm border border-violet-100 text-violet-500">
                        <ImagePlus className="size-5" />
                     </div>
                     <div>
@@ -1516,7 +1516,7 @@ export function ForumSection() {
                     type="button"
                     onClick={addMediaField}
                     disabled={interactionLocked || media.length >= FORUM_MEDIA_LIMIT}
-                    className="rounded-full bg-white border border-rose-200 px-4 py-2 text-xs font-bold text-rose-600 transition-all hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-full bg-white border border-rose-200 px-4 py-2 text-xs font-bold text-violet-600 transition-all hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Add Field
                   </button>
@@ -1535,7 +1535,7 @@ export function ForumSection() {
                             )
                           )
                         }
-                        className="rounded-full border border-rose-200 bg-white px-4 py-3 text-xs font-bold outline-none transition focus:border-rose-400 disabled:cursor-not-allowed disabled:opacity-60 sm:w-32"
+                        className="rounded-full border border-rose-200 bg-white px-4 py-3 text-xs font-bold outline-none transition focus:border-violet-400 disabled:cursor-not-allowed disabled:opacity-60 sm:w-32"
                       >
                         <option value="image">Image</option>
                         <option value="video">Video</option>
@@ -1549,13 +1549,13 @@ export function ForumSection() {
                           )
                         }
                         placeholder="https://..."
-                        className="flex-1 rounded-full border border-rose-200 bg-white px-5 py-3 text-xs font-medium outline-none transition focus:border-rose-400 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="flex-1 rounded-full border border-rose-200 bg-white px-5 py-3 text-xs font-medium outline-none transition focus:border-violet-400 disabled:cursor-not-allowed disabled:opacity-60"
                       />
                       <button
                         type="button"
                         disabled={interactionLocked}
                         onClick={() => setMedia((current) => current.filter((entry) => entry.key !== item.key))}
-                        className="h-10 w-10 flex items-center justify-center rounded-full border border-rose-200 text-rose-400 transition-all hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="h-10 w-10 flex items-center justify-center rounded-full border border-rose-200 text-violet-400 transition-all hover:bg-violet-50 hover:text-violet-600 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <Trash2 className="size-4" />
                       </button>
@@ -1578,7 +1578,7 @@ export function ForumSection() {
                     onChange={(event) => setIsAnonymous(event.target.checked)}
                     className="peer sr-only"
                   />
-                  <div className="h-6 w-11 rounded-full bg-slate-200 peer-checked:bg-rose-500 transition-colors after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full" />
+                  <div className="h-6 w-11 rounded-full bg-slate-200 peer-checked:bg-violet-500 transition-colors after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full" />
                   <span className="text-sm font-bold text-foreground">Post as anonymous user</span>
                 </label>
               </div>
@@ -1588,7 +1588,7 @@ export function ForumSection() {
                   type="button"
                   onClick={handleCreatePost}
                   disabled={!forum.viewer.isAuthenticated || busyKey === "create-post" || interactionLocked}
-                  className="flex-1 rounded-2xl bg-gradient-to-r from-rose-600 to-rose-500 px-6 py-4 text-sm font-bold text-white shadow-lg shadow-rose-500/25 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-rose-500/40 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex-1 rounded-2xl bg-gradient-to-r from-violet-600 to-violet-500 px-6 py-4 text-sm font-bold text-white shadow-lg shadow-violet-500/25 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-violet-500/40 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {busyKey === "create-post"
                     ? "Saving..."
@@ -1601,7 +1601,7 @@ export function ForumSection() {
                 <button
                   type="button"
                   onClick={() => setIsComposerOpen(false)}
-                  className="rounded-2xl border border-border/60 bg-white px-6 py-4 text-sm font-bold text-muted-foreground transition-all hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200"
+                  className="rounded-2xl border border-border/60 bg-white px-6 py-4 text-sm font-bold text-muted-foreground transition-all hover:bg-violet-50 hover:text-violet-600 hover:border-violet-200"
                 >
                   Cancel
                 </button>
@@ -1731,12 +1731,12 @@ function ForumPostCard({
       className={[
         "overflow-hidden rounded-[2.5rem] border bg-card/80 backdrop-blur-sm transition-all duration-300",
         expanded 
-          ? "mx-auto shadow-2xl border-rose-200/60 dark:border-rose-800/40 max-w-4xl" 
-          : "cursor-pointer border-border/60 shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:border-rose-300/50 hover:bg-white dark:hover:bg-card group/card",
+          ? "mx-auto shadow-2xl border-violet-200/60 dark:border-violet-800/40 max-w-4xl" 
+          : "cursor-pointer border-border/60 shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:border-violet-300/50 hover:bg-white dark:hover:bg-card group/card",
       ].join(" ")}
       onClick={handleCardClick}
     >
-      <div className="h-1.5 w-full bg-gradient-to-r from-rose-400 via-violet-400 to-indigo-400 opacity-80 group-hover/card:opacity-100 transition-opacity" />
+      <div className="h-1.5 w-full bg-gradient-to-r from-violet-400 via-violet-400 to-indigo-400 opacity-80 group-hover/card:opacity-100 transition-opacity" />
       <div className={expanded ? "p-6 sm:p-7" : "p-3.5 sm:p-4"}>
         <div className={expanded ? "flex flex-wrap items-start justify-between gap-4" : "flex items-start justify-between gap-3"}>
           <div className="min-w-0 flex-1">
