@@ -56,12 +56,6 @@ export const STI_QUICK_ACTIONS: StiQuickAction[] = [
     href: "/sti-awareness/safer-sex-playbook",
     eyebrow: "For reducing future risk",
   },
-  {
-    title: "Talk to a doctor",
-    description: "Move from reading into action if you are worried about symptoms, results, or what to do next.",
-    href: "/doctors-help",
-    eyebrow: "For personal advice",
-  },
 ];
 
 export const STI_GUIDES: StiGuide[] = [
