@@ -118,26 +118,35 @@ export async function GET(request: NextRequest) {
     
     const userStats = isOnboarded ? { height: onboardingData[0].height, weight: onboardingData[0].weight } : null;
     
-    // Evaluate health status based on cycle
+    const userRegularity = isOnboarded ? onboardingData[0].regularity : "mostly";
+    
+    // Evaluate health status based on cycle and regularity
     let healthStatus = {
       status: "Good",
-      message: "Reproductive system seems fine.",
-      details: "Everything appears to be within normal ranges."
+      message: "Great job taking care of your health!",
+      details: "Your consistent tracking helps you stay in tune with your body. Keep up the good work!"
     };
 
-    if (dayOfCycle > 35) {
+    if (userRegularity === "irregular") {
+      healthStatus = {
+        status: "Advice",
+        message: "Irregular Cycle Noted",
+        details: "Since your cycle is irregular, we suggest consulting our medical professionals for personalized guidance."
+      };
+    } else if (dayOfCycle > 35) {
       healthStatus = {
         status: "Warning",
         message: "Your period is late.",
-        details: "You might be pregnant. Consider taking a test or getting professional help and asking for consultation."
+        details: "Consider taking a pregnancy test or consulting a professional if your cycle is usually regular."
       };
     } else if (currentPhase === "Ovulation") {
       healthStatus = {
         status: "Excellent",
         message: "Optimal Reproductive Window",
-        details: "Good reproduction phase. You are highly fertile right now."
+        details: "You are in your highly fertile phase right now. Great job monitoring your cycle!"
       };
     }
+
 
     // Pregnancy chance calculation
     let pregnancyChance = { label: "LOW CHANCE of getting pregnant", color: "text-green-500", bg: "bg-green-500/10" };
@@ -147,6 +156,29 @@ export async function GET(request: NextRequest) {
       pregnancyChance = { label: "MODERATE CHANCE of getting pregnant", color: "text-yellow-600", bg: "bg-yellow-500/10" };
     }
 
+    // Calculate cycle history for the last 6 cycles
+
+    const history = [];
+    if (logs.length > 1) {
+      for (let i = 0; i < Math.min(logs.length - 1, 6); i++) {
+        const current = new Date(logs[i].startDate);
+        const prev = new Date(logs[i+1].startDate);
+        const diffDays = Math.round((current.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
+        history.push({
+          month: prev.toLocaleString('default', { month: 'short' }),
+          year: prev.getFullYear(),
+          length: diffDays,
+          startDate: logs[i+1].startDate
+        });
+      }
+    }
+    const cycleHistory = history.reverse();
+
+    const avgCycleLength = isOnboarded ? (onboardingData[0].averageCycleLength || 28) : 28;
+    const avgPeriodLength = isOnboarded ? (onboardingData[0].averagePeriodLength || 5) : 5;
+    
+    const isCycleNormal = avgCycleLength >= 21 && avgCycleLength <= 35;
+    const isPeriodNormal = avgPeriodLength >= 2 && avgPeriodLength <= 7;
 
     return NextResponse.json({
       hasData: true,
@@ -158,6 +190,11 @@ export async function GET(request: NextRequest) {
       healthStatus,
       pregnancyChance,
       userStats,
+      cycleHistory,
+      isCycleNormal,
+      isPeriodNormal,
+
+
       periodStartDates: logs.map(l => l.startDate),
       recommendations: tips.length > 0 ? tips : [{ tipTitle: "Rest and Hydrate", tipDescription: "Listen to your body today." }],
       latestCycle: {

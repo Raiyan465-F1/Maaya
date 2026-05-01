@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
-import { Heart, Sparkles, Stethoscope, ArrowRight, CalendarClock, Activity, Baby, Scale, Ruler, Droplets, Flame, CalendarHeart, Smile, Clock, Lightbulb, FileEdit, X } from "lucide-react";
+import { Heart, Sparkles, Stethoscope, ArrowRight, CalendarClock, Activity, Baby, Scale, Ruler, Droplets, Flame, CalendarHeart, Smile, Clock, Lightbulb, FileEdit, X, BarChart3 } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { isSameDay, format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -306,6 +306,108 @@ export default function CycleTrackingPage() {
             </CardContent>
           </Card>
 
+          {/* 6-Month Cycle Analysis Chart */}
+          <Card className="w-full shadow-lg border-primary/10 bg-gradient-to-b from-background to-primary/5">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2 text-primary">
+                <BarChart3 className="w-5 h-5" />
+                6-Month Cycle Analysis
+              </CardTitle>
+              <CardDescription>Historical study of your cycle lengths</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-4 pb-8 px-6">
+              {!analytics || !analytics.cycleHistory || analytics.cycleHistory.length === 0 ? (
+                <div className="h-[150px] flex flex-col items-center justify-center rounded-xl border border-dashed border-primary/20 bg-muted/5 gap-2 text-center p-4">
+                  <p className="text-muted-foreground text-sm font-medium">Log more than one period to see your historical cycle analysis.</p>
+                </div>
+              ) : (
+                <div className="space-y-8">
+                  {/* Chart Container */}
+                  <div className="h-[180px] w-full flex items-end justify-between gap-3 pt-6 relative border-b border-muted/50">
+                    {/* Y-Axis Label */}
+                    <div className="absolute -left-2 top-0 h-full flex flex-col justify-between text-[9px] text-muted-foreground/50 font-bold pointer-events-none pr-2">
+                       <span>45d</span>
+                       <span>28d</span>
+                       <span>10d</span>
+                    </div>
+
+                    {analytics.cycleHistory.map((cycle, idx) => {
+                      const heightPercent = Math.min(100, (cycle.length / 45) * 100);
+                      const isIrregular = Math.abs(cycle.length - 28) > 4;
+                      return (
+                        <div key={idx} className="flex-1 flex flex-col items-center group relative h-full justify-end">
+                          <div className="absolute -top-8 opacity-0 group-hover:opacity-100 transition-opacity bg-foreground text-background text-[10px] px-2 py-1 rounded shadow-xl z-10 font-bold">
+                            {cycle.length} Days
+                          </div>
+                          <div 
+                            className={`w-full max-w-[40px] rounded-t-lg transition-all duration-700 ease-out ${
+                              isIrregular ? 'bg-amber-400' : 'bg-primary'
+                            } hover:opacity-80`}
+                            style={{ height: `${heightPercent}%` }}
+                          />
+                          <p className="mt-2 text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">{cycle.month}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Stats Summary */}
+                  <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 flex justify-between items-center">
+                    <div className="space-y-1">
+                      <p className="text-[10px] uppercase text-muted-foreground font-bold">Average Length</p>
+                      <p className="text-xl font-black text-primary">
+                        {Math.round(analytics.cycleHistory.reduce((acc, c) => acc + c.length, 0) / analytics.cycleHistory.length)} Days
+                      </p>
+                    </div>
+                    <div className="text-right space-y-1">
+                       <p className="text-[10px] uppercase text-muted-foreground font-bold">Trend</p>
+                       <p className={`text-sm font-bold ${
+                         Math.max(...analytics.cycleHistory.map(c => c.length)) - Math.min(...analytics.cycleHistory.map(c => c.length)) <= 3 
+                         ? 'text-green-600' : 'text-amber-600'
+                       }`}>
+                         {Math.max(...analytics.cycleHistory.map(c => c.length)) - Math.min(...analytics.cycleHistory.map(c => c.length)) <= 3 
+                           ? 'Consistent' : 'Variable'}
+                       </p>
+                    </div>
+                  </div>
+
+                  {/* Medical Norms Analysis */}
+                  <div className="grid grid-cols-2 gap-3 pt-2">
+                    <div className={`p-3 rounded-xl border flex flex-col gap-1 ${
+                      analytics.isCycleNormal 
+                        ? 'bg-green-50/50 border-green-100 dark:bg-green-950/10 dark:border-green-900' 
+                        : 'bg-red-50/50 border-red-100 dark:bg-red-950/10 dark:border-red-900'
+                    }`}>
+                       <p className="text-[10px] font-bold uppercase text-muted-foreground">Cycle Average</p>
+                       <p className={`text-sm font-black flex items-center gap-1 ${
+                         analytics.isCycleNormal ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'
+                       }`}>
+                         {analytics.isCycleNormal ? 'Normal' : 'Abnormal'}
+                         <span className="text-[10px] font-medium opacity-70">(21-35d)</span>
+                       </p>
+                    </div>
+                    <div className={`p-3 rounded-xl border flex flex-col gap-1 ${
+                      analytics.isPeriodNormal 
+                        ? 'bg-green-50/50 border-green-100 dark:bg-green-950/10 dark:border-green-900' 
+                        : 'bg-red-50/50 border-red-100 dark:bg-red-950/10 dark:border-red-900'
+                    }`}>
+                       <p className="text-[10px] font-bold uppercase text-muted-foreground">Period Average</p>
+                       <p className={`text-sm font-black flex items-center gap-1 ${
+                         analytics.isPeriodNormal ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'
+                       }`}>
+                         {analytics.isPeriodNormal ? 'Normal' : 'Abnormal'}
+                         <span className="text-[10px] font-medium opacity-70">(2-7d)</span>
+                       </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            </CardContent>
+          </Card>
+
+
+
           {/* Mood Tracker Card */}
           <Card className={`w-full shadow-lg border-indigo-200/50 bg-indigo-50/30 dark:bg-indigo-950/20 transition-opacity duration-300 ${isPending ? "opacity-60 pointer-events-none" : ""}`}>
             <CardHeader className="pb-4">
@@ -426,7 +528,23 @@ export default function CycleTrackingPage() {
                        <p className="text-sm font-semibold mb-1 text-purple-700 dark:text-purple-300 flex items-center gap-2"><Activity className="w-4 h-4"/> Symptoms You Might Feel</p>
                        <p className="text-sm text-muted-foreground leading-snug">{analytics.predictedSymptoms}</p>
                     </div>
+
+                    <div className={`mt-1 p-3 rounded-xl border ${
+                      analytics.healthStatus?.status === 'Warning' ? 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-900' :
+                      analytics.healthStatus?.status === 'Advice' ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900' :
+                      'bg-purple-50/50 border-purple-100 dark:bg-purple-950/10 dark:border-purple-900'
+                    }`}>
+                       <p className={`text-sm font-bold mb-1 flex items-center gap-2 ${
+                         analytics.healthStatus?.status === 'Warning' ? 'text-red-700 dark:text-red-400' :
+                         analytics.healthStatus?.status === 'Advice' ? 'text-amber-700 dark:text-amber-400' :
+                         'text-purple-700 dark:text-purple-300'
+                       }`}>
+                         <Heart className="w-4 h-4"/> {analytics.healthStatus?.message}
+                       </p>
+                       <p className="text-xs text-muted-foreground leading-relaxed">{analytics.healthStatus?.details}</p>
+                    </div>
                   </div>
+
                 )}
                 
                 <div className="mt-6">
