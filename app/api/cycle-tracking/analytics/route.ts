@@ -96,13 +96,25 @@ export async function GET(request: NextRequest) {
 
     const daysUntilNextPeriod = Math.max(0, Math.ceil((nextPeriodStart.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
     
+    const userPeriodSymptoms = isOnboarded && onboardingData[0].periodSymptoms ? onboardingData[0].periodSymptoms : [];
+    const formattedSymptoms = userPeriodSymptoms.length > 0 
+      ? (userPeriodSymptoms.length > 1 
+          ? `${userPeriodSymptoms.slice(0, -1).join(", ")} and ${userPeriodSymptoms.slice(-1)}` 
+          : userPeriodSymptoms[0])
+      : null;
+
     const SYMPTOMS_PREDICTIONS: Record<string, string> = {
-      "Menstrual": "Fatigue, cramps, lower back pain, potential headaches.",
+      "Menstrual": formattedSymptoms 
+        ? `You may be experiencing ${formattedSymptoms} today. Rest and take care of yourself.` 
+        : "Fatigue, cramps, lower back pain, potential headaches.",
       "Follicular": "Everything is fine! Energy is rising, skin might be clearer.",
       "Ovulation": "High energy, possible mild pelvic twinges (mittelschmerz).",
-      "Luteal": "Cravings, bloating, mood swings, potential insomnia or fatigue."
+      "Luteal": formattedSymptoms 
+        ? `Heads up! You might start feeling ${formattedSymptoms} as your period approaches.`
+        : "Cravings, bloating, mood swings, potential insomnia or fatigue."
     };
     const predictedSymptoms = SYMPTOMS_PREDICTIONS[currentPhase] || "No major symptoms predicted.";
+
     
     const userStats = isOnboarded ? { height: onboardingData[0].height, weight: onboardingData[0].weight } : null;
     
