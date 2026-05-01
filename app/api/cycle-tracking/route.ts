@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { db } from "@/src/db";
 import { cycleLogs } from "@/src/schema";
 import { authOptions } from "@/lib/auth";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, isNull } from "drizzle-orm";
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -112,11 +112,16 @@ export async function PUT(request: NextRequest) {
     const logs = await db
       .select()
       .from(cycleLogs)
-      .where(eq(cycleLogs.userId, session.user.id))
+      .where(
+        and(
+          eq(cycleLogs.userId, session.user.id),
+          isNull(cycleLogs.endDate)
+        )
+      )
       .orderBy(desc(cycleLogs.startDate))
       .limit(1);
 
-    if (logs.length === 0 || logs[0].endDate) {
+    if (logs.length === 0) {
       return NextResponse.json({ error: "No active cycle to end." }, { status: 400 });
     }
 
