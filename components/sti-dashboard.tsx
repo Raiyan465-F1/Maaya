@@ -284,21 +284,25 @@ export function STIDashboard({
             </div>
           )}
 
-          <div className="rounded-[2.5rem] border border-border/60 bg-card p-8 md:p-10 shadow-lg">
-            <div className="mb-6 flex items-center justify-between">
-              <h3 className="font-heading text-xl font-extrabold text-foreground">Featured Updates</h3>
-              <span className="rounded-full bg-cyan-100 dark:bg-cyan-900/40 px-3 py-1 text-xs font-bold text-cyan-700 dark:text-cyan-300">{sidebarUpdates.length} latest</span>
+          <div className="rounded-[2.5rem] border-2 border-cyan-200/50 bg-gradient-to-br from-cyan-50 to-blue-50 dark:border-cyan-900/50 dark:from-cyan-950/40 dark:to-blue-950/20 p-8 md:p-10 shadow-lg relative overflow-hidden group/container">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-300/20 dark:bg-cyan-700/20 rounded-full blur-[60px] pointer-events-none transition-transform duration-700 group-hover/container:scale-150" />
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-300/20 dark:bg-blue-700/20 rounded-full blur-[60px] pointer-events-none transition-transform duration-700 group-hover/container:scale-150" />
+            
+            <div className="mb-6 flex items-center justify-between relative z-10">
+              <h3 className="font-heading text-xl font-extrabold text-cyan-950 dark:text-cyan-100">Featured Updates</h3>
+              <span className="rounded-full bg-white/60 dark:bg-black/40 backdrop-blur border border-cyan-200 dark:border-cyan-800 px-3 py-1 text-xs font-bold text-cyan-700 dark:text-cyan-300 shadow-sm">{sidebarUpdates.length} latest</span>
             </div>
-            <div className="space-y-4">
+            
+            <div className="space-y-4 relative z-10">
               {sidebarUpdates.map((article) => (
                 <Link
                   key={article.slug}
                   href={article.url}
-                  className="group block rounded-[1.5rem] border border-border/50 bg-card p-5 shadow-sm transition-all hover:border-cyan-300/50 hover:shadow-md"
+                  className="group block rounded-[1.5rem] border border-white/60 dark:border-white/10 bg-white/60 dark:bg-black/40 backdrop-blur-xl p-5 shadow-[0_4px_20px_rgb(0,0,0,0.03)] transition-all duration-300 hover:bg-white/90 dark:hover:bg-black/60 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:border-cyan-300/50"
                 >
                   <p className="mb-2 text-[0.6rem] font-bold uppercase tracking-[0.2em] text-cyan-600 dark:text-cyan-400">{article.topic}</p>
-                  <h4 className="font-bold text-foreground transition-colors group-hover:text-cyan-600 dark:group-hover:text-cyan-400">{article.title}</h4>
-                  <p className="mt-2 text-xs font-medium text-muted-foreground opacity-80">{article.readingTime} · {formatDate(article.publishedAt)}</p>
+                  <h4 className="font-bold text-cyan-950 dark:text-cyan-50 transition-colors group-hover:text-cyan-700 dark:group-hover:text-cyan-300">{article.title}</h4>
+                  <p className="mt-2 text-xs font-medium text-cyan-800/70 dark:text-cyan-200/60">{article.readingTime} · {formatDate(article.publishedAt)}</p>
                 </Link>
               ))}
             </div>

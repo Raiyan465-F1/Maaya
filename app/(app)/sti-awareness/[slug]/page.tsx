@@ -247,64 +247,75 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   }
 
   return (
-    <article className="mx-auto w-full max-w-4xl space-y-8 p-4 py-8 md:p-8">
+    <article className="mx-auto w-full max-w-[1200px] space-y-12 p-4 py-8 md:p-12 relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-b from-cyan-50/50 via-white to-transparent dark:from-cyan-950/20 dark:via-background pointer-events-none -z-10" />
+      <div className="absolute top-0 right-1/4 h-96 w-96 rounded-full bg-cyan-400/10 blur-[120px] pointer-events-none -z-10" />
+
       <Link
         href="/sti-awareness"
-        className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+        className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/50 px-5 py-2.5 text-sm font-semibold text-muted-foreground transition-all hover:-translate-x-1 hover:border-cyan-300/50 hover:bg-cyan-50/50 dark:hover:bg-cyan-950/30 hover:text-cyan-700 dark:hover:text-cyan-400 shadow-sm"
       >
         <ArrowLeft className="size-4" />
-        Back to STI Awareness Center
+        Back to Research Watch
       </Link>
 
-      <div className="relative aspect-video w-full overflow-hidden rounded-3xl border bg-muted shadow-sm sm:aspect-[21/9]">
+      <div className="relative aspect-video w-full overflow-hidden rounded-[2.5rem] border border-cyan-100 dark:border-cyan-900/50 shadow-2xl shadow-cyan-900/10 sm:aspect-[21/9] group">
         <Image
           src={resource.image}
           alt={resource.title}
           fill
-          className="object-cover"
+          className="object-cover transition-transform duration-1000 group-hover:scale-105"
           priority
           unoptimized
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-        <div className="absolute bottom-6 left-6 right-6 flex flex-col gap-4 text-white md:bottom-10 md:left-10 md:right-10">
-          <h1 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl md:text-5xl lg:text-6xl text-shadow-sm">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+        <div className="absolute bottom-8 left-8 right-8 flex flex-col gap-5 text-white md:bottom-12 md:left-12 md:right-12">
+          <span className="inline-flex w-fit items-center gap-2 rounded-full bg-cyan-500/20 backdrop-blur-md px-4 py-1.5 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-cyan-50 border border-cyan-400/30">
+            <Activity className="size-3.5" />
+            Research Update
+          </span>
+          <h1 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-5xl md:text-6xl text-shadow-sm max-w-4xl">
             {resource.title}
           </h1>
-          <div className="flex flex-wrap items-center gap-4 text-sm font-medium text-white/90 sm:text-base">
-            <div className="flex items-center gap-1.5">
-              <User className="size-4" />
+          <div className="flex flex-wrap items-center gap-6 text-sm font-medium text-white/90 sm:text-base mt-2">
+            <div className="flex items-center gap-2">
+              <User className="size-5 text-cyan-300" />
               <span>{resource.source.name}</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <Calendar className="size-4" />
-              <span>{new Date(resource.publishedAt).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}</span>
+            <div className="flex items-center gap-2">
+              <Calendar className="size-5 text-cyan-300" />
+              <span>{new Date(resource.publishedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="mx-auto mt-12 w-full max-w-3xl">
-        <p className="mb-8 text-xl font-medium leading-relaxed text-foreground/80">
+      <div className="mx-auto mt-16 w-full max-w-3xl rounded-[2rem] bg-white/60 dark:bg-black/20 backdrop-blur-xl border border-white/50 dark:border-white/10 p-8 md:p-12 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+        <p className="mb-10 text-2xl font-semibold leading-relaxed text-foreground/90 border-l-4 border-cyan-500 pl-6">
           {resource.description}
         </p>
 
         <div
-          className="space-y-6 text-lg leading-relaxed text-muted-foreground [&>p]:mb-6 [&>h3]:mt-10 [&>h3]:mb-4 [&>h3]:text-2xl [&>h3]:font-bold [&>h3]:text-foreground [&>h3]:tracking-tight [&_i]:text-foreground/80"
+          className="prose prose-lg dark:prose-invert prose-p:leading-relaxed prose-p:text-muted-foreground prose-h3:text-3xl prose-h3:font-extrabold prose-h3:tracking-tight prose-h3:mt-12 prose-h3:mb-6 prose-a:text-cyan-600 dark:prose-a:text-cyan-400 max-w-none"
           dangerouslySetInnerHTML={{ __html: resource.content }}
         />
       </div>
 
-      <div className="mx-auto w-full max-w-3xl rounded-[2rem] border border-primary/15 bg-primary/5 p-6 shadow-sm">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-primary">Context</p>
-        <p className="text-sm leading-7 text-muted-foreground">
-          Research updates stay here for users who want them, but they are no longer the main STI experience. If this update relates to symptoms, testing confusion, or treatment questions, move into a guide or ask a doctor for personal advice.
+      <div className="mx-auto w-full max-w-3xl relative overflow-hidden rounded-[2.5rem] border-2 border-cyan-200/50 bg-gradient-to-b from-cyan-50/80 to-cyan-100/10 dark:border-cyan-900/30 dark:from-cyan-950/30 dark:to-background p-10 shadow-lg">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-cyan-200/30 dark:bg-cyan-700/20 rounded-full blur-[40px] pointer-events-none" />
+        <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-cyan-100/50 dark:bg-cyan-900/30 px-3 py-1.5 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-cyan-700 dark:text-cyan-400">
+          <Sparkles className="size-3.5" />
+          Clinical Context
         </p>
-        <div className="mt-4 flex flex-wrap gap-3">
-          <Link href="/sti-awareness/testing-playbook" className="text-sm font-semibold text-primary hover:underline">
-            Read the testing guide
+        <p className="text-base font-medium leading-relaxed text-foreground/80 mb-8 max-w-2xl">
+          Research updates provide the latest clinical data, but they aren't meant to replace personalized medical advice. If this information relates to your symptoms, testing confusion, or treatment plans, consider talking to a professional.
+        </p>
+        <div className="flex flex-wrap gap-4 relative z-10">
+          <Link href="/sti-awareness/testing-playbook" className="inline-flex items-center gap-2 rounded-2xl bg-white dark:bg-black px-6 py-3.5 text-sm font-bold text-foreground shadow-sm transition-all hover:-translate-y-1 hover:shadow-md border border-border/50">
+            Read the Testing Guide <ArrowRight className="size-4" />
           </Link>
-          <Link href="/doctors-help" className="text-sm font-semibold text-primary hover:underline">
-            Ask Doctor&apos;s Help
+          <Link href="/doctors-help" className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-600 to-cyan-500 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-cyan-500/40">
+            Ask a Doctor Privately <ArrowRight className="size-4" />
           </Link>
         </div>
       </div>
