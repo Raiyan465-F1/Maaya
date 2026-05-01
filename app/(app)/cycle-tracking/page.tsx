@@ -410,7 +410,68 @@ export default function CycleTrackingPage() {
 
 
 
+
+          {/* Mood Tracker Card */}
+          <Card className={`w-full shadow-lg border-indigo-200/50 bg-indigo-50/30 dark:bg-indigo-950/20 transition-opacity duration-300 ${isPending ? "opacity-60 pointer-events-none" : ""}`}>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl flex items-center gap-2 text-indigo-900 dark:text-indigo-100">
+                <Smile className="w-5 h-5 text-indigo-500" />
+                Daily Check-up
+              </CardTitle>
+              <CardDescription>How are you feeling today?</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-between items-center bg-muted/40 p-2 rounded-2xl border border-border/50">
+                {[
+                  { id: "terrible", emoji: "😫", label: "Terrible" },
+                  { id: "bad", emoji: "😕", label: "Bad" },
+                  { id: "okay", emoji: "😐", label: "Okay" },
+                  { id: "good", emoji: "🙂", label: "Good" },
+                  { id: "great", emoji: "😄", label: "Great" },
+                ].map((m) => {
+                  const isSelected = lockedMood === m.id;
+                  const isBlurred = lockedMood && lockedMood !== m.id;
+                  
+                  return (
+                    <button
+                      key={m.id}
+                      onClick={() => handleMoodSelect(m.id, m.label)}
+                      disabled={!!lockedMood || isPending}
+                      className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl transition-all duration-500 group w-full 
+                        ${isSelected ? 'bg-primary/20 ring-2 ring-primary scale-105 shadow-sm my-2' : ''} 
+                        ${isBlurred ? 'opacity-30 grayscale blur-[1px] hover:scale-100 hover:bg-transparent' : 'hover:bg-background hover:shadow-sm hover:scale-105'}
+                      `}
+                    >
+                      <span className={`text-3xl transition-all duration-300 ${isSelected ? 'grayscale-0 drop-shadow-md' : 'grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100'}`}>
+                        {m.emoji}
+                      </span>
+                      <span className={`text-[0.7rem] font-medium transition-colors ${isSelected ? 'text-primary drop-shadow-md' : 'text-muted-foreground group-hover:text-foreground'}`}>
+                        {m.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Secure 24-hr Lock Feedback Display */}
+              <div className="mt-3 flex flex-col sm:flex-row items-center justify-between min-h-[3rem] gap-2">
+                <div className="flex-1 text-center sm:text-left">
+                  {feedbackMsg && (
+                    <p className={`text-sm font-semibold animate-in slide-in-from-top-2 fade-in duration-500 ${feedbackMsg.type === 'error' ? "text-destructive" : "text-primary"}`}>
+                      {feedbackMsg.text}
+                    </p>
+                  )}
+                  {lockedMood && !feedbackMsg && (
+                    <p className="text-sm font-medium text-muted-foreground delay-500 animate-in fade-in">
+                      {MOOD_MESSAGES[lockedMood] || "Your mood is safely tracked for today."}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
+
 
         {/* Right Column: Insights & Mood */}
         <div className="hidden lg:flex flex-col gap-6 w-full">
@@ -700,9 +761,10 @@ export default function CycleTrackingPage() {
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2 text-secondary font-semibold">
                 <Sparkles className="w-4 h-4 text-primary animate-pulse" />
-                <span className="text-xs uppercase tracking-wider text-primary">Daily Check-up</span>
+                <span className="text-xs uppercase tracking-wider text-primary">Daily Wellbeing</span>
               </div>
             </CardHeader>
+
             <CardContent>
               <div className="flex flex-col gap-1 transition-opacity duration-500">
                 <h3 className="text-lg font-bold text-foreground">{dailyMessage.title}</h3>
@@ -712,65 +774,7 @@ export default function CycleTrackingPage() {
               </div>
             </CardContent>
           </Card>
-          {/* Mood Tracker Card */}
-          <Card className={`w-full shadow-lg border-indigo-200/50 bg-indigo-50/30 dark:bg-indigo-950/20 transition-opacity duration-300 ${isPending ? "opacity-60 pointer-events-none" : ""}`}>
-            <CardHeader className="pb-4">
-              <CardTitle className="text-xl flex items-center gap-2 text-indigo-900 dark:text-indigo-100">
-                <Smile className="w-5 h-5 text-indigo-500" />
-                Daily Check-up
-              </CardTitle>
-              <CardDescription>How are you feeling today?</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-between items-center bg-muted/40 p-2 rounded-2xl border border-border/50">
-                {[
-                  { id: "terrible", emoji: "😫", label: "Terrible" },
-                  { id: "bad", emoji: "😕", label: "Bad" },
-                  { id: "okay", emoji: "😐", label: "Okay" },
-                  { id: "good", emoji: "🙂", label: "Good" },
-                  { id: "great", emoji: "😄", label: "Great" },
-                ].map((m) => {
-                  const isSelected = lockedMood === m.id;
-                  const isBlurred = lockedMood && lockedMood !== m.id;
-                  
-                  return (
-                    <button
-                      key={m.id}
-                      onClick={() => handleMoodSelect(m.id, m.label)}
-                      disabled={!!lockedMood || isPending}
-                      className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl transition-all duration-500 group w-full 
-                        ${isSelected ? 'bg-primary/20 ring-2 ring-primary scale-105 shadow-sm my-2' : ''} 
-                        ${isBlurred ? 'opacity-30 grayscale blur-[1px] hover:scale-100 hover:bg-transparent' : 'hover:bg-background hover:shadow-sm hover:scale-105'}
-                      `}
-                    >
-                      <span className={`text-3xl transition-all duration-300 ${isSelected ? 'grayscale-0 drop-shadow-md' : 'grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100'}`}>
-                        {m.emoji}
-                      </span>
-                      <span className={`text-[0.7rem] font-medium transition-colors ${isSelected ? 'text-primary drop-shadow-md' : 'text-muted-foreground group-hover:text-foreground'}`}>
-                        {m.label}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
 
-              {/* Secure 24-hr Lock Feedback Display */}
-              <div className="mt-3 flex flex-col sm:flex-row items-center justify-between min-h-[3rem] gap-2">
-                <div className="flex-1 text-center sm:text-left">
-                  {feedbackMsg && (
-                    <p className={`text-sm font-semibold animate-in slide-in-from-top-2 fade-in duration-500 ${feedbackMsg.type === 'error' ? "text-destructive" : "text-primary"}`}>
-                      {feedbackMsg.text}
-                    </p>
-                  )}
-                  {lockedMood && !feedbackMsg && (
-                    <p className="text-sm font-medium text-muted-foreground delay-500 animate-in fade-in">
-                      {MOOD_MESSAGES[lockedMood] || "Your mood is safely tracked for today."}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Doctor's Help Card */}
           <Card className="w-full shadow-md border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors">
