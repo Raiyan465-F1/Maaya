@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { StiGuide, StiQuickAction, StiUpdate } from "@/lib/sti-content";
 import { cn } from "@/lib/utils";
+import {
   Activity,
   AlertTriangle,
   ArrowRight,
