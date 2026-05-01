@@ -29,6 +29,7 @@ const getDaysColor = (days: number) => {
 
 export default function CycleTrackingPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [isLogging, setIsLogging] = useState(false);
   const [analytics, setAnalytics] = useState<any>(null);
   const [dailyMessage, setDailyMessage] = useState({ title: "Loading...", body: "" });
@@ -110,8 +111,8 @@ export default function CycleTrackingPage() {
   };
 
   const handleLogPeriod = async () => {
-    if (!selectedDate) return;
-    if (selectedDate > new Date()) {
+    if (!dateRange?.from) return;
+    if (dateRange.from > new Date()) {
       setCalFeedback({ type: "error", text: "You cannot log a period for a future date." });
       return;
     }
@@ -122,16 +123,16 @@ export default function CycleTrackingPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          startDate: format(selectedDate, 'yyyy-MM-dd')
+          startDate: format(dateRange.from, 'yyyy-MM-dd'),
+          endDate: dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : undefined
         })
       });
       if (resp.ok) {
-        const data = await resp.json();
         setCalFeedback({ 
           type: "success", 
-          text: "Period start logged! Tracking active." 
+          text: dateRange.to ? "Period range logged successfully!" : "Period start logged! Tracking active." 
         });
-        setSelectedDate(undefined);
+        setDateRange(undefined);
         // Refresh analytics dynamically
         const newAnalytics = await fetch("/api/cycle-tracking/analytics").then(res => res.json());
         setAnalytics(newAnalytics);
@@ -322,72 +323,103 @@ export default function CycleTrackingPage() {
               
               <div className={`w-full flex flex-col items-center gap-4 transition-all duration-500 ${(!analytics?.isOnboarded && analytics?.hasData === false) ? 'opacity-20 pointer-events-none blur-[2px] grayscale' : ''}`}>
                 <div className="p-1 bg-white dark:bg-black/40 rounded-2xl shadow-inner border border-rose-100 dark:border-rose-900/30">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
-                    disabled={[
-                      { after: new Date() },
-                      ...(isActiveCycle && analytics?.latestCycle?.startDate ? [{ 
-                        before: new Date(
-                          Number(analytics.latestCycle.startDate.split('-')[0]),
-                          Number(analytics.latestCycle.startDate.split('-')[1]) - 1,
-                          Number(analytics.latestCycle.startDate.split('-')[2].substring(0, 2))
-                        )
-                      }] : [])
-                    ]}
-                    className="rounded-xl border-none p-3 sm:p-5 w-full bg-transparent"
-                    modifiers={{
-                      periodStart: (analytics?.periodStartDates || []).map((d: string) => {
-                        const [year, month, day] = d.split('T')[0].split('-').map(Number);
-                        return new Date(year, month - 1, day);
-                      }),
-                      periodEnd: (analytics?.periodEndDates || []).map((d: string) => {
-                        const [year, month, day] = d.split('T')[0].split('-').map(Number);
-                        return new Date(year, month - 1, day);
-                      }),
-                      activeStart: isActiveCycle ? [
-                        new Date(
-                          Number(analytics.latestCycle.startDate.split('-')[0]),
-                          Number(analytics.latestCycle.startDate.split('-')[1]) - 1,
-                          Number(analytics.latestCycle.startDate.split('-')[2].substring(0, 2))
-                        )
-                      ] : []
-                    }}
-                    modifiersClassNames={{
-                      periodStart: "logged-period-day",
-                      periodEnd: "logged-period-end-day",
-                      activeStart: "active-cycle-start"
-                    }}
-                  />
-                </div>
-                
-                <div className="w-full flex flex-col items-center gap-3 mt-2">
-                  {selectedDate && (
-                    <div className="w-full max-w-[280px] animate-in fade-in zoom-in-95 duration-300">
-                      {isActiveCycle ? (
-                        <Button 
-                           onClick={handleEndPeriod} 
-                           disabled={isLogging} 
-                           variant="default"
-                           className="w-full bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white shadow-lg shadow-red-500/30 font-bold py-6 text-lg rounded-xl transition-all active:scale-95"
-                        >
-                          <Heart className="w-5 h-5 mr-2 fill-white/20" />
-                          {isLogging ? "Saving..." : `Log End Date (Started: ${new Date(
+                  {isActiveCycle ? (
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={setSelectedDate}
+                      disabled={[
+                        { after: new Date() },
+                        ...(analytics?.latestCycle?.startDate ? [{ 
+                          before: new Date(
                             Number(analytics.latestCycle.startDate.split('-')[0]),
                             Number(analytics.latestCycle.startDate.split('-')[1]) - 1,
                             Number(analytics.latestCycle.startDate.split('-')[2].substring(0, 2))
-                          ).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })})`}
-                        </Button>
-                      ) : (
-                        <Button 
-                           onClick={handleLogPeriod} 
-                           disabled={isLogging} 
-                           className="w-full bg-gradient-to-r from-rose-400 to-pink-500 hover:from-rose-500 hover:to-pink-600 text-white shadow-lg shadow-pink-500/20 font-bold py-6 text-lg rounded-xl transition-all active:scale-95"
-                        >
-                          <Droplets className="w-5 h-5 mr-2" />
-                          {isLogging ? "Saving..." : "Log Period Start"}
-                        </Button>
+                          )
+                        }] : [])
+                      ]}
+                      className="rounded-xl border-none p-3 sm:p-5 w-full bg-transparent"
+                      modifiers={{
+                        periodStart: (analytics?.periodStartDates || []).map((d: string) => {
+                          const [year, month, day] = d.split('T')[0].split('-').map(Number);
+                          return new Date(year, month - 1, day);
+                        }),
+                        periodEnd: (analytics?.periodEndDates || []).map((d: string) => {
+                          const [year, month, day] = d.split('T')[0].split('-').map(Number);
+                          return new Date(year, month - 1, day);
+                        }),
+                        activeStart: [
+                          new Date(
+                            Number(analytics.latestCycle.startDate.split('-')[0]),
+                            Number(analytics.latestCycle.startDate.split('-')[1]) - 1,
+                            Number(analytics.latestCycle.startDate.split('-')[2].substring(0, 2))
+                          )
+                        ]
+                      }}
+                      modifiersClassNames={{
+                        periodStart: "logged-period-day",
+                        periodEnd: "logged-period-end-day",
+                        activeStart: "active-cycle-start"
+                      }}
+                    />
+                  ) : (
+                    <Calendar
+                      mode="range"
+                      selected={dateRange}
+                      onSelect={setDateRange}
+                      disabled={[
+                        { after: new Date() }
+                      ]}
+                      className="rounded-xl border-none p-3 sm:p-5 w-full bg-transparent"
+                      modifiers={{
+                        periodStart: (analytics?.periodStartDates || []).map((d: string) => {
+                          const [year, month, day] = d.split('T')[0].split('-').map(Number);
+                          return new Date(year, month - 1, day);
+                        }),
+                        periodEnd: (analytics?.periodEndDates || []).map((d: string) => {
+                          const [year, month, day] = d.split('T')[0].split('-').map(Number);
+                          return new Date(year, month - 1, day);
+                        })
+                      }}
+                      modifiersClassNames={{
+                        periodStart: "logged-period-day",
+                        periodEnd: "logged-period-end-day"
+                      }}
+                    />
+                  )}
+                </div>
+                
+                <div className="w-full flex flex-col items-center gap-3 mt-2">
+                  {isActiveCycle && selectedDate && (
+                    <div className="w-full max-w-[280px] animate-in fade-in zoom-in-95 duration-300">
+                      <Button 
+                         onClick={handleEndPeriod} 
+                         disabled={isLogging} 
+                         variant="default"
+                         className="w-full bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white shadow-lg shadow-red-500/30 font-bold py-6 text-lg rounded-xl transition-all active:scale-95"
+                      >
+                        <Heart className="w-5 h-5 mr-2 fill-white/20" />
+                        {isLogging ? "Saving..." : `Log End Date (Started: ${new Date(
+                          Number(analytics.latestCycle.startDate.split('-')[0]),
+                          Number(analytics.latestCycle.startDate.split('-')[1]) - 1,
+                          Number(analytics.latestCycle.startDate.split('-')[2].substring(0, 2))
+                        ).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })})`}
+                      </Button>
+                    </div>
+                  )}
+
+                  {!isActiveCycle && dateRange?.from && (
+                    <div className="w-full max-w-[280px] animate-in fade-in zoom-in-95 duration-300">
+                      <Button 
+                         onClick={handleLogPeriod} 
+                         disabled={isLogging} 
+                         className="w-full bg-gradient-to-r from-rose-400 to-pink-500 hover:from-rose-500 hover:to-pink-600 text-white shadow-lg shadow-pink-500/20 font-bold py-6 text-lg rounded-xl transition-all active:scale-95"
+                      >
+                        <Droplets className="w-5 h-5 mr-2" />
+                        {isLogging ? "Saving..." : (dateRange.to ? "Log Period Range" : "Log Period Start")}
+                      </Button>
+                      {!dateRange.to && (
+                        <p className="text-xs text-center text-muted-foreground mt-2">Select another date to mark the end date, or log just the start date.</p>
                       )}
                     </div>
                   )}
