@@ -410,16 +410,33 @@ export default function CycleTrackingPage() {
 
                   {!isActiveCycle && dateRange?.from && (
                     <div className="w-full max-w-[280px] animate-in fade-in zoom-in-95 duration-300">
-                      <Button 
-                         onClick={handleLogPeriod} 
-                         disabled={isLogging} 
-                         className="w-full bg-gradient-to-r from-rose-400 to-pink-500 hover:from-rose-500 hover:to-pink-600 text-white shadow-lg shadow-pink-500/20 font-bold py-6 text-lg rounded-xl transition-all active:scale-95"
-                      >
-                        <Droplets className="w-5 h-5 mr-2" />
-                        {isLogging ? "Saving..." : (dateRange.to ? "Log Period Range" : "Log Period Start")}
-                      </Button>
-                      {!dateRange.to && (
-                        <p className="text-xs text-center text-muted-foreground mt-2">Select another date to mark the end date, or log just the start date.</p>
+                      {dateRange.to ? (
+                        <Button 
+                           onClick={handleLogPeriod} 
+                           disabled={isLogging} 
+                           className="w-full bg-gradient-to-r from-rose-400 to-pink-500 hover:from-rose-500 hover:to-pink-600 text-white shadow-lg shadow-pink-500/20 font-bold py-6 text-lg rounded-xl transition-all active:scale-95"
+                        >
+                          <Droplets className="w-5 h-5 mr-2" />
+                          {isLogging ? "Saving..." : "Log Completed Period"}
+                        </Button>
+                      ) : (
+                        <div className="flex flex-col gap-2 w-full">
+                          <Button 
+                             onClick={() => setCalFeedback({ type: "success", text: "Start date selected! Now click your End Date on the calendar above." })}
+                             className="w-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg font-bold py-6 text-lg rounded-xl transition-all active:scale-95"
+                          >
+                            Next: Select End Date
+                          </Button>
+                          <Button 
+                             onClick={handleLogPeriod} 
+                             variant="outline"
+                             disabled={isLogging} 
+                             className="w-full font-bold py-6 text-lg rounded-xl transition-all border-rose-200 hover:bg-rose-50"
+                          >
+                            <Droplets className="w-5 h-5 mr-2 text-rose-500" />
+                            {isLogging ? "Saving..." : "Save Active Period (No End Yet)"}
+                          </Button>
+                        </div>
                       )}
                     </div>
                   )}
