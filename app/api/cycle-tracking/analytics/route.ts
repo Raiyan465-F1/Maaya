@@ -59,15 +59,35 @@ export async function GET(request: NextRequest) {
       }, { status: 200 });
     }
 
-    const latestCycle = logs[0];
+    let latestCycle = logs[0];
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const avgCycleLength = isOnboarded && onboardingData[0].averageCycleLength ? onboardingData[0].averageCycleLength : 28;
+    const avgPeriodLength = isOnboarded && onboardingData[0].averagePeriodLength ? onboardingData[0].averagePeriodLength : 5;
+
+    // Auto-close active cycle if time frame exceeded
+    if (!latestCycle.endDate) {
+      const cycleStart = new Date(latestCycle.startDate);
+      cycleStart.setHours(0, 0, 0, 0);
+      const daysSinceStart = Math.floor((today.getTime() - cycleStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      
+      if (daysSinceStart > avgPeriodLength) {
+        // Automatically set end date to start + avgPeriodLength - 1 day
+        const autoEndDate = new Date(cycleStart);
+        autoEndDate.setDate(autoEndDate.getDate() + avgPeriodLength - 1);
+        
+        await db.update(cycleLogs)
+          .set({ endDate: autoEndDate.toISOString() })
+          .where(eq(cycleLogs.id, latestCycle.id));
+          
+        latestCycle = { ...latestCycle, endDate: autoEndDate.toISOString() };
+      }
+    }
     today.setHours(0, 0, 0, 0);
     
     const start = new Date(latestCycle.startDate);
     start.setHours(0, 0, 0, 0);
-
-    const avgCycleLength = isOnboarded && onboardingData[0].averageCycleLength ? onboardingData[0].averageCycleLength : 28;
-    const avgPeriodLength = isOnboarded && onboardingData[0].averagePeriodLength ? onboardingData[0].averagePeriodLength : 5;
 
     const nextPeriodStart = new Date(start.getTime() + avgCycleLength * 24 * 60 * 60 * 1000);
     const nextPeriodEnd = new Date(nextPeriodStart.getTime() + avgPeriodLength * 24 * 60 * 60 * 1000);

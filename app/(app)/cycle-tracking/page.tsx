@@ -128,7 +128,7 @@ export default function CycleTrackingPage() {
         const data = await resp.json();
         setCalFeedback({ 
           type: "success", 
-          text: "Period logged! Predictions updated." 
+          text: "Period start logged! Tracking active." 
         });
         setSelectedDate(undefined);
         // Refresh analytics dynamically
@@ -142,6 +142,39 @@ export default function CycleTrackingPage() {
     }
     setIsLogging(false);
   };
+
+  const handleEndPeriod = async () => {
+    if (!selectedDate) return;
+    if (selectedDate > new Date()) {
+      setCalFeedback({ type: "error", text: "You cannot log an end date for a future date." });
+      return;
+    }
+    setCalFeedback(null);
+    setIsLogging(true);
+    try {
+      const resp = await fetch("/api/cycle-tracking", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          endDate: selectedDate
+        })
+      });
+      if (resp.ok) {
+        setCalFeedback({ type: "success", text: "Period end date logged successfully!" });
+        setSelectedDate(undefined);
+        const newAnalytics = await fetch("/api/cycle-tracking/analytics").then(res => res.json());
+        setAnalytics(newAnalytics);
+      } else {
+        const errorData = await resp.json();
+        setCalFeedback({ type: "error", text: errorData.error || "Failed to log end date." });
+      }
+    } catch(err) {
+      setCalFeedback({ type: "error", text: "Error logging end date." });
+    }
+    setIsLogging(false);
+  };
+
+  const isActiveCycle = analytics?.latestCycle && !analytics.latestCycle.endDate;
 
   useEffect(() => {
     // Mount algorithm hook to prevent SSR hydration mismatch
@@ -225,66 +258,113 @@ export default function CycleTrackingPage() {
         )}
 
         <div className="flex flex-col gap-6 w-full max-w-[400px]">
-          <Card className="w-full shadow-xl border-rose-200/50 bg-rose-50/50 dark:bg-rose-950/20">
-            <CardHeader className="text-center pb-2">
+          <Card className={`w-full shadow-2xl border-2 transition-all duration-300 ${isActiveCycle ? 'border-rose-400 bg-rose-50/80 dark:bg-rose-950/40 shadow-rose-200' : 'border-rose-200/50 bg-rose-50/30 dark:bg-rose-950/10'}`}>
+            <CardHeader className="text-center pb-2 relative overflow-hidden">
+              {isActiveCycle && (
+                 <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-rose-400 via-red-500 to-rose-400 animate-pulse" />
+              )}
               <CardTitle className="text-2xl flex items-center justify-center gap-2 text-rose-900 dark:text-rose-100">
-                <CalendarHeart className="w-6 h-6 text-rose-500" />
-                Menstrual Calendar
+                <CalendarHeart className={`w-7 h-7 ${isActiveCycle ? 'text-red-500 animate-pulse' : 'text-rose-400'}`} />
+                {isActiveCycle ? 'Period is Active' : 'Menstrual Calendar'}
               </CardTitle>
-              <CardDescription className="text-[0.95rem]">
-                Track your cycle to predict upcoming phases
+              <CardDescription className="text-[0.95rem] font-medium">
+                {isActiveCycle ? 'Don\'t forget to log your end date when it finishes.' : 'Select a date to log your period start.'}
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center pt-6 pb-8 gap-4">
+            <CardContent className="flex flex-col items-center justify-center pt-4 pb-8 gap-5">
               <style>{`
-                .rdp-day_button { position: relative !important; }
+                .rdp-day_button { position: relative !important; transition: all 0.2s ease; }
+                .rdp-day_button:hover { transform: scale(1.1); z-index: 10; }
                 .logged-period-day {
-                  outline: 2px solid #ef4444 !important; /* Extremely obvious crimson border */
+                  outline: 2px solid #ef4444 !important;
                   border-radius: 8px;
+                  background-color: rgba(239, 68, 68, 0.1) !important;
                 }
                 .logged-period-day .rdp-day_button::after {
                   content: '';
                   position: absolute;
-                  top: 2px;
-                  right: 2px;
-                  width: 8px;
-                  height: 8px;
+                  bottom: 2px;
+                  left: 50%;
+                  transform: translateX(-50%);
+                  width: 6px;
+                  height: 6px;
                   border-radius: 50%;
-                  background-color: #ef4444 !important; /* Bright Red */
-                  box-shadow: 0 0 5px rgba(255,0,0,0.5);
+                  background-color: #ef4444 !important;
+                  box-shadow: 0 0 4px rgba(255,0,0,0.6);
                   z-index: 50;
                 }
+                .active-cycle-start .rdp-day_button {
+                  background-color: #ef4444 !important;
+                  color: white !important;
+                  font-weight: bold;
+                  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4);
+                }
               `}</style>
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={setSelectedDate}
-                disabled={{ after: new Date() }}
-                className="rounded-xl border border-primary/10 shadow-sm p-4 sm:p-6 bg-background w-full"
-                modifiers={{
-                  periodStart: (analytics?.periodStartDates || []).map((d: string) => {
-                    const [year, month, day] = d.split('-').map(Number);
-                    return new Date(year, month - 1, day);
-                  })
-                }}
-                modifiersClassNames={{
-                  periodStart: "logged-period-day"
-                }}
-              />
-              {selectedDate && (
-                <Button 
-                   onClick={handleLogPeriod} 
-                   disabled={isLogging} 
-                   className="w-full max-w-[200px]"
-                >
-                  {isLogging ? "Saving..." : "Log Period"}
-                </Button>
-              )}
-              {calFeedback && (
-                <p className={`text-sm font-semibold mt-2 animate-in slide-in-from-top-1 fade-in duration-300 ${calFeedback.type === 'error' ? "text-destructive" : "text-primary"}`}>
-                  {calFeedback.text}
-                </p>
-              )}
+              <div className="p-1 bg-white dark:bg-black/40 rounded-2xl shadow-inner border border-rose-100 dark:border-rose-900/30">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  disabled={{ after: new Date() }}
+                  className="rounded-xl border-none p-3 sm:p-5 w-full bg-transparent"
+                  modifiers={{
+                    periodStart: (analytics?.periodStartDates || []).map((d: string) => {
+                      const [year, month, day] = d.split('T')[0].split('-').map(Number);
+                      return new Date(year, month - 1, day);
+                    }),
+                    activeStart: isActiveCycle ? [
+                      new Date(
+                        Number(analytics.latestCycle.startDate.split('-')[0]),
+                        Number(analytics.latestCycle.startDate.split('-')[1]) - 1,
+                        Number(analytics.latestCycle.startDate.split('-')[2].substring(0, 2))
+                      )
+                    ] : []
+                  }}
+                  modifiersClassNames={{
+                    periodStart: "logged-period-day",
+                    activeStart: "active-cycle-start"
+                  }}
+                />
+              </div>
+              
+              <div className="w-full flex flex-col items-center gap-3 mt-2">
+                {selectedDate && (
+                  <div className="w-full max-w-[280px] animate-in fade-in zoom-in-95 duration-300">
+                    {isActiveCycle ? (
+                      <Button 
+                         onClick={handleEndPeriod} 
+                         disabled={isLogging} 
+                         variant="default"
+                         className="w-full bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white shadow-lg shadow-red-500/30 font-bold py-6 text-lg rounded-xl transition-all active:scale-95"
+                      >
+                        <Heart className="w-5 h-5 mr-2 fill-white/20" />
+                        {isLogging ? "Saving..." : `Log End Date (${selectedDate.toLocaleDateString()})`}
+                      </Button>
+                    ) : (
+                      <Button 
+                         onClick={handleLogPeriod} 
+                         disabled={isLogging} 
+                         className="w-full bg-gradient-to-r from-rose-400 to-pink-500 hover:from-rose-500 hover:to-pink-600 text-white shadow-lg shadow-pink-500/20 font-bold py-6 text-lg rounded-xl transition-all active:scale-95"
+                      >
+                        <Droplets className="w-5 h-5 mr-2" />
+                        {isLogging ? "Saving..." : `Log Period Start (${selectedDate.toLocaleDateString()})`}
+                      </Button>
+                    )}
+                  </div>
+                )}
+                
+                {isActiveCycle && !selectedDate && (
+                  <div className="text-center animate-pulse text-rose-600 dark:text-rose-400 font-medium text-sm flex items-center gap-2">
+                    <ArrowRight className="w-4 h-4" /> Select a date above to end period
+                  </div>
+                )}
+
+                {calFeedback && (
+                  <div className={`px-4 py-2 rounded-lg text-sm font-bold mt-1 animate-in slide-in-from-bottom-2 fade-in duration-300 ${calFeedback.type === 'error' ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-200" : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border border-green-200"}`}>
+                    {calFeedback.text}
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
 

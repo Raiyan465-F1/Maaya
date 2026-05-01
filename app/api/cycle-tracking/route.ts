@@ -84,3 +84,65 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+
+export async function PUT(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const { endDate } = body;
+
+    if (!endDate) {
+      return NextResponse.json({ error: "End date is required." }, { status: 400 });
+    }
+
+    const end = new Date(endDate);
+    const now = new Date();
+
+    if (end > now) {
+      return NextResponse.json({ error: "Date cannot be in the future." }, { status: 400 });
+    }
+
+    // Find the latest active cycle (no endDate)
+    const logs = await db
+      .select()
+      .from(cycleLogs)
+      .where(eq(cycleLogs.userId, session.user.id))
+      .orderBy(desc(cycleLogs.startDate))
+      .limit(1);
+
+    if (logs.length === 0 || logs[0].endDate) {
+      return NextResponse.json({ error: "No active cycle to end." }, { status: 400 });
+    }
+
+    const activeCycle = logs[0];
+    const start = new Date(activeCycle.startDate);
+
+    if (end < start) {
+      return NextResponse.json({ error: "End date cannot be before start date." }, { status: 400 });
+    }
+
+    const pLength = activeCycle.predictedCycleLength || 28;
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const actualCycleLength = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const predictedDifference = actualCycleLength - pLength;
+
+    const [updated] = await db
+      .update(cycleLogs)
+      .set({
+        endDate: end.toISOString(),
+        actualCycleLength,
+        predictedDifference,
+      })
+      .where(eq(cycleLogs.id, activeCycle.id))
+      .returning();
+
+    return NextResponse.json({ cycleLog: updated }, { status: 200 });
+  } catch (error) {
+    console.error("PUT cycle-tracking error:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
