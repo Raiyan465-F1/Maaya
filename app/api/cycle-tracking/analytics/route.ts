@@ -128,12 +128,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Pregnancy chance calculation
-    let pregnancyChance = { label: "No chance", color: "text-green-500", bg: "bg-green-500/10" };
+    let pregnancyChance = { label: "LOW CHANCE of getting pregnant", color: "text-green-500", bg: "bg-green-500/10" };
     if (dayOfCycle >= 12 && dayOfCycle <= 16) {
-      pregnancyChance = { label: "High chance", color: "text-red-500", bg: "bg-red-500/10" };
+      pregnancyChance = { label: "HIGH CHANCE of getting pregnant", color: "text-red-500", bg: "bg-red-500/10" };
     } else if ((dayOfCycle >= 10 && dayOfCycle <= 11) || (dayOfCycle >= 17 && dayOfCycle <= 18)) {
-      pregnancyChance = { label: "Middle", color: "text-yellow-600", bg: "bg-yellow-500/10" };
+      pregnancyChance = { label: "MODERATE CHANCE of getting pregnant", color: "text-yellow-600", bg: "bg-yellow-500/10" };
     }
+
 
     return NextResponse.json({
       hasData: true,

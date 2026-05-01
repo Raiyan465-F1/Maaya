@@ -415,13 +415,7 @@ export function OnboardingJourney({ onComplete, onClose }: { onComplete: () => v
           </div>
 
           <CardHeader className="pt-8 pb-4 relative">
-            <button
-              onClick={onClose}
-              className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-              aria-label="Close quiz"
-            >
-              <X className="w-5 h-5" />
-            </button>
+
             <div className="flex justify-between items-center mb-2">
               <span className="text-xs font-mono tracking-widest text-primary uppercase">
                 Step {step + 1} of {QUESTIONS.length}
