@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useDeferredValue, useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { useSession } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { AlertTriangle, ArrowDown, ArrowUp, ImagePlus, MessageSquare, MoreHorizontal, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { isSuspendedAndActive, formatRestrictionRemaining } from "@/lib/account-restriction-helpers";
@@ -733,6 +733,7 @@ function CommentTree({
 
 function ForumSectionContent() {
   const { confirm, ConfirmDialog } = useConfirm();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const initialPostId = searchParams.get("post");
   
@@ -1179,7 +1180,13 @@ function ForumSectionContent() {
                 setFocusedPostId(postId);
                 setCommentTargetPostId(postId);
               }}
-              onClose={() => setFocusedPostId(null)}
+              onClose={() => {
+                if (initialPostId) {
+                  router.back();
+                } else {
+                  setFocusedPostId(null);
+                }
+              }}
               onTagClick={applyTagFilter}
               onVote={(postId, voteType) =>
                 submitVote(
@@ -1390,8 +1397,12 @@ function ForumSectionContent() {
               onOpen={() => undefined}
               onOpenComments={() => undefined}
               onClose={() => {
-                setFocusedPostId(null);
-                setCommentTargetPostId(null);
+                if (initialPostId) {
+                  router.back();
+                } else {
+                  setFocusedPostId(null);
+                  setCommentTargetPostId(null);
+                }
               }}
               onTagClick={applyTagFilter}
               onVote={(postId, voteType) =>
