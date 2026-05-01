@@ -1448,16 +1448,16 @@ export function ForumSection() {
         </div>
       ) : null}
 
-      <div className="fixed right-4 bottom-4 z-50 sm:right-6 sm:bottom-6 lg:right-8">
+      <div className="fixed right-4 bottom-4 z-50 sm:right-6 sm:bottom-6 lg:right-8 flex flex-col items-end max-w-full">
         {isComposerOpen ? (
-          <div className="mb-6 w-[min(94vw,32rem)] overflow-hidden rounded-[2.5rem] border border-rose-200/60 bg-white/90 backdrop-blur-2xl p-8 shadow-[0_20px_50px_rgba(244,63,94,0.15)] relative">
+          <div className="mb-4 w-[min(94vw,32rem)] max-h-[calc(100vh-8rem)] overflow-y-auto rounded-[2.5rem] border border-rose-200/60 bg-white/95 backdrop-blur-2xl p-6 sm:p-10 shadow-[0_20px_50px_rgba(244,63,94,0.15)] relative scrollbar-hidden">
             <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-rose-400/10 blur-[60px] pointer-events-none" />
             <div className="absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-violet-400/10 blur-[60px] pointer-events-none" />
             
             <div className="relative z-10 flex items-start justify-between gap-6 mb-8">
-              <div>
-                <h2 className="font-heading text-2xl font-extrabold text-foreground">Start a discussion</h2>
-                <p className="mt-1.5 text-sm font-medium text-muted-foreground leading-relaxed">Clear titles and a little context make replies much faster.</p>
+              <div className="min-w-0">
+                <h2 className="font-heading text-2xl font-extrabold text-foreground leading-tight">Start a discussion</h2>
+                <p className="mt-2 text-sm font-medium text-muted-foreground leading-relaxed">Clear titles and a little context make replies much faster.</p>
               </div>
               <div className="shrink-0 rounded-2xl bg-rose-50 border border-rose-100 px-3.5 py-2 text-[10px] font-bold uppercase tracking-wider text-rose-600">
                 {FORUM_TAG_LIMIT} tags max
