@@ -7,6 +7,7 @@ import {
   type DashboardQuestion,
 } from "@/components/dashboard-shell";
 import { authOptions } from "@/lib/auth";
+import { listUserNotifications } from "@/lib/notifications";
 import { db } from "@/src/db";
 import { alerts, doctorAnswers, doctorQuestions, users, symptomLogs, cycleLogs, userCycleOnboarding } from "@/src/schema";
 
@@ -102,11 +103,11 @@ export default async function DashboardPage() {
           .where(inArray(users.id, userIds))
       : [];
 
-  const feedbackAlertsRaw = await db
-    .select()
-    .from(alerts)
-    .where(eq(alerts.userId, session.user.id))
-    .orderBy(desc(alerts.createdAt));
+  const feedbackAlertsRaw = await listUserNotifications({
+    userId: session.user.id,
+    limit: 20,
+    types: ["doctor_response"],
+  });
 
   const displayNameByUserId = new Map(
     relatedUsers.map((user) => [user.id, buildDisplayName(user.name, user.email)])
@@ -142,12 +143,13 @@ export default async function DashboardPage() {
       };
     });
 
-  const feedbackAlerts: DashboardAlert[] = feedbackAlertsRaw.map((alert) => ({
+  const feedbackAlerts: DashboardAlert[] = feedbackAlertsRaw.notifications.map((alert) => ({
     id: alert.id,
     title: alert.title,
     message: alert.message,
-    isRead: alert.isRead ?? false,
-    createdAt: alert.createdAt.toISOString(),
+    linkHref: alert.linkHref,
+    isRead: alert.isRead,
+    createdAt: alert.createdAt,
     type: alert.type,
   }));
 

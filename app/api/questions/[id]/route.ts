@@ -5,6 +5,7 @@ import { db } from "@/src/db";
 import { doctorQuestions, users } from "@/src/schema";
 import { questionStatus, type QuestionStatus } from "@/src/schema/enums";
 import { authOptions } from "@/lib/auth";
+import { notifyQuestionStatusUpdated } from "@/lib/notifications";
 import { withCorsHeaders } from "@/lib/cors";
 
 function jsonResponse(
@@ -49,6 +50,7 @@ export async function PATCH(
       .select({
         id: doctorQuestions.id,
         userId: doctorQuestions.userId,
+        questionText: doctorQuestions.questionText,
       })
       .from(doctorQuestions)
       .where(eq(doctorQuestions.id, questionId))
@@ -90,6 +92,17 @@ export async function PATCH(
       .set({ status: nextStatus })
       .where(eq(doctorQuestions.id, questionId))
       .returning();
+
+    if (isAdmin && existing.userId !== session.user.id) {
+      await notifyQuestionStatusUpdated({
+        recipientUserId: existing.userId,
+        actorUserId: session.user.id,
+        questionId,
+        questionTitle:
+          existing.questionText.split("\n\n")[0]?.trim() || "your question",
+        status: nextStatus,
+      });
+    }
 
     return jsonResponse(updated, 200, origin);
   } catch (error) {

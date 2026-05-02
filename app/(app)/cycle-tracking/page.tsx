@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
-import { Heart, Sparkles, Stethoscope, ArrowRight, CalendarClock, Activity, Baby, Scale, Ruler, Droplets, Flame, CalendarHeart, Smile, Clock, Lightbulb, FileEdit } from "lucide-react";
+import { Heart, Sparkles, Stethoscope, ArrowRight, CalendarClock, Activity, Baby, Scale, Ruler, Droplets, Flame, CalendarHeart, Smile, Clock, Lightbulb, FileEdit, X, BarChart3 } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { isSameDay, format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -27,10 +27,67 @@ const getDaysColor = (days: number) => {
   return "text-green-500 font-bold";
 };
 
+type CycleHistoryItem = {
+  month: string;
+  year: number;
+  length: number;
+  startDate: string;
+};
+
+type PeriodHistoryItem = CycleHistoryItem & {
+  endDate: string;
+};
+
+type CycleAnalytics = {
+  hasData: boolean;
+  isOnboarded?: boolean;
+  message?: string;
+  latestCycle?: {
+    startDate: string;
+    endDate: string | null;
+    predictedEndDate: string;
+    expectedPeriodEnd: string;
+  };
+  userStats?: {
+    height: string | null;
+    weight: string | null;
+  } | null;
+  periodStartDates?: string[];
+  cycleHistory?: CycleHistoryItem[];
+  periodHistory?: PeriodHistoryItem[];
+  cycleAverageDays?: number | null;
+  periodAverageDays?: number | null;
+  cycleVarianceDays?: number | null;
+  cycleTrend?: "consistent" | "variable" | null;
+  usesOnboardingFallback?: boolean;
+  isCycleNormal?: boolean | null;
+  isPeriodNormal?: boolean | null;
+  currentPhase?: string;
+  dayOfCycle?: number;
+  expectedMood?: string;
+  daysUntilNextPeriod?: number;
+  predictedSymptoms?: string;
+  healthStatus?: {
+    status: string;
+    message: string;
+    details: string;
+  } | null;
+  pregnancyChance?: {
+    label: string;
+    color: string;
+    bg: string;
+  };
+  recommendations?: Array<{
+    tipTitle?: string;
+    tipDescription?: string;
+  }>;
+};
+
 export default function CycleTrackingPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [isLogging, setIsLogging] = useState(false);
-  const [analytics, setAnalytics] = useState<any>(null);
+  const [analytics, setAnalytics] = useState<CycleAnalytics | null>(null);
   const [dailyMessage, setDailyMessage] = useState({ title: "Loading...", body: "" });
   const [flyingHearts, setFlyingHearts] = useState<{ id: number; tx: number; ty: number }[]>([]);
   
@@ -50,12 +107,14 @@ export default function CycleTrackingPage() {
   });
   const [isUpdatingHealth, setIsUpdatingHealth] = useState(false);
 
+
   useEffect(() => {
-    if (analytics?.userStats) {
+    const userStats = analytics?.userStats;
+    if (userStats) {
       setInsightForm(prev => ({
         ...prev,
-        weight: analytics.userStats.weight || "",
-        height: analytics.userStats.height || ""
+        weight: userStats.weight || "",
+        height: userStats.height || ""
       }));
     }
   }, [analytics]);
@@ -109,8 +168,8 @@ export default function CycleTrackingPage() {
   };
 
   const handleLogPeriod = async () => {
-    if (!selectedDate) return;
-    if (selectedDate > new Date()) {
+    if (!dateRange?.from) return;
+    if (dateRange.from > new Date()) {
       setCalFeedback({ type: "error", text: "You cannot log a period for a future date." });
       return;
     }
@@ -121,27 +180,68 @@ export default function CycleTrackingPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          startDate: selectedDate
+          startDate: format(dateRange.from, 'yyyy-MM-dd'),
+          endDate: dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : undefined
         })
       });
       if (resp.ok) {
-        const data = await resp.json();
         setCalFeedback({ 
           type: "success", 
-          text: "Period logged! Predictions updated." 
+          text: dateRange.to ? "Period range logged successfully!" : "Period start logged! Tracking active." 
         });
-        setSelectedDate(undefined);
+        setDateRange(undefined);
         // Refresh analytics dynamically
         const newAnalytics = await fetch("/api/cycle-tracking/analytics").then(res => res.json());
         setAnalytics(newAnalytics);
       } else {
-        setCalFeedback({ type: "error", text: "Failed to log cycle." });
+        const errorData = await resp.json().catch(() => ({}));
+        setCalFeedback({ type: "error", text: errorData.error || "Failed to log cycle." });
       }
     } catch(err) {
       setCalFeedback({ type: "error", text: "Error logging cycle." });
     }
     setIsLogging(false);
   };
+
+  const handleEndPeriod = async () => {
+    if (!selectedDate) return;
+    if (selectedDate > new Date()) {
+      setCalFeedback({ type: "error", text: "You cannot log an end date for a future date." });
+      return;
+    }
+    setCalFeedback(null);
+    setIsLogging(true);
+    try {
+      const resp = await fetch("/api/cycle-tracking", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          endDate: format(selectedDate, 'yyyy-MM-dd')
+        })
+      });
+      if (resp.ok) {
+        setCalFeedback({ type: "success", text: "Period end date logged successfully!" });
+        setSelectedDate(undefined);
+        const newAnalytics = await fetch("/api/cycle-tracking/analytics").then(res => res.json());
+        setAnalytics(newAnalytics);
+      } else {
+        const errorData = await resp.json();
+        setCalFeedback({ type: "error", text: errorData.error || "Failed to log end date." });
+      }
+    } catch(err) {
+      setCalFeedback({ type: "error", text: "Error logging end date." });
+    }
+    setIsLogging(false);
+  };
+
+  const isActiveCycle = analytics?.latestCycle && !analytics.latestCycle.endDate;
+  const activeCycleStartDate =
+    isActiveCycle && analytics?.latestCycle?.startDate
+      ? (() => {
+          const [year, month, day] = analytics.latestCycle.startDate.split("T")[0].split("-").map(Number);
+          return new Date(year, month - 1, day);
+        })()
+      : null;
 
   useEffect(() => {
     // Mount algorithm hook to prevent SSR hydration mismatch
@@ -157,12 +257,13 @@ export default function CycleTrackingPage() {
       }
     });
 
-    // Fetch cycle analytics
-    fetch("/api/cycle-tracking/analytics")
+    // Fetch cycle analytics with cache busting
+    fetch(`/api/cycle-tracking/analytics?t=${Date.now()}`)
       .then(res => res.json())
       .then(data => setAnalytics(data))
       .catch(err => console.error(err));
   }, []);
+
 
   return (
     <div className="flex flex-col h-full items-center pt-10">
@@ -187,11 +288,7 @@ export default function CycleTrackingPage() {
             <Card className="w-full overflow-hidden border-none shadow-2xl bg-gradient-to-br from-primary/20 via-rose-50 to-orange-50 dark:from-primary/10 dark:via-background dark:to-orange-950/20">
               <CardContent className="p-0">
                 <div className="flex flex-col md:flex-row items-center justify-between p-8 gap-8">
-                  <div className="flex-1 text-center md:text-left">
-                    <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4">
-                      <Sparkles className="w-4 h-4" />
-                      New Feature
-                    </div>
+                  <div className="flex-1 text-center md:text-left pt-4">
                     <h2 className="text-4xl font-bold mb-4 tracking-tight">Your Cycle Journey <span className="italic text-primary">Starts Here</span></h2>
                     <p className="text-muted-foreground text-lg mb-8 max-w-xl leading-relaxed">
                       Welcome to Maaya's cycle tracking. Answer a few questions to unlock personalized predictions, health insights, and wellness tips tailored just for you.
@@ -215,6 +312,8 @@ export default function CycleTrackingPage() {
           </div>
         )}
 
+
+
         {showOnboarding && (
           <OnboardingJourney onComplete={() => {
             setShowOnboarding(false);
@@ -225,77 +324,353 @@ export default function CycleTrackingPage() {
         )}
 
         <div className="flex flex-col gap-6 w-full max-w-[400px]">
-          <Card className="w-full shadow-xl border-rose-200/50 bg-rose-50/50 dark:bg-rose-950/20">
-            <CardHeader className="text-center pb-2">
+          <Card className={`w-full shadow-2xl border-2 transition-all duration-300 ${isActiveCycle ? 'border-rose-400 bg-rose-50/80 dark:bg-rose-950/40 shadow-rose-200' : 'border-rose-200/50 bg-rose-50/30 dark:bg-rose-950/10'}`}>
+            <CardHeader className="text-center pb-2 relative overflow-hidden">
+              {isActiveCycle && (
+                 <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-rose-400 via-red-500 to-rose-400 animate-pulse" />
+              )}
               <CardTitle className="text-2xl flex items-center justify-center gap-2 text-rose-900 dark:text-rose-100">
-                <CalendarHeart className="w-6 h-6 text-rose-500" />
-                Menstrual Calendar
+                <CalendarHeart className={`w-7 h-7 ${isActiveCycle ? 'text-red-500 animate-pulse' : 'text-rose-400'}`} />
+                {isActiveCycle ? 'Period is Active' : 'Menstrual Calendar'}
               </CardTitle>
-              <CardDescription className="text-[0.95rem]">
-                Track your cycle to predict upcoming phases
+              <CardDescription className="text-[0.95rem] font-medium">
+                {isActiveCycle ? 'Don\'t forget to log your end date when it finishes.' : 'Select a date to log your period start.'}
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center pt-6 pb-8 gap-4">
+            <CardContent className="flex flex-col items-center justify-center pt-4 pb-8 gap-5 relative">
               <style>{`
-                .rdp-day_button { position: relative !important; }
+                .rdp-day_button { position: relative !important; transition: all 0.2s ease; }
+                .rdp-day_button:hover { transform: scale(1.1); z-index: 10; }
                 .logged-period-day {
-                  outline: 2px solid #ef4444 !important; /* Extremely obvious crimson border */
+                  outline: 2px solid #ef4444 !important;
                   border-radius: 8px;
+                  background-color: rgba(239, 68, 68, 0.1) !important;
                 }
                 .logged-period-day .rdp-day_button::after {
                   content: '';
                   position: absolute;
-                  top: 2px;
-                  right: 2px;
-                  width: 8px;
-                  height: 8px;
+                  bottom: 2px;
+                  left: 50%;
+                  transform: translateX(-50%);
+                  width: 6px;
+                  height: 6px;
                   border-radius: 50%;
-                  background-color: #ef4444 !important; /* Bright Red */
-                  box-shadow: 0 0 5px rgba(255,0,0,0.5);
+                  background-color: #ef4444 !important;
+                  box-shadow: 0 0 4px rgba(239, 68, 68, 0.6);
                   z-index: 50;
                 }
+                .logged-period-end-day {
+                  outline: 2px solid #3b82f6 !important;
+                  border-radius: 8px;
+                  background-color: rgba(59, 130, 246, 0.1) !important;
+                }
+                .logged-period-end-day .rdp-day_button::after {
+                  content: '';
+                  position: absolute;
+                  bottom: 2px;
+                  left: 50%;
+                  transform: translateX(-50%);
+                  width: 6px;
+                  height: 6px;
+                  border-radius: 50%;
+                  background-color: #3b82f6 !important;
+                  box-shadow: 0 0 4px rgba(59, 130, 246, 0.6);
+                  z-index: 50;
+                }
+                .active-cycle-start .rdp-day_button {
+                  background-color: #ef4444 !important;
+                  color: white !important;
+                  font-weight: bold;
+                  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4);
+                }
               `}</style>
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={setSelectedDate}
-                disabled={{ after: new Date() }}
-                className="rounded-xl border border-primary/10 shadow-sm p-4 sm:p-6 bg-background w-full"
-                modifiers={{
-                  periodStart: (analytics?.periodStartDates || []).map((d: string) => {
-                    const [year, month, day] = d.split('-').map(Number);
-                    return new Date(year, month - 1, day);
-                  })
-                }}
-                modifiersClassNames={{
-                  periodStart: "logged-period-day"
-                }}
-              />
-              {selectedDate && (
-                <Button 
-                   onClick={handleLogPeriod} 
-                   disabled={isLogging} 
-                   className="w-full max-w-[200px]"
-                >
-                  {isLogging ? "Saving..." : "Log Period"}
-                </Button>
-              )}
-              {calFeedback && (
-                <p className={`text-sm font-semibold mt-2 animate-in slide-in-from-top-1 fade-in duration-300 ${calFeedback.type === 'error' ? "text-destructive" : "text-primary"}`}>
-                  {calFeedback.text}
-                </p>
+              
+              <div className={`w-full flex flex-col items-center gap-4 transition-all duration-500 ${(!analytics?.isOnboarded && analytics?.hasData === false) ? 'opacity-20 pointer-events-none blur-[2px] grayscale' : ''}`}>
+                <div className="p-1 bg-white dark:bg-black/40 rounded-2xl shadow-inner border border-rose-100 dark:border-rose-900/30">
+                  {isActiveCycle ? (
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={setSelectedDate}
+                      disabled={[
+                        { after: new Date() },
+                        ...(analytics?.latestCycle?.startDate ? [{ 
+                          before: new Date(
+                            Number(analytics.latestCycle.startDate.split('-')[0]),
+                            Number(analytics.latestCycle.startDate.split('-')[1]) - 1,
+                            Number(analytics.latestCycle.startDate.split('-')[2].substring(0, 2))
+                          )
+                        }] : [])
+                      ]}
+                      className="rounded-xl border-none p-3 sm:p-5 w-full bg-transparent"
+                      modifiers={{
+                        periodStart: (analytics?.periodStartDates || []).map((d: string) => {
+                          const [year, month, day] = d.split('T')[0].split('-').map(Number);
+                          return new Date(year, month - 1, day);
+                        }),
+                        periodEnd: (analytics?.periodEndDates || []).map((d: string) => {
+                          const [year, month, day] = d.split('T')[0].split('-').map(Number);
+                          return new Date(year, month - 1, day);
+                        }),
+                        activeStart: [
+                          new Date(
+                            Number(analytics.latestCycle.startDate.split('-')[0]),
+                            Number(analytics.latestCycle.startDate.split('-')[1]) - 1,
+                            Number(analytics.latestCycle.startDate.split('-')[2].substring(0, 2))
+                          )
+                        ]
+                      }}
+                      modifiersClassNames={{
+                        periodStart: "logged-period-day",
+                        periodEnd: "logged-period-end-day",
+                        activeStart: "active-cycle-start"
+                      }}
+                    />
+                  ) : (
+                    <Calendar
+                      mode="range"
+                      selected={dateRange}
+                      onSelect={setDateRange}
+                      disabled={[
+                        { after: new Date() }
+                      ]}
+                      className="rounded-xl border-none p-3 sm:p-5 w-full bg-transparent"
+                      modifiers={{
+                        periodStart: (analytics?.periodStartDates || []).map((d: string) => {
+                          const [year, month, day] = d.split('T')[0].split('-').map(Number);
+                          return new Date(year, month - 1, day);
+                        }),
+                        periodEnd: (analytics?.periodEndDates || []).map((d: string) => {
+                          const [year, month, day] = d.split('T')[0].split('-').map(Number);
+                          return new Date(year, month - 1, day);
+                        })
+                      }}
+                      modifiersClassNames={{
+                        periodStart: "logged-period-day",
+                        periodEnd: "logged-period-end-day"
+                      }}
+                    />
+                  )}
+                </div>
+                
+                <div className="w-full flex flex-col items-center gap-3 mt-2">
+                  {isActiveCycle && selectedDate && (
+                    <div className="w-full max-w-[280px] animate-in fade-in zoom-in-95 duration-300">
+                      <Button 
+                         onClick={handleEndPeriod} 
+                         disabled={isLogging} 
+                         variant="default"
+                         className="w-full bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white shadow-lg shadow-red-500/30 font-bold py-6 text-lg rounded-xl transition-all active:scale-95"
+                      >
+                        <Heart className="w-5 h-5 mr-2 fill-white/20" />
+                        {isLogging ? "Saving..." : `Log End Date (Started: ${new Date(
+                          Number(analytics.latestCycle.startDate.split('-')[0]),
+                          Number(analytics.latestCycle.startDate.split('-')[1]) - 1,
+                          Number(analytics.latestCycle.startDate.split('-')[2].substring(0, 2))
+                        ).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })})`}
+                      </Button>
+                    </div>
+                  )}
+
+                  {!isActiveCycle && dateRange?.from && (
+                    <div className="w-full max-w-[280px] animate-in fade-in zoom-in-95 duration-300">
+                      {dateRange.to ? (
+                        <Button 
+                           onClick={handleLogPeriod} 
+                           disabled={isLogging} 
+                           className="w-full bg-gradient-to-r from-rose-400 to-pink-500 hover:from-rose-500 hover:to-pink-600 text-white shadow-lg shadow-pink-500/20 font-bold py-6 text-lg rounded-xl transition-all active:scale-95"
+                        >
+                          <Droplets className="w-5 h-5 mr-2" />
+                          {isLogging ? "Saving..." : "Log Completed Period"}
+                        </Button>
+                      ) : (
+                        <div className="flex flex-col gap-2 w-full">
+                          <Button 
+                             onClick={() => setCalFeedback({ type: "success", text: "Start date selected! Now click your End Date on the calendar above." })}
+                             className="w-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg font-bold py-6 text-lg rounded-xl transition-all active:scale-95"
+                          >
+                            Next: Select End Date
+                          </Button>
+                          <Button 
+                             onClick={handleLogPeriod} 
+                             variant="outline"
+                             disabled={isLogging} 
+                             className="w-full font-bold py-6 text-lg rounded-xl transition-all border-rose-200 hover:bg-rose-50"
+                          >
+                            <Droplets className="w-5 h-5 mr-2 text-rose-500" />
+                            {isLogging ? "Saving..." : "Save Active Period (No End Yet)"}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {isActiveCycle && !selectedDate && (
+                    <div className="text-center animate-pulse text-rose-600 dark:text-rose-400 font-medium text-sm flex items-center gap-2">
+                      <ArrowRight className="w-4 h-4" /> Select a date above to end period
+                    </div>
+                  )}
+
+                  {calFeedback && (
+                    <div className={`px-4 py-2 rounded-lg text-sm font-bold mt-1 animate-in slide-in-from-bottom-2 fade-in duration-300 ${calFeedback.type === 'error' ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-200" : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border border-green-200"}`}>
+                      {calFeedback.text}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {!analytics?.isOnboarded && analytics?.hasData === false && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-6 z-20 text-center animate-in fade-in zoom-in duration-500">
+                   <div className="bg-primary/20 p-4 rounded-full mb-4 shadow-xl shadow-primary/10 animate-bounce">
+                      <Sparkles className="w-8 h-8 text-primary" />
+                   </div>
+                   <h3 className="text-lg font-bold text-foreground mb-2">Unlock Cycle Tracking</h3>
+                   <p className="text-sm text-muted-foreground mb-6 max-w-[200px]">Complete our quick quiz to enable personalized predictions and logging.</p>
+                   <Button onClick={() => setShowOnboarding(true)} className="rounded-2xl px-8 py-6 text-md font-bold shadow-xl hover:scale-105 transition-all shadow-primary/20">
+                      Start Quiz
+                      <ArrowRight className="w-5 h-5 ml-2" />
+                   </Button>
+                </div>
               )}
             </CardContent>
           </Card>
+
+          {/* 6-Month Cycle Analysis Chart */}
+          <Card className="w-full shadow-lg border-primary/10 bg-gradient-to-b from-background to-primary/5">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2 text-primary">
+                <BarChart3 className="w-5 h-5" />
+                Bar Chart Analysis of Cycle
+              </CardTitle>
+
+
+              <CardDescription>Historical study of your cycle lengths</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-4 pb-8 px-6">
+              {!analytics || !analytics.cycleHistory || analytics.cycleHistory.length === 0 ? (
+                <div className="h-[150px] flex flex-col items-center justify-center rounded-xl border border-dashed border-primary/20 bg-muted/5 gap-2 text-center p-4">
+                  <p className="text-muted-foreground text-sm font-medium">Log more than one period to see your historical cycle analysis.</p>
+                </div>
+              ) : (
+                <div className="space-y-8">
+                  {/* Chart Container */}
+                  <div className="h-[180px] w-full flex items-end justify-between gap-3 pt-6 relative border-b border-muted/50">
+                    {/* Y-Axis Label */}
+                    <div className="absolute -left-2 top-0 h-full flex flex-col justify-between text-[9px] text-muted-foreground/50 font-bold pointer-events-none pr-2">
+                       <span>45d</span>
+                       <span>28d</span>
+                       <span>10d</span>
+                    </div>
+
+                    {analytics.cycleHistory.map((cycle: CycleHistoryItem, idx: number) => {
+                      const heightPercent = Math.min(100, (cycle.length / 45) * 100);
+                      const isIrregular = Math.abs(cycle.length - 28) > 4;
+                      return (
+                        <div key={idx} className="flex-1 flex flex-col items-center group relative h-full justify-end">
+                          <div className="absolute -top-8 opacity-0 group-hover:opacity-100 transition-opacity bg-foreground text-background text-[10px] px-2 py-1 rounded shadow-xl z-10 font-bold">
+                            {cycle.length} Days
+                          </div>
+                          <div 
+                            className={`w-full max-w-[40px] rounded-t-lg transition-all duration-700 ease-out ${
+                              isIrregular ? 'bg-amber-400' : 'bg-primary'
+                            } hover:opacity-80`}
+                            style={{ height: `${heightPercent}%` }}
+                          />
+                          <p className="mt-2 text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">{cycle.month}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Stats Summary */}
+                  <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 flex justify-between items-center">
+                    <div className="space-y-1">
+                      <p className="text-[10px] uppercase text-muted-foreground font-bold">Average Length</p>
+                      <p className="text-xl font-black text-primary">
+                        {analytics.cycleAverageDays ?? "--"} Days
+                      </p>
+                    </div>
+                    <div className="text-right space-y-1">
+                       <p className="text-[10px] uppercase text-muted-foreground font-bold">Trend</p>
+                       <p className={`text-sm font-bold ${
+                         analytics.cycleTrend === "consistent"
+                         ? 'text-green-600' : 'text-amber-600'
+                       }`}>
+                         {analytics.cycleTrend === "consistent" ? "Consistent" : "Variable"}
+                       </p>
+                    </div>
+                  </div>
+
+                  {/* Medical Norms Analysis */}
+                  <div className="grid grid-cols-2 gap-3 pt-2">
+                    <div className={`p-3 rounded-xl border flex flex-col gap-1 ${
+                      analytics.isCycleNormal 
+                        ? 'bg-green-50/50 border-green-100 dark:bg-green-950/10 dark:border-green-900' 
+                        : 'bg-red-50/50 border-red-100 dark:bg-red-950/10 dark:border-red-900'
+                    }`}>
+                       <p className="text-[10px] font-bold uppercase text-muted-foreground">Cycle Average</p>
+                       <p className="text-lg font-black text-foreground">
+                         {analytics.cycleAverageDays ?? "--"}d
+                       </p>
+                       <p className={`text-sm font-black flex items-center gap-1 ${
+                         analytics.isCycleNormal ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'
+                       }`}>
+                         {analytics.isCycleNormal ? 'Normal' : 'Abnormal'}
+                         <span className="text-[10px] font-medium opacity-70">(21-35d)</span>
+                       </p>
+                    </div>
+                    <div className={`p-3 rounded-xl border flex flex-col gap-1 ${
+                      analytics.periodHistory && analytics.periodHistory.length > 0
+                        ? analytics.isPeriodNormal
+                          ? 'bg-green-50/50 border-green-100 dark:bg-green-950/10 dark:border-green-900'
+                          : 'bg-red-50/50 border-red-100 dark:bg-red-950/10 dark:border-red-900'
+                        : 'bg-muted/20 border-border/60'
+                    }`}>
+                       <p className="text-[10px] font-bold uppercase text-muted-foreground">Period Average</p>
+                       {analytics.periodHistory && analytics.periodHistory.length > 0 ? (
+                         <>
+                           <p className="text-lg font-black text-foreground">
+                             {analytics.periodAverageDays ?? "--"}d
+                           </p>
+                           <p className={`text-sm font-black flex items-center gap-1 ${
+                             analytics.isPeriodNormal ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'
+                           }`}>
+                             {analytics.isPeriodNormal ? 'Normal' : 'Abnormal'}
+                             <span className="text-[10px] font-medium opacity-70">(2-7d)</span>
+                           </p>
+                         </>
+                       ) : (
+                         <>
+                           <p className="text-lg font-black text-foreground">--</p>
+                           <p className="text-sm font-bold text-muted-foreground">
+                             Not enough data
+                           </p>
+                         </>
+                       )}
+                    </div>
+                  </div>
+                  {analytics.usesOnboardingFallback && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      Some predictions may still use your onboarding estimates until more completed cycle logs are available.
+                    </p>
+                  )}
+                </div>
+              )}
+
+            </CardContent>
+          </Card>
+
+
+
 
           {/* Mood Tracker Card */}
           <Card className={`w-full shadow-lg border-indigo-200/50 bg-indigo-50/30 dark:bg-indigo-950/20 transition-opacity duration-300 ${isPending ? "opacity-60 pointer-events-none" : ""}`}>
             <CardHeader className="pb-4">
               <CardTitle className="text-xl flex items-center gap-2 text-indigo-900 dark:text-indigo-100">
                 <Smile className="w-5 h-5 text-indigo-500" />
-                How are you feeling today?
+                Daily Mood-Board
               </CardTitle>
-              <CardDescription>Track your daily mood to see cycle trends</CardDescription>
+              <CardDescription>How are you feeling today?</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex justify-between items-center bg-muted/40 p-2 rounded-2xl border border-border/50">
@@ -347,73 +722,79 @@ export default function CycleTrackingPage() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Doctor's Help Card */}
-          <Card className="w-full shadow-md border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors">
-            <CardHeader className="pb-3 text-center">
-              <div className="mx-auto bg-primary/10 p-3 rounded-full mb-2 w-fit">
-                <Stethoscope className="w-8 h-8 text-primary" />
-              </div>
-              <CardTitle className="text-xl">Facing a problem?</CardTitle>
-              <CardDescription className="text-sm">
-                Consult our verified doctors here.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex justify-center pb-6">
-              <Link href="/doctors-help" className="w-full sm:w-auto">
-                <Button className="w-full sm:min-w-[200px] rounded-xl text-md font-semibold transition-all hover:scale-105 shadow-md">
-                  Get Help
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-
-
         </div>
+
+
         {/* Right Column: Insights & Mood */}
         <div className="hidden lg:flex flex-col gap-6 w-full">
           {/* Insights Card */}
           <Dialog>
-            <DialogTrigger asChild>
-              <Card className="w-full shadow-md border-purple-200/50 bg-purple-50/40 dark:bg-purple-950/20 cursor-pointer hover:bg-purple-100/50 transition-colors">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2 text-purple-900 dark:text-purple-100">
-                    <Activity className="w-5 h-5 text-purple-500" />
-                    Cycle Insights
-                  </CardTitle>
-                  <CardDescription>Click to view and update your health data</CardDescription>
-                </CardHeader>
-                <CardContent className="px-6 pb-6">
-                  {!analytics ? (
-                    <div className="h-[100px] flex items-center justify-center rounded-xl border border-dashed border-purple-200 bg-muted/10">
-                      <p className="text-muted-foreground text-sm font-medium animate-pulse">Loading insights...</p>
-                    </div>
-                  ) : !analytics.hasData ? (
-                    <div className="h-[100px] flex items-center justify-center rounded-xl border border-dashed border-purple-200 bg-muted/10">
-                      <p className="text-muted-foreground text-sm font-medium">{analytics.message}</p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-4">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-white/50 dark:bg-black/20 p-3 rounded-xl border border-purple-100 dark:border-purple-900 flex flex-col gap-1">
-                           <p className="text-xs uppercase text-purple-600 dark:text-purple-400 font-bold mb-1 flex items-center gap-1"><CalendarClock className="w-3 h-3"/> Period In</p>
-                           <p className={`text-2xl ${getDaysColor(analytics.daysUntilNextPeriod)}`}>{analytics.daysUntilNextPeriod} <span className="text-sm font-medium text-muted-foreground">Days</span></p>
-                        </div>
-                        <div className="bg-white/50 dark:bg-black/20 p-3 rounded-xl border border-purple-100 dark:border-purple-900 flex flex-col gap-1">
-                           <p className="text-xs uppercase text-purple-600 dark:text-purple-400 font-bold mb-1 flex items-center gap-1"><Sparkles className="w-3 h-3"/> Phase</p>
-                           <p className="text-lg font-bold text-purple-700 dark:text-purple-300 truncate">{analytics.currentPhase}</p>
-                           <p className="text-xs text-muted-foreground">Day {analytics.dayOfCycle}</p>
-                        </div>
+            <Card className="w-full shadow-md border-purple-200/50 bg-purple-50/40 dark:bg-purple-950/20">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2 text-purple-900 dark:text-purple-100">
+                  <Activity className="w-5 h-5 text-purple-500" />
+                  Cycle Insights
+                </CardTitle>
+                <CardDescription>View and update your health data</CardDescription>
+              </CardHeader>
+              <CardContent className="px-6 pb-6">
+                {!analytics ? (
+                  <div className="h-[100px] flex items-center justify-center rounded-xl border border-dashed border-purple-200 bg-muted/10">
+                    <p className="text-muted-foreground text-sm font-medium animate-pulse">Loading insights...</p>
+                  </div>
+                ) : !analytics.hasData ? (
+                  <div className="h-[100px] flex items-center justify-center rounded-xl border border-dashed border-purple-200 bg-muted/10">
+                    <p className="text-muted-foreground text-sm font-medium">{analytics.message}</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-white/50 dark:bg-black/20 p-3 rounded-xl border border-purple-100 dark:border-purple-900 flex flex-col gap-1">
+                         <p className="text-xs uppercase text-purple-600 dark:text-purple-400 font-bold mb-1 flex items-center gap-1"><CalendarClock className="w-3 h-3"/> Period In</p>
+                         <p className={`text-2xl ${getDaysColor(analytics.daysUntilNextPeriod ?? 0)}`}>{analytics.daysUntilNextPeriod ?? "--"} <span className="text-sm font-medium text-muted-foreground">Days</span></p>
                       </div>
-                      <div className="mt-1 bg-white/50 dark:bg-black/20 p-3 rounded-xl border border-purple-100 dark:border-purple-900">
-                         <p className="text-sm font-semibold mb-1 text-purple-700 dark:text-purple-300 flex items-center gap-2"><Activity className="w-4 h-4"/> Symptoms You Might Feel</p>
-                         <p className="text-sm text-muted-foreground leading-snug">{analytics.predictedSymptoms}</p>
+                      <div className="bg-white/50 dark:bg-black/20 p-3 rounded-xl border border-purple-100 dark:border-purple-900 flex flex-col gap-1">
+                         <p className="text-xs uppercase text-purple-600 dark:text-purple-400 font-bold mb-1 flex items-center gap-1"><Sparkles className="w-3 h-3"/> Phase</p>
+                         <p className="text-lg font-bold text-purple-700 dark:text-purple-300 truncate">{analytics.currentPhase}</p>
+                         <p className="text-xs text-muted-foreground">Day {analytics.dayOfCycle}</p>
                       </div>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            </DialogTrigger>
+                    <div className="mt-1 bg-white/50 dark:bg-black/20 p-3 rounded-xl border border-purple-100 dark:border-purple-900">
+                       <p className="text-sm font-semibold mb-1 text-purple-700 dark:text-purple-300 flex items-center gap-2"><Activity className="w-4 h-4"/> Symptoms You Might Feel</p>
+                       <p className="text-sm text-muted-foreground leading-snug">{analytics.predictedSymptoms}</p>
+                    </div>
+
+                    {analytics.healthStatus && (
+                      <div className={`mt-1 p-3 rounded-xl border ${
+                        analytics.healthStatus.status === 'Warning' ? 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-900' :
+                        analytics.healthStatus.status === 'Advice' ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900' :
+                        'bg-purple-50/50 border-purple-100 dark:bg-purple-950/10 dark:border-purple-900'
+                      }`}>
+                         <p className={`text-sm font-bold mb-1 flex items-center gap-2 ${
+                           analytics.healthStatus.status === 'Warning' ? 'text-red-700 dark:text-red-400' :
+                           analytics.healthStatus.status === 'Advice' ? 'text-amber-700 dark:text-amber-400' :
+                           'text-purple-700 dark:text-purple-300'
+                         }`}>
+                           <Heart className="w-4 h-4"/> {analytics.healthStatus.message}
+                         </p>
+                         <p className="text-xs text-muted-foreground leading-relaxed">{analytics.healthStatus.details}</p>
+                      </div>
+                    )}
+
+                  </div>
+
+                )}
+                
+                <div className="mt-6">
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full border-purple-200 text-purple-700 hover:bg-purple-100/50 hover:text-purple-800 dark:border-purple-800 dark:text-purple-300 dark:hover:bg-purple-900/30 font-bold rounded-xl transition-all active:scale-[0.98]">
+                      View & Update Insights
+                    </Button>
+                  </DialogTrigger>
+                </div>
+              </CardContent>
+            </Card>
+
             {analytics?.hasData && (
               <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
@@ -522,32 +903,43 @@ export default function CycleTrackingPage() {
                 <div className="h-[100px] flex items-center justify-center rounded-xl border border-dashed border-primary/20 bg-muted/10">
                   <p className="text-muted-foreground text-sm font-medium animate-pulse">Loading predictions...</p>
                 </div>
-              ) : !analytics.hasData ? (
-                <div className="h-[100px] flex items-center justify-center rounded-xl border border-dashed border-primary/20 bg-muted/10">
-                  <p className="text-muted-foreground text-sm font-medium">Log a period to see predictions.</p>
-                </div>
               ) : (
-                <div className="flex flex-col gap-4">
-                  <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 flex justify-between items-center">
-                    <div>
-                      <p className="text-xs uppercase text-primary font-bold mb-1">Next Period Starts</p>
-                      <p className="text-sm font-semibold">
-                        {analytics.latestCycle?.predictedEndDate && !isNaN(new Date(analytics.latestCycle.predictedEndDate).getTime())
-                          ? new Date(analytics.latestCycle.predictedEndDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
-                          : 'Pending'}
-                      </p>
+                  <div className="flex flex-col gap-3">
+                    {!analytics.hasData ? (
+                      <div className="bg-muted/5 p-4 rounded-xl border border-dashed border-border flex items-center justify-center min-h-[80px]">
+                        <p className="text-muted-foreground text-xs font-medium text-center italic">Log your first period to unlock predictions.</p>
+                      </div>
+                    ) : (
+                      <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 flex justify-between items-center">
+                        <div>
+                          <p className="text-xs uppercase text-primary font-bold mb-1">Next Period Starts</p>
+                          <p className="text-sm font-semibold">
+                            {analytics.latestCycle?.predictedEndDate && !isNaN(new Date(analytics.latestCycle.predictedEndDate).getTime())
+                              ? new Date(analytics.latestCycle.predictedEndDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+                              : 'Pending'}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs uppercase text-primary font-bold mb-1">Next Period Ends</p>
+                          <p className="text-sm font-semibold">
+                            {analytics.latestCycle?.expectedPeriodEnd && !isNaN(new Date(analytics.latestCycle.expectedPeriodEnd).getTime()) 
+                              ? new Date(analytics.latestCycle.expectedPeriodEnd).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+                              : 'Pending'}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className={`p-4 rounded-xl border ${analytics.pregnancyChance?.bg || 'bg-muted/10'} border-opacity-20 flex items-center gap-3 transition-all duration-500`}>
+                      <Baby className={`w-5 h-5 flex-shrink-0 ${analytics.pregnancyChance?.color || 'text-muted-foreground'}`} />
+                      <span className={`text-sm font-black uppercase tracking-wider ${analytics.pregnancyChance?.color || 'text-muted-foreground'}`}>
+                        {analytics.pregnancyChance?.label || 'Unknown'}
+                      </span>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xs uppercase text-primary font-bold mb-1">Next Period Ends</p>
-                      <p className="text-sm font-semibold">
-                        {analytics.latestCycle?.expectedPeriodEnd && !isNaN(new Date(analytics.latestCycle.expectedPeriodEnd).getTime()) 
-                          ? new Date(analytics.latestCycle.expectedPeriodEnd).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
-                          : 'Pending'}
-                      </p>
-                    </div>
+
                   </div>
-                </div>
               )}
+
             </CardContent>
           </Card>
 
@@ -621,9 +1013,10 @@ export default function CycleTrackingPage() {
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2 text-secondary font-semibold">
                 <Sparkles className="w-4 h-4 text-primary animate-pulse" />
-                <span className="text-xs uppercase tracking-wider text-primary">Daily Check-up</span>
+                <span className="text-xs uppercase tracking-wider text-primary">Daily Wellbeing</span>
               </div>
             </CardHeader>
+
             <CardContent>
               <div className="flex flex-col gap-1 transition-opacity duration-500">
                 <h3 className="text-lg font-bold text-foreground">{dailyMessage.title}</h3>
@@ -635,11 +1028,28 @@ export default function CycleTrackingPage() {
           </Card>
 
 
+          {/* Doctor's Help Card */}
+          <Card className="w-full shadow-md border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors">
+            <CardHeader className="pb-3 text-center">
+              <div className="mx-auto bg-primary/10 p-3 rounded-full mb-2 w-fit">
+                <Stethoscope className="w-8 h-8 text-primary" />
+              </div>
+              <CardTitle className="text-xl font-bold">Facing a problem?</CardTitle>
+              <CardDescription className="text-sm">
+                Consult our verified doctors here.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-center pb-6">
+              <Link href="/doctors-help" className="w-full sm:w-auto">
+                <Button className="w-full sm:min-w-[200px] rounded-xl text-md font-semibold transition-all hover:scale-105 shadow-md">
+                  Get Help
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
 
-
-
-        </div>
       </div>
     </div>
+  </div>
   );
 }

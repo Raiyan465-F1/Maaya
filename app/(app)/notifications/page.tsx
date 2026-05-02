@@ -1,21 +1,43 @@
-export default function NotificationsPage() {
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { NotificationsCenter } from "@/components/notifications-center";
+import { authOptions } from "@/lib/auth";
+import { listUserNotifications } from "@/lib/notifications";
+
+export default async function NotificationsPage() {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user?.id) {
+    redirect("/login?callbackUrl=/notifications");
+  }
+
+  const data = await listUserNotifications({
+    userId: session.user.id,
+    limit: 100,
+    markSeen: true,
+  });
+  const archived = await listUserNotifications({
+    userId: session.user.id,
+    limit: 100,
+    filter: "archived",
+  });
+
+  const combinedNotifications = [...data.notifications];
+  for (const item of archived.notifications) {
+    if (!combinedNotifications.some((existing) => existing.id === item.id)) {
+      combinedNotifications.push(item);
+    }
+  }
+  combinedNotifications.sort(
+    (left, right) =>
+      new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
+  );
+
   return (
-    <>
-      <p className="font-mono text-xs tracking-widest text-primary uppercase mb-3">
-        Notification & Reminders
-      </p>
-      <h1 className="font-heading text-3xl font-bold text-foreground tracking-tight mb-2">
-        Reminders{" "}
-        <span className="italic bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-          & alerts
-        </span>
-      </h1>
-      <p className="text-muted-foreground text-sm leading-relaxed mb-8">
-        Notifications and reminders will appear here.
-      </p>
-      <div className="bg-card rounded-2xl border border-border p-8 text-center text-muted-foreground text-sm">
-        Coming soon.
-      </div>
-    </>
+    <NotificationsCenter
+      initialNotifications={combinedNotifications}
+      initialUnreadCount={data.unreadCount}
+      initialUnseenCount={data.unseenCount}
+    />
   );
 }

@@ -93,6 +93,7 @@ export function AppSidebar() {
   const pathname = usePathname();
   const { data: session, status } = useSession();
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     if (status !== "authenticated") {
@@ -134,6 +135,58 @@ export function AppSidebar() {
       );
     };
   }, [status, pathname]);
+
+  useEffect(() => {
+    if (status !== "authenticated") {
+      setUnreadCount(0);
+      return;
+    }
+
+    let cancelled = false;
+
+    const refreshUnreadCount = async () => {
+      try {
+        const res = await fetch("/api/notifications/unread-count", {
+          cache: "no-store",
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as { unreadCount?: unknown };
+        if (!cancelled) {
+          setUnreadCount(
+            typeof data.unreadCount === "number" ? data.unreadCount : 0,
+          );
+        }
+      } catch {
+        // best-effort
+      }
+    };
+
+    refreshUnreadCount();
+    const interval = window.setInterval(refreshUnreadCount, 60000);
+    const source = new EventSource("/api/notifications/stream");
+    const handleNotifications = (event: MessageEvent<string>) => {
+      try {
+        const data = JSON.parse(event.data) as { unseenCount?: unknown };
+        if (!cancelled && typeof data.unseenCount === "number") {
+          setUnreadCount(data.unseenCount);
+        }
+      } catch {
+        // ignore malformed events
+      }
+    };
+    source.addEventListener("notifications", handleNotifications as EventListener);
+    window.addEventListener("focus", refreshUnreadCount);
+    window.addEventListener("notifications:changed", refreshUnreadCount);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      source.removeEventListener("notifications", handleNotifications as EventListener);
+      source.close();
+      window.removeEventListener("focus", refreshUnreadCount);
+      window.removeEventListener("notifications:changed", refreshUnreadCount);
+    };
+  }, [status]);
 
   const role = session?.user?.role;
   const name = session?.user?.name;
@@ -177,12 +230,19 @@ export function AppSidebar() {
               {mainNav.map((item) => {
                 const isActive =
                   pathname === item.href || pathname.startsWith(item.href + "/");
+                const showUnreadBadge =
+                  item.href === "/notifications" && unreadCount > 0;
                 return (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
                       <Link href={item.href}>
                         <item.icon />
                         <span>{item.label}</span>
+                        {showUnreadBadge ? (
+                          <span className="ml-auto inline-flex min-w-6 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground group-data-[collapsible=icon]:hidden">
+                            {unreadCount > 99 ? "99+" : unreadCount}
+                          </span>
+                        ) : null}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

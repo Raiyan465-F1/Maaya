@@ -3,6 +3,12 @@ import { getServerSession } from "next-auth";
 import { db } from "@/src/db";
 import { comments } from "@/src/schema/forum";
 import { authOptions } from "@/lib/auth";
+import {
+  getUserDisplayLabel,
+  notifyForumComment,
+  notifyForumReply,
+  resolveForumPostOwnerUserId,
+} from "@/lib/notifications";
 import { suspendedMutationBlockedResponse } from "@/lib/suspended-mutation";
 import {
   canAccessModeratedContent,
@@ -48,19 +54,54 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Discussion not found." }, { status: 404 });
     }
 
+    let parent:
+      | {
+          id: number;
+          postId: number;
+          parentCommentId: number | null;
+          authorId: string;
+          status: "active" | "hidden" | "removed" | null;
+        }
+      | null = null;
     if (parentCommentId) {
-      const parent = await ensureCommentExists(parentCommentId);
+      parent = await ensureCommentExists(parentCommentId);
       if (!parent || parent.postId !== postId || !canAccessModeratedContent(session.user.role, parent.status)) {
         return NextResponse.json({ error: "Reply target not found." }, { status: 404 });
       }
     }
 
-    await db.insert(comments).values({
+    const [createdComment] = await db.insert(comments).values({
       postId,
       parentCommentId,
       authorId: session.user.id,
       content,
+    }).returning({
+      id: comments.id,
     });
+
+    const actorLabel = await getUserDisplayLabel(session.user.id);
+
+    if (parentCommentId) {
+      await notifyForumReply({
+        recipientUserId: parent?.authorId ?? null,
+        actorUserId: session.user.id,
+        actorLabel,
+        postId,
+        postTitle: post.title,
+        commentId: createdComment.id,
+        parentCommentId,
+      });
+    } else {
+      const ownerUserId = await resolveForumPostOwnerUserId(postId);
+      await notifyForumComment({
+        recipientUserId: ownerUserId,
+        actorUserId: session.user.id,
+        actorLabel,
+        postId,
+        postTitle: post.title,
+        commentId: createdComment.id,
+      });
+    }
 
     const data = await getForumSnapshot(session.user.id, session.user.role);
     return NextResponse.json(data, { status: 201 });

@@ -72,7 +72,8 @@ export default function DoctorRegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [doctorAccessCode, setDoctorAccessCode] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [submitState, setSubmitState] = useState<"idle" | "submitting" | "redirecting">("idle");
+  const isBusy = submitState !== "idle";
 
   const passwordValid = password.length >= MIN_PASSWORD_LENGTH;
   const passwordsMatch =
@@ -82,7 +83,7 @@ export default function DoctorRegisterPage() {
     e.preventDefault();
     setError(null);
     if (!passwordValid || !passwordsMatch) return;
-    setIsLoading(true);
+    setSubmitState("submitting");
 
     try {
       const res = await fetch("/api/auth/register", {
@@ -100,16 +101,16 @@ export default function DoctorRegisterPage() {
 
       if (!res.ok) {
         setError((data.error as string) || "Doctor registration failed. Please try again.");
-        setIsLoading(false);
+        setSubmitState("idle");
         return;
       }
 
-      setIsLoading(false);
-      router.push("/login?registered=1");
+      setSubmitState("redirecting");
+      router.replace("/login?registered=1");
       router.refresh();
     } catch {
       setError("Something went wrong. Please try again.");
-      setIsLoading(false);
+      setSubmitState("idle");
     }
   }
 
@@ -159,6 +160,7 @@ export default function DoctorRegisterPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="doctor@example.com"
+                  disabled={isBusy}
                   className="w-full h-11 px-3.5 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-primary/50 transition-colors"
                   required
                 />
@@ -173,6 +175,7 @@ export default function DoctorRegisterPage() {
                   value={doctorAccessCode}
                   onChange={(e) => setDoctorAccessCode(e.target.value)}
                   placeholder="Enter the shared registration code"
+                  disabled={isBusy}
                   className="w-full h-11 px-3.5 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-primary/50 transition-colors"
                   required
                 />
@@ -187,6 +190,7 @@ export default function DoctorRegisterPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="........"
+                  disabled={isBusy}
                   className="w-full h-11 px-3.5 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-primary/50 transition-colors"
                   required
                   minLength={MIN_PASSWORD_LENGTH}
@@ -205,6 +209,7 @@ export default function DoctorRegisterPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="........"
+                  disabled={isBusy}
                   className="w-full h-11 px-3.5 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-primary/50 transition-colors"
                   required
                 />
@@ -215,13 +220,13 @@ export default function DoctorRegisterPage() {
 
               <Button
                 type="submit"
-                disabled={isLoading || !passwordValid || !passwordsMatch || doctorAccessCode.trim().length === 0}
+                disabled={isBusy || !passwordValid || !passwordsMatch || doctorAccessCode.trim().length === 0}
                 className="w-full h-11 text-base font-semibold bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-xl hover:opacity-90 transition-opacity shadow-sm disabled:opacity-70"
               >
-                {isLoading ? (
+                {isBusy ? (
                   <span className="inline-flex items-center gap-2">
                     <LoaderCircle className="h-4 w-4 animate-spin" />
-                    Creating doctor account...
+                    {submitState === "redirecting" ? "Opening login..." : "Creating doctor account..."}
                   </span>
                 ) : (
                   "Create doctor account"

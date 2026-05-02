@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/src/db";
 import { forumPosts } from "@/src/schema/forum";
 import { users } from "@/src/schema/users";
+import { ArrowLeft, MessageSquare, User } from "lucide-react";
 
 export default async function ForumUserPage({
   params,
@@ -38,63 +39,102 @@ export default async function ForumUserPage({
     .where(and(eq(forumPosts.authorId, userId), eq(forumPosts.isAnonymous, false)))
     .orderBy(desc(forumPosts.createdAt));
 
+  const initials = user.email.slice(0, 2).toUpperCase();
+
   return (
-    <section className="space-y-8">
-      <div className="rounded-[2rem] border border-primary/15 bg-gradient-to-br from-card via-card to-primary/5 p-6 shadow-sm">
-        <p className="font-mono text-xs tracking-[0.22em] text-primary uppercase">Forum profile</p>
-        <h1 className="mt-3 font-heading text-4xl font-semibold leading-tight text-foreground">{user.email}</h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-          Forum discussions posted by this user.
-        </p>
-        <div className="mt-5 flex items-center gap-3 text-sm">
-          <span className="rounded-full border border-primary/15 bg-white/70 px-4 py-2 font-mono text-foreground">
-            {posts.length} discussion{posts.length === 1 ? "" : "s"}
-          </span>
-          <Link
-            href="/forum"
-            className="rounded-full border border-primary/15 px-4 py-2 font-medium text-muted-foreground transition hover:text-foreground"
-          >
-            Back to forum
-          </Link>
+    <section className="mx-auto max-w-[84rem] space-y-10 px-4 py-12 pb-32 sm:px-6 lg:px-8">
+      {/* Profile Header */}
+      <div className="relative overflow-hidden rounded-[3rem] border border-violet-200/60 bg-[radial-gradient(ellipse_at_top_right,_rgba(139,92,246,0.15),_transparent_50%),linear-gradient(145deg,rgba(245,243,255,0.95),rgba(255,255,255,1))] dark:border-violet-900/30 dark:bg-[radial-gradient(ellipse_at_top_right,_rgba(139,92,246,0.15),_transparent_50%),linear-gradient(145deg,rgba(15,10,20,0.95),rgba(0,0,0,1))] shadow-2xl shadow-violet-900/5 p-8 sm:p-12">
+        <div className="pointer-events-none absolute right-0 top-0 h-96 w-96 rounded-full bg-violet-400/20 blur-[100px]" />
+        
+        <div className="relative z-10 flex flex-col gap-8 md:flex-row md:items-center">
+          <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[2rem] bg-violet-600 font-heading text-3xl font-bold text-white shadow-lg shadow-violet-600/20">
+            {initials}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-mono text-xs font-bold tracking-[0.22em] text-violet-600 dark:text-violet-400 uppercase">Forum Contributor</p>
+            <h1 className="mt-3 truncate font-heading text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">{user.email}</h1>
+            <p className="mt-4 max-w-2xl text-base font-medium leading-relaxed text-muted-foreground/80">
+              Sharing experiences and building community knowledge through thoughtful discussions.
+            </p>
+            
+            <div className="mt-8 flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2 rounded-2xl bg-white/80 backdrop-blur-sm border border-violet-100 px-5 py-3 text-sm font-bold text-violet-700 shadow-sm">
+                <MessageSquare className="size-4" />
+                {posts.length} {posts.length === 1 ? "Discussion" : "Discussions"}
+              </div>
+              <Link
+                href="/forum"
+                className="flex items-center gap-2 rounded-2xl bg-violet-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-violet-600/25 transition-all hover:bg-violet-700 hover:-translate-y-0.5"
+              >
+                <ArrowLeft className="size-4" />
+                Back to forum
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
 
-      {posts.length ? (
-        <div className="space-y-5">
-          {posts.map((post) => (
-            <article key={post.id} className="rounded-[2rem] border border-primary/15 bg-card p-6 shadow-sm">
-              <div className="flex flex-wrap items-center gap-2">
-                {post.isAnonymous ? (
-                  <span className="rounded-full border border-primary/20 bg-primary/8 px-2.5 py-1 text-[11px] font-medium text-primary">
-                    Posted anonymously
-                  </span>
-                ) : null}
-                {(post.tags ?? []).slice(0, 5).map((tag) => (
-                  <span key={tag} className="rounded-full bg-primary/8 px-3 py-1 text-xs font-medium text-primary">
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-              <h2 className="mt-4 font-heading text-2xl font-semibold text-foreground">{post.title}</h2>
-              <p className="mt-3 whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-sm leading-7 text-foreground/85">
-                {post.content}
-              </p>
-              <p className="mt-4 text-xs text-muted-foreground">
-                {new Date(post.createdAt).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </p>
-            </article>
-          ))}
+      {/* Posts List */}
+      <div className="space-y-8">
+        <div className="flex items-center gap-4">
+          <h2 className="font-heading text-2xl font-bold text-foreground">Recent Activity</h2>
+          <div className="h-px flex-1 bg-violet-100/60 dark:bg-violet-900/20" />
         </div>
-      ) : (
-        <div className="rounded-[2rem] border border-dashed border-primary/20 bg-card/60 px-6 py-16 text-center shadow-sm">
-          <p className="font-heading text-3xl text-foreground">No discussions yet</p>
-          <p className="mt-3 text-sm text-muted-foreground">This user has no public forum discussions yet.</p>
-        </div>
-      )}
+
+        {posts.length ? (
+          <div className="grid gap-8">
+            {posts.map((post) => (
+              <Link
+                key={post.id}
+                href={`/forum?post=${post.id}`}
+                className="group relative block overflow-hidden rounded-[2.5rem] border border-border/60 bg-white shadow-[0_4px_20px_rgb(0,0,0,0.02)] transition-all hover:-translate-y-1 hover:shadow-[0_12px_40px_rgb(0,0,0,0.06)] hover:border-violet-200"
+              >
+                <div className="h-1.5 w-full bg-gradient-to-r from-violet-400 to-indigo-400 opacity-60 group-hover:opacity-100 transition-opacity" />
+                <div className="p-8">
+                  <div className="flex flex-wrap items-center gap-3">
+                    {(post.tags ?? []).slice(0, 5).map((tag) => (
+                      <span key={tag} className="rounded-full bg-violet-50 px-3.5 py-1.5 text-xs font-bold text-violet-600 border border-violet-100/50">
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                  <h3 className="mt-5 font-heading text-2xl font-bold text-foreground leading-snug group-hover:text-violet-700 transition-colors">{post.title}</h3>
+                  <p className="mt-4 line-clamp-3 whitespace-pre-wrap break-words text-base font-medium leading-relaxed text-muted-foreground/90">
+                    {post.content}
+                  </p>
+                  <div className="mt-8 flex items-center justify-between border-t border-violet-50 pt-6">
+                    <p className="text-sm font-bold text-muted-foreground/60 uppercase tracking-wider">
+                      {new Date(post.createdAt).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </p>
+                    <span className="text-sm font-bold text-violet-600 group-hover:underline">
+                      View discussion →
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center rounded-[3rem] border-2 border-dashed border-violet-100 bg-violet-50/20 px-8 py-24 text-center">
+            <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-white shadow-sm text-violet-200 mb-6">
+               <MessageSquare className="size-10" />
+            </div>
+            <p className="font-heading text-3xl font-extrabold text-foreground">No public activity</p>
+            <p className="mt-3 max-w-md text-base font-medium text-muted-foreground/80">
+              This user hasn't started any public discussions yet.
+            </p>
+            <Link href="/forum" className="mt-8 font-bold text-violet-600 hover:underline">
+               Explore the forum
+            </Link>
+          </div>
+        )}
+      </div>
     </section>
   );
 }
+

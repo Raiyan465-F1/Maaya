@@ -84,7 +84,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Post content must be at least 10 characters long." }, { status: 400 });
     }
 
-    const nextAuthorId = isAnonymous ? null : (existing.authorId ?? session.user.id);
+    const nextAuthorId = existing.authorId ?? session.user.id;
     const nextAnonymousOwnerHash = isAnonymous
       ? (existing.anonymousOwnerHash ?? buildAnonymousOwnerHash(existing.authorId ?? session.user.id))
       : null;

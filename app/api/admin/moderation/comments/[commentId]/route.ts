@@ -33,7 +33,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid content status." }, { status: 400 });
   }
 
-  const updated = await updateCommentModerationStatus(commentId, status);
+  const updated = await updateCommentModerationStatus(commentId, status, session.user.id);
   if (!updated) {
     return NextResponse.json({ error: "Comment not found." }, { status: 404 });
   }
