@@ -2,11 +2,25 @@ import { Heart, Activity, Droplets, CalendarClock, Smile, Moon, Thermometer, Win
 import Link from "next/link";
 
 
-export function CycleRingWidget() {
+export function CycleRingWidget({ currentPhase, dayOfCycle, daysUntilNextPeriod }: { currentPhase: string, dayOfCycle: number, daysUntilNextPeriod: number }) {
+  let ringColor = "from-teal-400 to-emerald-500";
+  let textColor = "text-teal-500";
+  let bgLight = "bg-teal-50";
+
+  if (currentPhase === "Menstrual") {
+    ringColor = "from-rose-400 to-red-500";
+    textColor = "text-rose-500";
+    bgLight = "bg-rose-50";
+  } else if (currentPhase === "Luteal") {
+    ringColor = "from-indigo-400 to-purple-500";
+    textColor = "text-indigo-500";
+    bgLight = "bg-indigo-50";
+  }
+
   return (
     <div className="flex flex-col items-center justify-center py-8 relative">
       {/* Background soft glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full bg-teal-50 blur-3xl opacity-50 dark:opacity-20 pointer-events-none" />
+      <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full ${bgLight} blur-3xl opacity-50 dark:opacity-20 pointer-events-none`} />
       
       {/* The Cycle Ring */}
       <Link 
@@ -14,22 +28,22 @@ export function CycleRingWidget() {
         className="relative w-64 h-64 rounded-full p-2 bg-white dark:bg-card shadow-xl shadow-black/5 z-10 flex items-center justify-center group transition-transform hover:scale-105 duration-500 cursor-pointer"
       >
         {/* Colorful gradient border ring */}
-        <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-teal-400 to-emerald-500 opacity-20 group-hover:opacity-30 transition-opacity" />
+        <div className={`absolute inset-0 rounded-full bg-gradient-to-tr ${ringColor} opacity-20 group-hover:opacity-30 transition-opacity`} />
         
         {/* Inner circle */}
-        <div className="relative w-full h-full rounded-full border-[6px] border-white dark:border-card bg-gradient-to-b bg-teal-50 dark:bg-background flex flex-col items-center justify-center shadow-inner">
-          <p className="text-xs uppercase tracking-[0.2em] font-bold mb-1 opacity-70 text-teal-500">
-            Ovulation
+        <div className={`relative w-full h-full rounded-full border-[6px] border-white dark:border-card bg-gradient-to-b ${bgLight} dark:bg-background flex flex-col items-center justify-center shadow-inner`}>
+          <p className={`text-xs uppercase tracking-[0.2em] font-bold mb-1 opacity-70 ${textColor}`}>
+            {currentPhase}
           </p>
           <div className="flex items-baseline gap-1">
             <span className="text-sm font-bold opacity-50">Day</span>
-            <span className="text-7xl font-heading font-black tracking-tighter text-teal-500 drop-shadow-sm">
-              14
+            <span className={`text-7xl font-heading font-black tracking-tighter ${textColor} drop-shadow-sm`}>
+              {dayOfCycle}
             </span>
           </div>
           <p className="text-sm font-medium opacity-80 mt-2 flex items-center gap-1.5">
             <CalendarClock className="w-4 h-4" />
-            14 days to period
+            {daysUntilNextPeriod} days to period
           </p>
         </div>
       </Link>
@@ -57,7 +71,17 @@ export function CycleRingWidget() {
   );
 }
 
-export function HealthMetricsGrid() {
+export function HealthMetricsGrid({ todayMood, todaySymptoms }: { todayMood?: string | null, todaySymptoms?: string }) {
+  const moodMap: Record<string, { emoji: string; label: string }> = {
+    terrible: { emoji: "😫", label: "Terrible" },
+    bad: { emoji: "😕", label: "Bad" },
+    okay: { emoji: "😐", label: "Okay" },
+    good: { emoji: "🙂", label: "Good" },
+    great: { emoji: "😄", label: "Great" },
+  };
+
+  const moodData = todayMood && moodMap[todayMood] ? moodMap[todayMood] : { emoji: "😶", label: "Not logged" };
+
   return (
     <div className="grid gap-10 md:grid-cols-2">
       {/* Mood Card */}
@@ -72,47 +96,12 @@ export function HealthMetricsGrid() {
           <h3 className="text-sm font-bold text-indigo-900/60 dark:text-indigo-100/60 uppercase tracking-widest">Mood</h3>
         </div>
         <div className="flex items-center gap-4 bg-white/60 dark:bg-black/40 p-5 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm w-full">
-          <span className="text-3xl">🙂</span>
+          <span className="text-3xl">{moodData.emoji}</span>
           <div>
-            <p className="text-sm font-bold text-indigo-900 dark:text-indigo-100 uppercase tracking-widest">Good</p>
+            <p className="text-sm font-bold text-indigo-900 dark:text-indigo-100 uppercase tracking-widest">{moodData.label}</p>
           </div>
         </div>
       </Link>
-
-
-      {/* Sleep Card */}
-      <Link 
-        href="/cycle-tracking"
-        className="rounded-[48px] p-10 min-h-[200px] shadow-sm border-0 bg-blue-50/50 dark:bg-blue-950/20 flex flex-col hover:bg-blue-100/50 transition-all duration-500 group cursor-pointer"
-      >
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2.5 bg-blue-100 dark:bg-blue-900/50 rounded-full group-hover:scale-110 transition-transform">
-            <Moon className="w-6 h-6 text-blue-500" />
-          </div>
-          <h3 className="text-sm font-bold text-blue-900/60 dark:text-blue-100/60 uppercase tracking-widest">Sleep</h3>
-        </div>
-        <div className="bg-white/60 dark:bg-black/40 p-5 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm w-full">
-          <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">7<span className="text-sm font-medium opacity-60 ml-1">hr</span> 30<span className="text-sm font-medium opacity-60 ml-1">m</span></p>
-        </div>
-      </Link>
-
-
-      {/* Temp Card */}
-      <Link 
-        href="/cycle-tracking"
-        className="rounded-[48px] p-10 min-h-[200px] shadow-sm border-0 bg-orange-50/50 dark:bg-orange-950/20 flex flex-col hover:bg-orange-100/50 transition-all duration-500 group cursor-pointer"
-      >
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2.5 bg-orange-100 dark:bg-orange-900/50 rounded-full group-hover:scale-110 transition-transform">
-            <Thermometer className="w-6 h-6 text-orange-500" />
-          </div>
-          <h3 className="text-sm font-bold text-orange-900/60 dark:text-orange-100/60 uppercase tracking-widest">BBT</h3>
-        </div>
-        <div className="bg-white/60 dark:bg-black/40 p-5 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm w-full">
-          <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">36.5<span className="text-sm font-medium opacity-60 ml-1">°C</span></p>
-        </div>
-      </Link>
-
 
       {/* Symptoms Card */}
       <Link 
@@ -125,8 +114,8 @@ export function HealthMetricsGrid() {
           </div>
           <h3 className="text-sm font-bold text-rose-900/60 dark:text-rose-100/60 uppercase tracking-widest">Symptoms</h3>
         </div>
-        <div className="bg-white/60 dark:bg-black/40 p-5 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm w-full">
-          <p className="text-sm font-bold text-rose-900 dark:text-rose-100 leading-tight uppercase tracking-wide">Mild Cramps, Headaches</p>
+        <div className="bg-white/60 dark:bg-black/40 p-5 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm w-full h-full flex items-center">
+          <p className="text-sm font-bold text-rose-900 dark:text-rose-100 leading-tight uppercase tracking-wide">{todaySymptoms || "None logged"}</p>
         </div>
       </Link>
 
@@ -134,7 +123,21 @@ export function HealthMetricsGrid() {
   );
 }
 
-export function SmartInsightsCarousel() {
+export function SmartInsightsCarousel({ currentPhase }: { currentPhase: string }) {
+  let title = "Fertile Window";
+  let text = "You are likely entering your fertile window today. Chances of pregnancy are high.";
+  
+  if (currentPhase === "Menstrual") {
+    title = "Period Phase";
+    text = "You are currently in your menstrual phase. Chances of pregnancy are very low.";
+  } else if (currentPhase === "Luteal") {
+    title = "Luteal Phase";
+    text = "You are in your luteal phase, preparing for your next cycle. Chances of pregnancy are low.";
+  } else if (currentPhase === "Follicular") {
+    title = "Follicular Phase";
+    text = "Your energy is rising. Your body is preparing for ovulation, pregnancy chances are increasing.";
+  }
+
   return (
     <Link 
       href="/cycle-tracking" 
@@ -144,8 +147,8 @@ export function SmartInsightsCarousel() {
         <Heart className="w-6 h-6 text-amber-500" />
       </div>
       <div>
-        <h4 className="text-sm font-bold text-amber-900 dark:text-amber-100">Fertile Window</h4>
-        <p className="mt-1 text-sm font-medium text-amber-800/80 dark:text-amber-200/80">You are likely entering your fertile window today. Chances of pregnancy are high.</p>
+        <h4 className="text-sm font-bold text-amber-900 dark:text-amber-100">{title}</h4>
+        <p className="mt-1 text-sm font-medium text-amber-800/80 dark:text-amber-200/80">{text}</p>
       </div>
     </Link>
 
@@ -185,51 +188,57 @@ export function FeaturedArticlesWidget() {
   const articles = [
     {
       id: 1,
-      title: "Understanding Hormonal Fluctuations",
-      hub: "Education",
-      icon: <BookOpen className="w-3 h-3" />,
+      title: "FDA Approves DoxyPEP to Prevent Bacterial STIs",
+      hub: "STI Awareness",
+      href: "/sti-awareness/fda-approves-doxypep",
+      icon: <ShieldAlert className="w-3 h-3" />,
       color: "bg-blue-500",
-      image: "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=200&h=200&fit=crop"
+      image: "https://images.unsplash.com/photo-1584308666744-24d5e4a50d4b?auto=format&fit=crop&q=80&w=800"
     },
     {
       id: 2,
-      title: "STI Prevention: A Comprehensive Guide",
+      title: "Global Syphilis Cases Continue Historic Rise",
       hub: "STI Awareness",
+      href: "/sti-awareness/global-syphilis-surge",
       icon: <ShieldAlert className="w-3 h-3" />,
       color: "bg-rose-500",
-      image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=200&h=200&fit=crop"
+      image: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&q=80&w=800"
     },
     {
       id: 3,
-      title: "The Importance of Regular Checkups",
+      title: "Advances in the Chlamydia Vaccine Trials",
       hub: "Education",
+      href: "/sti-awareness/chlamydia-vaccine-trials",
       icon: <BookOpen className="w-3 h-3" />,
       color: "bg-emerald-500",
-      image: "https://images.unsplash.com/photo-1581595220892-b0739db3ba8c?w=200&h=200&fit=crop"
+      image: "https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?auto=format&fit=crop&q=80&w=800"
     },
     {
       id: 4,
-      title: "Nutrition Tips for Cycle Balance",
+      title: "The Impact of Telemedicine on STI Testing Rates",
       hub: "Education",
+      href: "/sti-awareness/telemedicine-sti-testing",
       icon: <BookOpen className="w-3 h-3" />,
       color: "bg-amber-500",
-      image: "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=200&h=200&fit=crop"
+      image: "https://images.unsplash.com/photo-1618498082410-b4aa22193b38?auto=format&fit=crop&q=80&w=800"
     },
     {
       id: 5,
-      title: "Common Myths About STI Transmission",
+      title: "New Guidelines Unveiled for HPV Screening",
       hub: "STI Awareness",
+      href: "/sti-awareness/new-hpv-guidelines",
       icon: <ShieldAlert className="w-3 h-3" />,
       color: "bg-purple-500",
-      image: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=200&h=200&fit=crop"
+      image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&q=80&w=800"
     },
     {
       id: 6,
-      title: "Mental Health and the Menstrual Cycle",
+      title: "Addressing STI Stigma in Healthcare Settings",
       hub: "Education",
+      href: "/sti-awareness/addressing-sti-stigma",
       icon: <BookOpen className="w-3 h-3" />,
       color: "bg-indigo-500",
-      image: "https://images.unsplash.com/photo-1516585427167-9f4af9627e6c?w=200&h=200&fit=crop"
+      image: "https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?auto=format&fit=crop&q=80&w=800"
     }
   ];
 
@@ -245,7 +254,7 @@ export function FeaturedArticlesWidget() {
         {articles.map((article) => (
           <Link 
             key={article.id} 
-            href={article.hub === "Education" ? "/education" : "/sti-awareness"}
+            href={article.href}
             className="flex items-center gap-4 group cursor-pointer"
           >
             <div className="relative shrink-0">

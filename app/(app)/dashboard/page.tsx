@@ -9,7 +9,7 @@ import {
 import { authOptions } from "@/lib/auth";
 import { listUserNotifications } from "@/lib/notifications";
 import { db } from "@/src/db";
-import { doctorAnswers, doctorQuestions, users } from "@/src/schema";
+import { alerts, doctorAnswers, doctorQuestions, users, symptomLogs, cycleLogs, userCycleOnboarding } from "@/src/schema";
 
 function buildDisplayName(name: string | null, email: string) {
   if (name?.trim()) {
@@ -153,6 +153,62 @@ export default async function DashboardPage() {
     type: alert.type,
   }));
 
+  const latestLogRaw = await db
+    .select()
+    .from(symptomLogs)
+    .where(eq(symptomLogs.userId, session.user.id))
+    .orderBy(desc(symptomLogs.createdAt))
+    .limit(1);
+
+  const latestLog = latestLogRaw[0] || null;
+  const loggedMood = (latestLog?.symptoms as any)?.mood || latestLog?.mood || null;
+  
+  const cycleLogsRaw = await db
+    .select()
+    .from(cycleLogs)
+    .where(eq(cycleLogs.userId, session.user.id))
+    .orderBy(desc(cycleLogs.startDate))
+    .limit(1);
+    
+  let currentPhase = "Menstrual";
+  let dayOfCycle = 1;
+  let daysUntilNextPeriod = 28;
+  
+  const onboardingData = await db
+    .select()
+    .from(userCycleOnboarding)
+    .where(eq(userCycleOnboarding.userId, session.user.id))
+    .limit(1);
+    
+  const avgCycleLength = onboardingData.length > 0 && onboardingData[0].averageCycleLength ? onboardingData[0].averageCycleLength : 28;
+
+  let predictedSymptomsText = "No major symptoms predicted.";
+  if (cycleLogsRaw.length > 0) {
+      const latestCycle = cycleLogsRaw[0];
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const start = new Date(latestCycle.startDate);
+      start.setHours(0, 0, 0, 0);
+
+      const diffTime = today.getTime() - start.getTime();
+      dayOfCycle = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+      if (dayOfCycle > 5 && dayOfCycle <= 13) currentPhase = "Follicular";
+      else if (dayOfCycle === 14) currentPhase = "Ovulation";
+      else if (dayOfCycle > 14) currentPhase = "Luteal";
+
+      const nextPeriodStart = new Date(start.getTime() + avgCycleLength * 24 * 60 * 60 * 1000);
+      daysUntilNextPeriod = Math.max(0, Math.ceil((nextPeriodStart.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
+
+      const SYMPTOMS_PREDICTIONS: Record<string, string> = {
+        "Menstrual": "Fatigue, cramps, lower back pain, potential headaches.",
+        "Follicular": "Everything is fine! Energy is rising, skin might be clearer.",
+        "Ovulation": "High energy, possible mild pelvic twinges (mittelschmerz).",
+        "Luteal": "Cravings, bloating, mood swings, potential insomnia or fatigue."
+      };
+      predictedSymptomsText = SYMPTOMS_PREDICTIONS[currentPhase] || "No major symptoms predicted.";
+  }
+
   return (
     <DashboardShell
       role={session.user.role}
@@ -160,6 +216,11 @@ export default async function DashboardPage() {
       personalQuestions={toDashboardQuestions(personalQuestionsRaw)}
       reviewQuestions={toDashboardQuestions(reviewQuestionsRaw)}
       feedbackAlerts={feedbackAlerts}
+      todayMood={loggedMood}
+      todaySymptoms={predictedSymptomsText}
+      currentPhase={currentPhase}
+      dayOfCycle={dayOfCycle}
+      daysUntilNextPeriod={daysUntilNextPeriod}
     />
   );
 }
