@@ -160,51 +160,57 @@ export function FeaturedArticlesWidget() {
   const articles = [
     {
       id: 1,
-      title: "Understanding Hormonal Fluctuations",
-      hub: "Education",
-      icon: <BookOpen className="w-3 h-3" />,
+      title: "FDA Approves DoxyPEP to Prevent Bacterial STIs",
+      hub: "STI Awareness",
+      href: "/sti-awareness/fda-approves-doxypep",
+      icon: <ShieldAlert className="w-3 h-3" />,
       color: "bg-blue-500",
-      image: "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=200&h=200&fit=crop"
+      image: "https://images.unsplash.com/photo-1584308666744-24d5e4a50d4b?auto=format&fit=crop&q=80&w=800"
     },
     {
       id: 2,
-      title: "STI Prevention: A Comprehensive Guide",
+      title: "Global Syphilis Cases Continue Historic Rise",
       hub: "STI Awareness",
+      href: "/sti-awareness/global-syphilis-surge",
       icon: <ShieldAlert className="w-3 h-3" />,
       color: "bg-rose-500",
-      image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=200&h=200&fit=crop"
+      image: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&q=80&w=800"
     },
     {
       id: 3,
-      title: "The Importance of Regular Checkups",
+      title: "Advances in the Chlamydia Vaccine Trials",
       hub: "Education",
+      href: "/sti-awareness/chlamydia-vaccine-trials",
       icon: <BookOpen className="w-3 h-3" />,
       color: "bg-emerald-500",
-      image: "https://images.unsplash.com/photo-1581595220892-b0739db3ba8c?w=200&h=200&fit=crop"
+      image: "https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?auto=format&fit=crop&q=80&w=800"
     },
     {
       id: 4,
-      title: "Nutrition Tips for Cycle Balance",
+      title: "The Impact of Telemedicine on STI Testing Rates",
       hub: "Education",
+      href: "/sti-awareness/telemedicine-sti-testing",
       icon: <BookOpen className="w-3 h-3" />,
       color: "bg-amber-500",
-      image: "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=200&h=200&fit=crop"
+      image: "https://images.unsplash.com/photo-1618498082410-b4aa22193b38?auto=format&fit=crop&q=80&w=800"
     },
     {
       id: 5,
-      title: "Common Myths About STI Transmission",
+      title: "New Guidelines Unveiled for HPV Screening",
       hub: "STI Awareness",
+      href: "/sti-awareness/new-hpv-guidelines",
       icon: <ShieldAlert className="w-3 h-3" />,
       color: "bg-purple-500",
-      image: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=200&h=200&fit=crop"
+      image: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&q=80&w=800"
     },
     {
       id: 6,
-      title: "Mental Health and the Menstrual Cycle",
+      title: "Addressing STI Stigma in Healthcare Settings",
       hub: "Education",
+      href: "/sti-awareness/addressing-sti-stigma",
       icon: <BookOpen className="w-3 h-3" />,
       color: "bg-indigo-500",
-      image: "https://images.unsplash.com/photo-1516585427167-9f4af9627e6c?w=200&h=200&fit=crop"
+      image: "https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?auto=format&fit=crop&q=80&w=800"
     }
   ];
 
@@ -220,7 +226,7 @@ export function FeaturedArticlesWidget() {
         {articles.map((article) => (
           <Link 
             key={article.id} 
-            href={article.hub === "Education" ? "/education" : "/sti-awareness"}
+            href={article.href}
             className="flex items-center gap-4 group cursor-pointer"
           >
             <div className="relative shrink-0">
