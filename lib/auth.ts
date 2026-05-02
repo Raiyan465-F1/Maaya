@@ -1,4 +1,5 @@
 import type { NextAuthOptions } from "next-auth";
+import type { JWT } from "next-auth/jwt";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import { eq } from "drizzle-orm";
@@ -37,13 +38,37 @@ declare module "next-auth/jwt" {
     role: UserRole;
     accountStatus: string | null;
     restrictionEndsAt: string | null;
+    statusSyncedAt?: number;
   }
 }
+
+const SESSION_STATUS_SYNC_INTERVAL_MS = 15_000;
 
 function restrictionToIso(value: Date | null | undefined): string | null {
   if (!value) return null;
   if (value instanceof Date) return value.toISOString();
   return null;
+}
+
+async function syncTokenModerationState(token: JWT) {
+  if (!token.id) return;
+
+  await expireAccountRestrictionIfNeeded(token.id);
+
+  const [row] = await db
+    .select({
+      accountStatus: users.accountStatus,
+      restrictionEndsAt: users.restrictionEndsAt,
+    })
+    .from(users)
+    .where(eq(users.id, token.id))
+    .limit(1);
+
+  if (!row) return;
+
+  token.accountStatus = row.accountStatus;
+  token.restrictionEndsAt = restrictionToIso(row.restrictionEndsAt ?? undefined);
+  token.statusSyncedAt = Date.now();
 }
 
 export const authOptions: NextAuthOptions = {
@@ -121,25 +146,18 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role;
         token.accountStatus = user.accountStatus;
         token.restrictionEndsAt = user.restrictionEndsAt ?? null;
+        token.statusSyncedAt = Date.now();
       }
 
-      if (token.id && token.accountStatus === "suspended" && token.restrictionEndsAt) {
-        const end = new Date(token.restrictionEndsAt);
-        if (!Number.isNaN(end.getTime()) && end <= new Date()) {
-          await expireAccountRestrictionIfNeeded(token.id as string);
-          const [row] = await db
-            .select({
-              accountStatus: users.accountStatus,
-              restrictionEndsAt: users.restrictionEndsAt,
-            })
-            .from(users)
-            .where(eq(users.id, token.id as string))
-            .limit(1);
-          if (row) {
-            token.accountStatus = row.accountStatus;
-            token.restrictionEndsAt = restrictionToIso(row.restrictionEndsAt ?? undefined);
-          }
-        }
+      const shouldSyncStatus =
+        Boolean(token.id) &&
+        (token.accountStatus === "suspended" ||
+          token.accountStatus === "banned" ||
+          typeof token.statusSyncedAt !== "number" ||
+          Date.now() - token.statusSyncedAt >= SESSION_STATUS_SYNC_INTERVAL_MS);
+
+      if (shouldSyncStatus) {
+        await syncTokenModerationState(token);
       }
 
       return token;

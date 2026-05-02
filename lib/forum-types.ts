@@ -66,6 +66,8 @@ export type ForumResponse = {
     id: string | null;
     role: string | null;
     tag: ForumAuthorTag | null;
+    accountStatus: string | null;
+    restrictionEndsAt: string | null;
   };
   posts: ForumPostRecord[];
 };

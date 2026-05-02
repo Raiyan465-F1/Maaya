@@ -102,6 +102,17 @@ export function canAccessModeratedContent(viewerRole: string | null, status: Con
 }
 
 export async function getForumSnapshot(viewerId: string | null, viewerRole: string | null): Promise<ForumResponse> {
+  const [viewerState] = viewerId
+    ? await db
+        .select({
+          accountStatus: users.accountStatus,
+          restrictionEndsAt: users.restrictionEndsAt,
+        })
+        .from(users)
+        .where(eq(users.id, viewerId))
+        .limit(1)
+    : [null];
+
   const postsQuery = db
     .select({
       id: forumPosts.id,
@@ -293,6 +304,10 @@ export async function getForumSnapshot(viewerId: string | null, viewerRole: stri
       id: viewerId,
       role: viewerRole,
       tag: viewerRole ? toAuthorTag(viewerRole as UserRole) : null,
+      accountStatus: viewerState?.accountStatus ?? null,
+      restrictionEndsAt: viewerState?.restrictionEndsAt
+        ? toIsoString(viewerState.restrictionEndsAt)
+        : null,
     },
     posts: posts.map((post) => {
       const resolvedAnonymousAuthor =
