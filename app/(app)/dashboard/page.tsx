@@ -8,7 +8,7 @@ import {
 } from "@/components/dashboard-shell";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/src/db";
-import { alerts, doctorAnswers, doctorQuestions, users, symptomLogs, cycleLogs } from "@/src/schema";
+import { alerts, doctorAnswers, doctorQuestions, users, symptomLogs, cycleLogs, userCycleOnboarding } from "@/src/schema";
 
 function buildDisplayName(name: string | null, email: string) {
   if (name?.trim()) {
@@ -168,6 +168,18 @@ export default async function DashboardPage() {
     .orderBy(desc(cycleLogs.startDate))
     .limit(1);
     
+  let currentPhase = "Menstrual";
+  let dayOfCycle = 1;
+  let daysUntilNextPeriod = 28;
+  
+  const onboardingData = await db
+    .select()
+    .from(userCycleOnboarding)
+    .where(eq(userCycleOnboarding.userId, session.user.id))
+    .limit(1);
+    
+  const avgCycleLength = onboardingData.length > 0 && onboardingData[0].averageCycleLength ? onboardingData[0].averageCycleLength : 28;
+
   let predictedSymptomsText = "No major symptoms predicted.";
   if (cycleLogsRaw.length > 0) {
       const latestCycle = cycleLogsRaw[0];
@@ -177,12 +189,14 @@ export default async function DashboardPage() {
       start.setHours(0, 0, 0, 0);
 
       const diffTime = today.getTime() - start.getTime();
-      const dayOfCycle = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+      dayOfCycle = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
-      let currentPhase = "Menstrual";
       if (dayOfCycle > 5 && dayOfCycle <= 13) currentPhase = "Follicular";
       else if (dayOfCycle === 14) currentPhase = "Ovulation";
       else if (dayOfCycle > 14) currentPhase = "Luteal";
+
+      const nextPeriodStart = new Date(start.getTime() + avgCycleLength * 24 * 60 * 60 * 1000);
+      daysUntilNextPeriod = Math.max(0, Math.ceil((nextPeriodStart.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
 
       const SYMPTOMS_PREDICTIONS: Record<string, string> = {
         "Menstrual": "Fatigue, cramps, lower back pain, potential headaches.",
@@ -202,6 +216,9 @@ export default async function DashboardPage() {
       feedbackAlerts={feedbackAlerts}
       todayMood={loggedMood}
       todaySymptoms={predictedSymptomsText}
+      currentPhase={currentPhase}
+      dayOfCycle={dayOfCycle}
+      daysUntilNextPeriod={daysUntilNextPeriod}
     />
   );
 }

@@ -36,6 +36,9 @@ type DashboardShellProps = {
   feedbackAlerts: DashboardAlert[];
   todayMood: string | null;
   todaySymptoms: string;
+  currentPhase: string;
+  dayOfCycle: number;
+  daysUntilNextPeriod: number;
 };
 
 type DashboardSection = {
@@ -65,11 +68,11 @@ function StatusBadge({ replied }: { replied: boolean }) {
   );
 }
 
-function CycleDetailsTab({ todayMood, todaySymptoms }: { todayMood: string | null, todaySymptoms: string }) {
+function CycleDetailsTab({ todayMood, todaySymptoms, currentPhase, dayOfCycle, daysUntilNextPeriod }: { todayMood: string | null, todaySymptoms: string, currentPhase: string, dayOfCycle: number, daysUntilNextPeriod: number }) {
   return (
     <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <SmartInsightsCarousel />
-      <CycleRingWidget />
+      <SmartInsightsCarousel currentPhase={currentPhase} />
+      <CycleRingWidget currentPhase={currentPhase} dayOfCycle={dayOfCycle} daysUntilNextPeriod={daysUntilNextPeriod} />
       <div className="mt-4">
         <h3 className="font-heading text-xl font-bold text-foreground mb-4 pl-2">Today's Logs</h3>
         <HealthMetricsGrid todayMood={todayMood} todaySymptoms={todaySymptoms} />
@@ -577,6 +580,9 @@ export function DashboardShell({
   feedbackAlerts,
   todayMood,
   todaySymptoms,
+  currentPhase,
+  dayOfCycle,
+  daysUntilNextPeriod,
 }: DashboardShellProps) {
   const pending = reviewQuestions.filter((question) => !question.replied);
   const answered = reviewQuestions.filter((question) => question.replied);
@@ -622,7 +628,7 @@ export function DashboardShell({
   const activePanel = (() => {
     switch (activeSection) {
       case "cycle-details":
-        return <CycleDetailsTab todayMood={todayMood} todaySymptoms={todaySymptoms} />;
+        return <CycleDetailsTab todayMood={todayMood} todaySymptoms={todaySymptoms} currentPhase={currentPhase} dayOfCycle={dayOfCycle} daysUntilNextPeriod={daysUntilNextPeriod} />;
       case "feedback-messages":
         return <FeedbackFeed alerts={feedbackAlerts} />;
       case "ask-a-doctor":
@@ -634,7 +640,7 @@ export function DashboardShell({
       case "replied-posts":
         return canReply ? <DoctorAnswered questions={answered} /> : null;
       default:
-        return <CycleDetailsTab todayMood={todayMood} todaySymptoms={todaySymptoms} />;
+        return <CycleDetailsTab todayMood={todayMood} todaySymptoms={todaySymptoms} currentPhase={currentPhase} dayOfCycle={dayOfCycle} daysUntilNextPeriod={daysUntilNextPeriod} />;
     }
   })();
 

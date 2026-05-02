@@ -2,11 +2,25 @@ import { Heart, Activity, Droplets, CalendarClock, Smile, Moon, Thermometer, Win
 import Link from "next/link";
 
 
-export function CycleRingWidget() {
+export function CycleRingWidget({ currentPhase, dayOfCycle, daysUntilNextPeriod }: { currentPhase: string, dayOfCycle: number, daysUntilNextPeriod: number }) {
+  let ringColor = "from-teal-400 to-emerald-500";
+  let textColor = "text-teal-500";
+  let bgLight = "bg-teal-50";
+
+  if (currentPhase === "Menstrual") {
+    ringColor = "from-rose-400 to-red-500";
+    textColor = "text-rose-500";
+    bgLight = "bg-rose-50";
+  } else if (currentPhase === "Luteal") {
+    ringColor = "from-indigo-400 to-purple-500";
+    textColor = "text-indigo-500";
+    bgLight = "bg-indigo-50";
+  }
+
   return (
     <div className="flex flex-col items-center justify-center py-8 relative">
       {/* Background soft glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full bg-teal-50 blur-3xl opacity-50 dark:opacity-20 pointer-events-none" />
+      <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full ${bgLight} blur-3xl opacity-50 dark:opacity-20 pointer-events-none`} />
       
       {/* The Cycle Ring */}
       <Link 
@@ -14,22 +28,22 @@ export function CycleRingWidget() {
         className="relative w-64 h-64 rounded-full p-2 bg-white dark:bg-card shadow-xl shadow-black/5 z-10 flex items-center justify-center group transition-transform hover:scale-105 duration-500 cursor-pointer"
       >
         {/* Colorful gradient border ring */}
-        <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-teal-400 to-emerald-500 opacity-20 group-hover:opacity-30 transition-opacity" />
+        <div className={`absolute inset-0 rounded-full bg-gradient-to-tr ${ringColor} opacity-20 group-hover:opacity-30 transition-opacity`} />
         
         {/* Inner circle */}
-        <div className="relative w-full h-full rounded-full border-[6px] border-white dark:border-card bg-gradient-to-b bg-teal-50 dark:bg-background flex flex-col items-center justify-center shadow-inner">
-          <p className="text-xs uppercase tracking-[0.2em] font-bold mb-1 opacity-70 text-teal-500">
-            Ovulation
+        <div className={`relative w-full h-full rounded-full border-[6px] border-white dark:border-card bg-gradient-to-b ${bgLight} dark:bg-background flex flex-col items-center justify-center shadow-inner`}>
+          <p className={`text-xs uppercase tracking-[0.2em] font-bold mb-1 opacity-70 ${textColor}`}>
+            {currentPhase}
           </p>
           <div className="flex items-baseline gap-1">
             <span className="text-sm font-bold opacity-50">Day</span>
-            <span className="text-7xl font-heading font-black tracking-tighter text-teal-500 drop-shadow-sm">
-              14
+            <span className={`text-7xl font-heading font-black tracking-tighter ${textColor} drop-shadow-sm`}>
+              {dayOfCycle}
             </span>
           </div>
           <p className="text-sm font-medium opacity-80 mt-2 flex items-center gap-1.5">
             <CalendarClock className="w-4 h-4" />
-            14 days to period
+            {daysUntilNextPeriod} days to period
           </p>
         </div>
       </Link>
@@ -109,7 +123,21 @@ export function HealthMetricsGrid({ todayMood, todaySymptoms }: { todayMood?: st
   );
 }
 
-export function SmartInsightsCarousel() {
+export function SmartInsightsCarousel({ currentPhase }: { currentPhase: string }) {
+  let title = "Fertile Window";
+  let text = "You are likely entering your fertile window today. Chances of pregnancy are high.";
+  
+  if (currentPhase === "Menstrual") {
+    title = "Period Phase";
+    text = "You are currently in your menstrual phase. Chances of pregnancy are very low.";
+  } else if (currentPhase === "Luteal") {
+    title = "Luteal Phase";
+    text = "You are in your luteal phase, preparing for your next cycle. Chances of pregnancy are low.";
+  } else if (currentPhase === "Follicular") {
+    title = "Follicular Phase";
+    text = "Your energy is rising. Your body is preparing for ovulation, pregnancy chances are increasing.";
+  }
+
   return (
     <Link 
       href="/cycle-tracking" 
@@ -119,8 +147,8 @@ export function SmartInsightsCarousel() {
         <Heart className="w-6 h-6 text-amber-500" />
       </div>
       <div>
-        <h4 className="text-sm font-bold text-amber-900 dark:text-amber-100">Fertile Window</h4>
-        <p className="mt-1 text-sm font-medium text-amber-800/80 dark:text-amber-200/80">You are likely entering your fertile window today. Chances of pregnancy are high.</p>
+        <h4 className="text-sm font-bold text-amber-900 dark:text-amber-100">{title}</h4>
+        <p className="mt-1 text-sm font-medium text-amber-800/80 dark:text-amber-200/80">{text}</p>
       </div>
     </Link>
 
