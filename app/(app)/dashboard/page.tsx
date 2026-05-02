@@ -8,7 +8,7 @@ import {
 } from "@/components/dashboard-shell";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/src/db";
-import { alerts, doctorAnswers, doctorQuestions, users, symptomLogs } from "@/src/schema";
+import { alerts, doctorAnswers, doctorQuestions, users, symptomLogs, cycleLogs } from "@/src/schema";
 
 function buildDisplayName(name: string | null, email: string) {
   if (name?.trim()) {
@@ -161,15 +161,37 @@ export default async function DashboardPage() {
   const latestLog = latestLogRaw[0] || null;
   const loggedMood = (latestLog?.symptoms as any)?.mood || latestLog?.mood || null;
   
-  const symptomsList = [];
-  if (latestLog?.symptoms) {
-     const s = latestLog.symptoms as any;
-     if (s.pregnancyStatus && s.pregnancyStatus !== "None") symptomsList.push(`Pregnancy: ${s.pregnancyStatus}`);
-     if (s.vaginalDischarge && s.vaginalDischarge !== "None") symptomsList.push(`Discharge: ${s.vaginalDischarge}`);
-     if (s.sex && s.sex !== "None") symptomsList.push(`Sex: ${s.sex}`);
-     if (s.sexDrive && s.sexDrive !== "None") symptomsList.push(`Sex Drive: ${s.sexDrive}`);
+  const cycleLogsRaw = await db
+    .select()
+    .from(cycleLogs)
+    .where(eq(cycleLogs.userId, session.user.id))
+    .orderBy(desc(cycleLogs.startDate))
+    .limit(1);
+    
+  let predictedSymptomsText = "No major symptoms predicted.";
+  if (cycleLogsRaw.length > 0) {
+      const latestCycle = cycleLogsRaw[0];
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const start = new Date(latestCycle.startDate);
+      start.setHours(0, 0, 0, 0);
+
+      const diffTime = today.getTime() - start.getTime();
+      const dayOfCycle = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+      let currentPhase = "Menstrual";
+      if (dayOfCycle > 5 && dayOfCycle <= 13) currentPhase = "Follicular";
+      else if (dayOfCycle === 14) currentPhase = "Ovulation";
+      else if (dayOfCycle > 14) currentPhase = "Luteal";
+
+      const SYMPTOMS_PREDICTIONS: Record<string, string> = {
+        "Menstrual": "Fatigue, cramps, lower back pain, potential headaches.",
+        "Follicular": "Everything is fine! Energy is rising, skin might be clearer.",
+        "Ovulation": "High energy, possible mild pelvic twinges (mittelschmerz).",
+        "Luteal": "Cravings, bloating, mood swings, potential insomnia or fatigue."
+      };
+      predictedSymptomsText = SYMPTOMS_PREDICTIONS[currentPhase] || "No major symptoms predicted.";
   }
-  const symptomsText = symptomsList.length > 0 ? symptomsList.join(", ") : "None logged";
 
   return (
     <DashboardShell
@@ -179,7 +201,7 @@ export default async function DashboardPage() {
       reviewQuestions={toDashboardQuestions(reviewQuestionsRaw)}
       feedbackAlerts={feedbackAlerts}
       todayMood={loggedMood}
-      todaySymptoms={symptomsText}
+      todaySymptoms={predictedSymptomsText}
     />
   );
 }
