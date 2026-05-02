@@ -57,7 +57,17 @@ export function CycleRingWidget() {
   );
 }
 
-export function HealthMetricsGrid() {
+export function HealthMetricsGrid({ todayMood, todaySymptoms }: { todayMood?: string | null, todaySymptoms?: string }) {
+  const moodMap: Record<string, { emoji: string; label: string }> = {
+    terrible: { emoji: "😫", label: "Terrible" },
+    bad: { emoji: "😕", label: "Bad" },
+    okay: { emoji: "😐", label: "Okay" },
+    good: { emoji: "🙂", label: "Good" },
+    great: { emoji: "😄", label: "Great" },
+  };
+
+  const moodData = todayMood && moodMap[todayMood] ? moodMap[todayMood] : { emoji: "😶", label: "Not logged" };
+
   return (
     <div className="grid gap-10 md:grid-cols-2">
       {/* Mood Card */}
@@ -72,47 +82,12 @@ export function HealthMetricsGrid() {
           <h3 className="text-sm font-bold text-indigo-900/60 dark:text-indigo-100/60 uppercase tracking-widest">Mood</h3>
         </div>
         <div className="flex items-center gap-4 bg-white/60 dark:bg-black/40 p-5 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm w-full">
-          <span className="text-3xl">🙂</span>
+          <span className="text-3xl">{moodData.emoji}</span>
           <div>
-            <p className="text-sm font-bold text-indigo-900 dark:text-indigo-100 uppercase tracking-widest">Good</p>
+            <p className="text-sm font-bold text-indigo-900 dark:text-indigo-100 uppercase tracking-widest">{moodData.label}</p>
           </div>
         </div>
       </Link>
-
-
-      {/* Sleep Card */}
-      <Link 
-        href="/cycle-tracking"
-        className="rounded-[48px] p-10 min-h-[200px] shadow-sm border-0 bg-blue-50/50 dark:bg-blue-950/20 flex flex-col hover:bg-blue-100/50 transition-all duration-500 group cursor-pointer"
-      >
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2.5 bg-blue-100 dark:bg-blue-900/50 rounded-full group-hover:scale-110 transition-transform">
-            <Moon className="w-6 h-6 text-blue-500" />
-          </div>
-          <h3 className="text-sm font-bold text-blue-900/60 dark:text-blue-100/60 uppercase tracking-widest">Sleep</h3>
-        </div>
-        <div className="bg-white/60 dark:bg-black/40 p-5 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm w-full">
-          <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">7<span className="text-sm font-medium opacity-60 ml-1">hr</span> 30<span className="text-sm font-medium opacity-60 ml-1">m</span></p>
-        </div>
-      </Link>
-
-
-      {/* Temp Card */}
-      <Link 
-        href="/cycle-tracking"
-        className="rounded-[48px] p-10 min-h-[200px] shadow-sm border-0 bg-orange-50/50 dark:bg-orange-950/20 flex flex-col hover:bg-orange-100/50 transition-all duration-500 group cursor-pointer"
-      >
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2.5 bg-orange-100 dark:bg-orange-900/50 rounded-full group-hover:scale-110 transition-transform">
-            <Thermometer className="w-6 h-6 text-orange-500" />
-          </div>
-          <h3 className="text-sm font-bold text-orange-900/60 dark:text-orange-100/60 uppercase tracking-widest">BBT</h3>
-        </div>
-        <div className="bg-white/60 dark:bg-black/40 p-5 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm w-full">
-          <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">36.5<span className="text-sm font-medium opacity-60 ml-1">°C</span></p>
-        </div>
-      </Link>
-
 
       {/* Symptoms Card */}
       <Link 
@@ -125,8 +100,8 @@ export function HealthMetricsGrid() {
           </div>
           <h3 className="text-sm font-bold text-rose-900/60 dark:text-rose-100/60 uppercase tracking-widest">Symptoms</h3>
         </div>
-        <div className="bg-white/60 dark:bg-black/40 p-5 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm w-full">
-          <p className="text-sm font-bold text-rose-900 dark:text-rose-100 leading-tight uppercase tracking-wide">Mild Cramps, Headaches</p>
+        <div className="bg-white/60 dark:bg-black/40 p-5 rounded-2xl border border-white/50 dark:border-white/10 shadow-sm w-full h-full flex items-center">
+          <p className="text-sm font-bold text-rose-900 dark:text-rose-100 leading-tight uppercase tracking-wide">{todaySymptoms || "None logged"}</p>
         </div>
       </Link>
 

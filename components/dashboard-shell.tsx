@@ -34,6 +34,8 @@ type DashboardShellProps = {
   personalQuestions: DashboardQuestion[];
   reviewQuestions: DashboardQuestion[];
   feedbackAlerts: DashboardAlert[];
+  todayMood: string | null;
+  todaySymptoms: string;
 };
 
 type DashboardSection = {
@@ -63,14 +65,14 @@ function StatusBadge({ replied }: { replied: boolean }) {
   );
 }
 
-function CycleDetailsTab() {
+function CycleDetailsTab({ todayMood, todaySymptoms }: { todayMood: string | null, todaySymptoms: string }) {
   return (
     <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <SmartInsightsCarousel />
       <CycleRingWidget />
       <div className="mt-4">
         <h3 className="font-heading text-xl font-bold text-foreground mb-4 pl-2">Today's Logs</h3>
-        <HealthMetricsGrid />
+        <HealthMetricsGrid todayMood={todayMood} todaySymptoms={todaySymptoms} />
       </div>
     </div>
   );
@@ -573,6 +575,8 @@ export function DashboardShell({
   personalQuestions,
   reviewQuestions,
   feedbackAlerts,
+  todayMood,
+  todaySymptoms,
 }: DashboardShellProps) {
   const pending = reviewQuestions.filter((question) => !question.replied);
   const answered = reviewQuestions.filter((question) => question.replied);
@@ -618,7 +622,7 @@ export function DashboardShell({
   const activePanel = (() => {
     switch (activeSection) {
       case "cycle-details":
-        return <CycleDetailsTab />;
+        return <CycleDetailsTab todayMood={todayMood} todaySymptoms={todaySymptoms} />;
       case "feedback-messages":
         return <FeedbackFeed alerts={feedbackAlerts} />;
       case "ask-a-doctor":
@@ -630,7 +634,7 @@ export function DashboardShell({
       case "replied-posts":
         return canReply ? <DoctorAnswered questions={answered} /> : null;
       default:
-        return <CycleDetailsTab />;
+        return <CycleDetailsTab todayMood={todayMood} todaySymptoms={todaySymptoms} />;
     }
   })();
 

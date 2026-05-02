@@ -8,7 +8,7 @@ import {
 } from "@/components/dashboard-shell";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/src/db";
-import { alerts, doctorAnswers, doctorQuestions, users } from "@/src/schema";
+import { alerts, doctorAnswers, doctorQuestions, users, symptomLogs } from "@/src/schema";
 
 function buildDisplayName(name: string | null, email: string) {
   if (name?.trim()) {
@@ -151,6 +151,26 @@ export default async function DashboardPage() {
     type: alert.type,
   }));
 
+  const latestLogRaw = await db
+    .select()
+    .from(symptomLogs)
+    .where(eq(symptomLogs.userId, session.user.id))
+    .orderBy(desc(symptomLogs.createdAt))
+    .limit(1);
+
+  const latestLog = latestLogRaw[0] || null;
+  const loggedMood = (latestLog?.symptoms as any)?.mood || latestLog?.mood || null;
+  
+  const symptomsList = [];
+  if (latestLog?.symptoms) {
+     const s = latestLog.symptoms as any;
+     if (s.pregnancyStatus && s.pregnancyStatus !== "None") symptomsList.push(`Pregnancy: ${s.pregnancyStatus}`);
+     if (s.vaginalDischarge && s.vaginalDischarge !== "None") symptomsList.push(`Discharge: ${s.vaginalDischarge}`);
+     if (s.sex && s.sex !== "None") symptomsList.push(`Sex: ${s.sex}`);
+     if (s.sexDrive && s.sexDrive !== "None") symptomsList.push(`Sex Drive: ${s.sexDrive}`);
+  }
+  const symptomsText = symptomsList.length > 0 ? symptomsList.join(", ") : "None logged";
+
   return (
     <DashboardShell
       role={session.user.role}
@@ -158,6 +178,8 @@ export default async function DashboardPage() {
       personalQuestions={toDashboardQuestions(personalQuestionsRaw)}
       reviewQuestions={toDashboardQuestions(reviewQuestionsRaw)}
       feedbackAlerts={feedbackAlerts}
+      todayMood={loggedMood}
+      todaySymptoms={symptomsText}
     />
   );
 }
