@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { db } from "@/src/db";
 import { cycleLogs } from "@/src/schema";
 import { authOptions } from "@/lib/auth";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, isNull } from "drizzle-orm";
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
@@ -55,8 +55,9 @@ export async function POST(request: NextRequest) {
     const start = new Date(startDate);
     const end = endDate ? new Date(endDate) : null;
     const now = new Date();
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
-    if (start > now || (end && end > now)) {
+    if (start > tomorrow || (end && end > tomorrow)) {
       return NextResponse.json({ error: "Dates cannot be in the future." }, { status: 400 });
     }
 
@@ -112,8 +113,9 @@ export async function PUT(request: NextRequest) {
 
     const end = new Date(endDate);
     const now = new Date();
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
-    if (end > now) {
+    if (end > tomorrow) {
       return NextResponse.json({ error: "Date cannot be in the future." }, { status: 400 });
     }
 
@@ -121,11 +123,16 @@ export async function PUT(request: NextRequest) {
     const logs = await db
       .select()
       .from(cycleLogs)
-      .where(eq(cycleLogs.userId, session.user.id))
+      .where(
+        and(
+          eq(cycleLogs.userId, session.user.id),
+          isNull(cycleLogs.endDate)
+        )
+      )
       .orderBy(desc(cycleLogs.startDate))
       .limit(1);
 
-    if (logs.length === 0 || logs[0].endDate) {
+    if (logs.length === 0) {
       return NextResponse.json({ error: "No active cycle to end." }, { status: 400 });
     }
 

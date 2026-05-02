@@ -103,15 +103,22 @@ export async function GET(request: NextRequest) {
     }
 
     let latestCycle = logs[0];
-    const today = startOfDay(new Date());
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const parseDate = (d: string) => {
+      const [year, month, day] = d.split('T')[0].split('-').map(Number);
+      return new Date(year, month - 1, day);
+    };
+
     const onboardingCycleAverage = isOnboarded ? onboardingData[0].averageCycleLength ?? null : null;
     const onboardingPeriodAverage = isOnboarded ? onboardingData[0].averagePeriodLength ?? null : null;
 
     const cycleHistory: HistoryItem[] = [];
     if (logs.length > 1) {
       for (let i = 0; i < Math.min(logs.length - 1, 6); i++) {
-        const currentStart = startOfDay(new Date(logs[i].startDate));
-        const previousStart = startOfDay(new Date(logs[i + 1].startDate));
+        const currentStart = parseDate(logs[i].startDate);
+        const previousStart = parseDate(logs[i + 1].startDate);
         cycleHistory.push({
           month: previousStart.toLocaleString("default", { month: "short" }),
           year: previousStart.getFullYear(),
@@ -125,8 +132,8 @@ export async function GET(request: NextRequest) {
       .filter((log) => !!log.endDate)
       .slice(0, 6)
       .map((log) => {
-        const startDate = startOfDay(new Date(log.startDate));
-        const endDate = startOfDay(new Date(log.endDate!));
+        const startDate = parseDate(log.startDate);
+        const endDate = parseDate(log.endDate!);
         return {
           month: startDate.toLocaleString("default", { month: "short" }),
           year: startDate.getFullYear(),
@@ -152,24 +159,7 @@ export async function GET(request: NextRequest) {
     const cycleTrend =
       cycleVarianceDays === null ? null : cycleVarianceDays <= 3 ? "consistent" : "variable";
 
-    // Auto-close active cycle if time frame exceeded
-    if (!latestCycle.endDate) {
-      const cycleStart = startOfDay(new Date(latestCycle.startDate));
-      const daysSinceStart = getInclusiveDayCount(cycleStart, today);
-      
-      if (daysSinceStart > periodAverageDays) {
-        // Automatically set end date to start + estimated period length - 1 day.
-        const autoEndDate = new Date(cycleStart);
-        autoEndDate.setDate(autoEndDate.getDate() + periodAverageDays - 1);
-        
-        await db.update(cycleLogs)
-          .set({ endDate: autoEndDate.toISOString() })
-          .where(eq(cycleLogs.id, latestCycle.id));
-          
-        latestCycle = { ...latestCycle, endDate: autoEndDate.toISOString() };
-      }
-    }
-    const start = startOfDay(new Date(latestCycle.startDate));
+    const start = parseDate(latestCycle.startDate);
 
     const nextPeriodStart = new Date(start.getTime() + cycleAverageDays * MS_PER_DAY);
     const nextPeriodEnd = new Date(nextPeriodStart.getTime() + (periodAverageDays - 1) * MS_PER_DAY);
@@ -280,6 +270,7 @@ export async function GET(request: NextRequest) {
 
 
       periodStartDates: logs.map(l => l.startDate),
+      periodEndDates: logs.filter(l => l.endDate).map(l => l.endDate),
       recommendations: tips.length > 0 ? tips : [{ tipTitle: "Rest and Hydrate", tipDescription: "Listen to your body today." }],
       latestCycle: {
         startDate: latestCycle.startDate,
