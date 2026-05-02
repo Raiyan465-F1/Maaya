@@ -18,6 +18,14 @@ import type {
 import { FORUM_MEDIA_LIMIT, FORUM_TAG_LIMIT } from "@/lib/forum-types";
 import { useConfirm } from "@/hooks/use-confirm";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type MediaDraft = ForumMediaInput & { key: number };
 type ForumSortOption = "latest" | "oldest" | "popular";
@@ -28,6 +36,8 @@ const EMPTY_FORUM: ForumResponse = {
     id: null,
     role: null,
     tag: null,
+    accountStatus: null,
+    restrictionEndsAt: null,
   },
   posts: [],
 };
@@ -548,7 +558,7 @@ function CommentTree({
   onDelete: (commentId: number) => void;
   onReply: (commentId: number, content: string) => void;
   onEdit: (commentId: number, content: string) => void;
-  onReport: (commentId: number, reason: string) => void;
+  onReport: (commentId: number) => void;
   depth?: number;
   highlightedCommentId?: number | null;
 }) {
@@ -672,11 +682,7 @@ function CommentTree({
                   ) : canInteract ? (
                     <ManagementMenu
                       menuDisabled={interactionLocked}
-                      onReport={() => {
-                        const reason = window.prompt("Why are you reporting this comment?");
-                        if (!reason?.trim()) return;
-                        onReport(comment.id, reason.trim());
-                      }}
+                      onReport={() => onReport(comment.id)}
                     />
                   ) : null}
                 </div>
@@ -740,6 +746,8 @@ function CommentTree({
 }
 
 function ForumSectionContent() {
+  type ReportTarget = { target: "post" | "comment"; id: number } | null;
+
   const { confirm, ConfirmDialog } = useConfirm();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -753,6 +761,8 @@ function ForumSectionContent() {
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [focusedPostId, setFocusedPostId] = useState<number | null>(null);
   const [commentTargetPostId, setCommentTargetPostId] = useState<number | null>(null);
+  const [reportTarget, setReportTarget] = useState<ReportTarget>(null);
+  const [reportReason, setReportReason] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<ForumSortOption>("latest");
@@ -794,11 +804,42 @@ function ForumSectionContent() {
 
   const deferredSearchTerm = useDeferredValue(searchTerm);
   const filterPanelRef = useRef<HTMLDivElement | null>(null);
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const interactionLocked = isSuspendedAndActive(
-    session?.user?.accountStatus,
-    session?.user?.restrictionEndsAt
+    forum.viewer.accountStatus,
+    forum.viewer.restrictionEndsAt
   );
+  const activeReportBusyKey = reportTarget
+    ? reportTarget.target === "post"
+      ? `post-${reportTarget.id}`
+      : `comment-${reportTarget.id}`
+    : null;
+  const isSubmittingReport = activeReportBusyKey !== null && busyKey === activeReportBusyKey;
+
+  useEffect(() => {
+    if (sessionStatus === "loading") return;
+
+    setForum((current) => {
+      const nextAccountStatus = session?.user?.accountStatus ?? null;
+      const nextRestrictionEndsAt = session?.user?.restrictionEndsAt ?? null;
+
+      if (
+        current.viewer.accountStatus === nextAccountStatus &&
+        current.viewer.restrictionEndsAt === nextRestrictionEndsAt
+      ) {
+        return current;
+      }
+
+      return {
+        ...current,
+        viewer: {
+          ...current.viewer,
+          accountStatus: nextAccountStatus,
+          restrictionEndsAt: nextRestrictionEndsAt,
+        },
+      };
+    });
+  }, [session?.user?.accountStatus, session?.user?.restrictionEndsAt, sessionStatus]);
 
   const discussionCount = forum.posts.length;
   const replyCount = useMemo(() => {
@@ -920,6 +961,16 @@ function ForumSectionContent() {
     return () => { isMounted = false; };
   }, []);
 
+  function openReportDialog(target: "post" | "comment", id: number) {
+    setReportTarget({ target, id });
+    setReportReason("");
+  }
+
+  function closeReportDialog() {
+    setReportTarget(null);
+    setReportReason("");
+  }
+
   async function submitJson(url: string, init: RequestInit, nextBusyKey: string) {
     setBusyKey(nextBusyKey);
     setError(null);
@@ -950,6 +1001,29 @@ function ForumSectionContent() {
       return false;
     } finally {
       setBusyKey(null);
+    }
+  }
+
+  async function handleReportSubmit() {
+    if (!reportTarget) return;
+
+    const trimmedReason = reportReason.trim();
+    if (trimmedReason.length < 5) return;
+
+    const path =
+      reportTarget.target === "post"
+        ? `/api/forum/posts/${reportTarget.id}/report`
+        : `/api/forum/comments/${reportTarget.id}/report`;
+
+    const wasSuccessful = await submitJson(
+      path,
+      { method: "POST", body: JSON.stringify({ reason: trimmedReason }) },
+      activeReportBusyKey ?? ""
+    );
+
+    if (wasSuccessful) {
+      toast.success("Report submitted.");
+      closeReportDialog();
     }
   }
 
@@ -1249,13 +1323,7 @@ function ForumSectionContent() {
                   replyTo ? `comment-${replyTo}` : `post-${postId}`
                 )
               }
-              onReport={(postId, reason) =>
-                submitJson(
-                  `/api/forum/posts/${postId}/report`,
-                  { method: "POST", body: JSON.stringify({ reason }) },
-                  `post-${postId}`
-                )
-              }
+              onReport={(postId) => openReportDialog("post", postId)}
               onCommentVote={(commentId, voteType) =>
                 submitVote(
                   `/api/forum/comments/${commentId}/vote`,
@@ -1275,13 +1343,7 @@ function ForumSectionContent() {
                   `comment-${commentId}`
                 )
               }
-              onCommentReport={(commentId, reason) =>
-                submitJson(
-                  `/api/forum/comments/${commentId}/report`,
-                  { method: "POST", body: JSON.stringify({ reason }) },
-                  `comment-${commentId}`
-                )
-              }
+              onCommentReport={(commentId) => openReportDialog("comment", commentId)}
             />
           ))}
 
@@ -1472,13 +1534,7 @@ function ForumSectionContent() {
                   replyTo ? `comment-${replyTo}` : `post-${postId}`
                 )
               }
-              onReport={(postId, reason) =>
-                submitJson(
-                  `/api/forum/posts/${postId}/report`,
-                  { method: "POST", body: JSON.stringify({ reason }) },
-                  `post-${postId}`
-                )
-              }
+              onReport={(postId) => openReportDialog("post", postId)}
               onCommentVote={(commentId, voteType) =>
                 submitVote(
                   `/api/forum/comments/${commentId}/vote`,
@@ -1498,13 +1554,7 @@ function ForumSectionContent() {
                   `comment-${commentId}`
                 )
               }
-              onCommentReport={(commentId, reason) =>
-                submitJson(
-                  `/api/forum/comments/${commentId}/report`,
-                  { method: "POST", body: JSON.stringify({ reason }) },
-                  `comment-${commentId}`
-                )
-              }
+              onCommentReport={(commentId) => openReportDialog("comment", commentId)}
             />
           </div>
         </div>
@@ -1687,6 +1737,54 @@ function ForumSectionContent() {
           </button>
         </div>
       </div>
+      <Dialog
+        open={reportTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !isSubmittingReport) {
+            closeReportDialog();
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {reportTarget?.target === "comment" ? "Report comment" : "Report discussion"}
+            </DialogTitle>
+            <DialogDescription>
+              Share a short reason so moderators can review this content quickly.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label htmlFor="forum-report-reason" className="text-sm font-medium text-foreground">
+              Reason
+            </label>
+            <textarea
+              id="forum-report-reason"
+              value={reportReason}
+              onChange={(event) => setReportReason(event.target.value)}
+              rows={4}
+              disabled={isSubmittingReport}
+              placeholder="Tell us what happened..."
+              className="w-full resize-none rounded-2xl border border-primary/15 bg-background px-4 py-3 text-sm outline-none transition focus:border-primary/40 disabled:cursor-not-allowed disabled:opacity-60"
+            />
+            <p className="text-xs text-muted-foreground">
+              Minimum 5 characters.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={closeReportDialog} disabled={isSubmittingReport}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void handleReportSubmit()}
+              disabled={isSubmittingReport || reportReason.trim().length < 5}
+            >
+              {isSubmittingReport ? "Submitting..." : "Submit report"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <ConfirmDialog />
     </section>
   );
@@ -1759,11 +1857,11 @@ function ForumPostCard({
     payload: { title: string; content: string; tags: string[]; isAnonymous: boolean; media: ForumMediaInput[] }
   ) => void;
   onComment: (postId: number, parentCommentId: number | null, content: string) => void;
-  onReport: (postId: number, reason: string) => void;
+  onReport: (postId: number) => void;
   onCommentVote: (commentId: number, voteType: "upvote" | "downvote") => void;
   onCommentDelete: (commentId: number) => void;
   onCommentEdit: (commentId: number, content: string) => void;
-  onCommentReport: (commentId: number, reason: string) => void;
+  onCommentReport: (commentId: number) => void;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [showCommentBox, setShowCommentBox] = useState(expanded);
@@ -1911,11 +2009,7 @@ function ForumPostCard({
             ) : canInteract ? (
               <ManagementMenu
                 menuDisabled={interactionLocked}
-                onReport={() => {
-                  const reason = window.prompt("Why are you reporting this discussion?");
-                  if (!reason?.trim()) return;
-                  void onReport(post.id, reason.trim());
-                }}
+                onReport={() => onReport(post.id)}
               />
             ) : null}
             {expanded ? (

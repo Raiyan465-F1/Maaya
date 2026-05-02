@@ -87,8 +87,9 @@ function LoginPageContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [submitState, setSubmitState] = useState<"idle" | "submitting" | "redirecting">("idle");
   const [banDialogOpen, setBanDialogOpen] = useState(false);
+  const isBusy = submitState !== "idle";
 
   useEffect(() => {
     if (banError) setBanDialogOpen(true);
@@ -97,7 +98,7 @@ function LoginPageContent() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setIsLoading(true);
+    setSubmitState("submitting");
 
     const result = await signIn("credentials", {
       email: email.trim().toLowerCase(),
@@ -105,17 +106,20 @@ function LoginPageContent() {
       redirect: false,
     });
 
-    setIsLoading(false);
-
     if (result?.error) {
+      setSubmitState("idle");
       setError("Invalid email or password. Please try again.");
       return;
     }
 
     if (result?.ok) {
-      router.push(callbackUrl);
+      setSubmitState("redirecting");
+      router.replace(callbackUrl);
       router.refresh();
+      return;
     }
+
+    setSubmitState("idle");
   }
 
   return (
@@ -170,6 +174,7 @@ function LoginPageContent() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
+                  disabled={isBusy}
                   className="w-full h-11 px-3.5 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-primary/50 transition-colors"
                   required
                 />
@@ -186,6 +191,7 @@ function LoginPageContent() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="........"
+                  disabled={isBusy}
                   className="w-full h-11 px-3.5 rounded-xl border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-primary/50 transition-colors"
                   required
                 />
@@ -193,13 +199,13 @@ function LoginPageContent() {
 
                 <Button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isBusy}
                   className="w-full h-11 text-base font-semibold bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-xl hover:opacity-90 transition-opacity shadow-sm disabled:opacity-70"
                 >
-                {isLoading ? (
+                {isBusy ? (
                   <span className="inline-flex items-center gap-2">
                     <LoaderCircle className="h-4 w-4 animate-spin" />
-                    Signing in...
+                    {submitState === "redirecting" ? "Opening your account..." : "Signing in..."}
                   </span>
                 ) : (
                   "Log in"

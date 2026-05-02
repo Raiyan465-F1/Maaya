@@ -1141,27 +1141,6 @@ export default function ProfilePage() {
           </SheetFooter>
         </SheetContent>
       </Sheet>
-
-      {/* Danger zone */}
-      <section className="mt-4 rounded-2xl border border-destructive/15 bg-card p-6">
-        <h2 className="mb-1 font-heading text-base font-semibold tracking-tight text-destructive">Danger zone</h2>
-        <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
-          These actions are irreversible. Proceed with caution.
-        </p>
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <Button type="button" disabled variant="destructive" className="h-10 rounded-xl px-5 text-sm">
-            Delete account
-          </Button>
-          <Button
-            type="button"
-            disabled
-            variant="outline"
-            className="h-10 rounded-xl border-destructive/30 px-5 text-sm text-destructive hover:bg-destructive/5"
-          >
-            Export my data
-          </Button>
-        </div>
-      </section>
     </>
   );
 }
