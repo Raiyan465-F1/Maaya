@@ -53,6 +53,7 @@ type CycleAnalytics = {
     weight: string | null;
   } | null;
   periodStartDates?: string[];
+  periodEndDates?: string[];
   cycleHistory?: CycleHistoryItem[];
   periodHistory?: PeriodHistoryItem[];
   cycleAverageDays?: number | null;
@@ -234,7 +235,7 @@ export default function CycleTrackingPage() {
     setIsLogging(false);
   };
 
-  const isActiveCycle = analytics?.latestCycle && !analytics.latestCycle.endDate;
+  const isActiveCycle = Boolean(analytics?.latestCycle && !analytics.latestCycle.endDate);
   const activeCycleStartDate =
     isActiveCycle && analytics?.latestCycle?.startDate
       ? (() => {
@@ -394,13 +395,7 @@ export default function CycleTrackingPage() {
                       onSelect={setSelectedDate}
                       disabled={[
                         { after: new Date() },
-                        ...(analytics?.latestCycle?.startDate ? [{ 
-                          before: new Date(
-                            Number(analytics.latestCycle.startDate.split('-')[0]),
-                            Number(analytics.latestCycle.startDate.split('-')[1]) - 1,
-                            Number(analytics.latestCycle.startDate.split('-')[2].substring(0, 2))
-                          )
-                        }] : [])
+                        ...(activeCycleStartDate ? [{ before: activeCycleStartDate }] : [])
                       ]}
                       className="rounded-xl border-none p-3 sm:p-5 w-full bg-transparent"
                       modifiers={{
@@ -412,13 +407,7 @@ export default function CycleTrackingPage() {
                           const [year, month, day] = d.split('T')[0].split('-').map(Number);
                           return new Date(year, month - 1, day);
                         }),
-                        activeStart: [
-                          new Date(
-                            Number(analytics.latestCycle.startDate.split('-')[0]),
-                            Number(analytics.latestCycle.startDate.split('-')[1]) - 1,
-                            Number(analytics.latestCycle.startDate.split('-')[2].substring(0, 2))
-                          )
-                        ]
+                        activeStart: activeCycleStartDate ? [activeCycleStartDate] : []
                       }}
                       modifiersClassNames={{
                         periodStart: "logged-period-day",
@@ -454,7 +443,7 @@ export default function CycleTrackingPage() {
                 </div>
                 
                 <div className="w-full flex flex-col items-center gap-3 mt-2">
-                  {isActiveCycle && selectedDate && (
+                  {isActiveCycle && selectedDate && activeCycleStartDate && (
                     <div className="w-full max-w-[280px] animate-in fade-in zoom-in-95 duration-300">
                       <Button 
                          onClick={handleEndPeriod} 
@@ -463,11 +452,7 @@ export default function CycleTrackingPage() {
                          className="w-full bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white shadow-lg shadow-red-500/30 font-bold py-6 text-lg rounded-xl transition-all active:scale-95"
                       >
                         <Heart className="w-5 h-5 mr-2 fill-white/20" />
-                        {isLogging ? "Saving..." : `Log End Date (Started: ${new Date(
-                          Number(analytics.latestCycle.startDate.split('-')[0]),
-                          Number(analytics.latestCycle.startDate.split('-')[1]) - 1,
-                          Number(analytics.latestCycle.startDate.split('-')[2].substring(0, 2))
-                        ).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })})`}
+                        {isLogging ? "Saving..." : `Log End Date (Started: ${activeCycleStartDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })})`}
                       </Button>
                     </div>
                   )}

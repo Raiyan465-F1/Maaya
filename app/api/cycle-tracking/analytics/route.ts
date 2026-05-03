@@ -93,6 +93,7 @@ export async function GET(request: NextRequest) {
         isCycleNormal: null,
         isPeriodNormal: null,
         periodStartDates: [],
+        periodEndDates: [],
         pregnancyChance: { label: "Unknown", color: "text-muted-foreground", bg: "bg-muted/10" },
         recommendations: [{ 
           tipTitle: "Ready to start?", 
