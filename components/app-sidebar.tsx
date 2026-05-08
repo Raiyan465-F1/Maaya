@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import {
@@ -207,6 +208,13 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="p-4">
         <Link href="/dashboard" className="flex items-center gap-2">
+          <Image
+            src="/logo.png"
+            alt="Maaya logo"
+            width={28}
+            height={28}
+            className="h-7 w-7 rounded-md object-contain"
+          />
           <span
             className={`bg-gradient-to-r ${accentColor} bg-clip-text font-heading text-xl font-bold tracking-tight text-transparent`}
           >

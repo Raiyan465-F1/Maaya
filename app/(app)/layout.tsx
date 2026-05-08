@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 
@@ -18,6 +19,13 @@ export default function AppLayout({
       <SidebarInset>
         <header className="flex h-12 items-center gap-2 border-b border-sidebar-border px-4 md:hidden">
           <SidebarTrigger />
+          <Image
+            src="/logo.png"
+            alt="Maaya logo"
+            width={24}
+            height={24}
+            className="h-6 w-6 rounded object-contain"
+          />
           <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text font-heading text-lg font-bold tracking-tight text-transparent">
             MAAYA
           </span>

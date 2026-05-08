@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 import { verifiedDoctors } from "@/lib/verified-doctors";
@@ -14,6 +15,14 @@ function LandingNavbar() {
     <header className="fixed top-0 left-0 right-0 z-50 bg-card/80 backdrop-blur-md border-b border-primary/15 shadow-sm">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5">
+          <Image
+            src="/logo.png"
+            alt="Maaya logo"
+            width={32}
+            height={32}
+            className="h-8 w-8 rounded-md object-contain"
+            priority
+          />
           <span className="font-heading text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent tracking-tight">
             MAAYA
           </span>
@@ -629,9 +638,18 @@ function LandingFooter() {
       <div className="max-w-6xl mx-auto px-6 py-14">
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
           <div className="lg:col-span-2">
-            <span className="font-heading text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent tracking-tight">
-              MAAYA
-            </span>
+            <div className="flex items-center gap-2.5">
+              <Image
+                src="/logo.png"
+                alt="Maaya logo"
+                width={32}
+                height={32}
+                className="h-8 w-8 rounded-md object-contain"
+              />
+              <span className="font-heading text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent tracking-tight">
+                MAAYA
+              </span>
+            </div>
             <p className="text-sm text-muted-foreground mt-3 leading-relaxed max-w-xs">
               A safe, supportive platform for reproductive health education, cycle tracking,
               and community connection.
